@@ -175,15 +175,10 @@ namespace kagami {
     CreateConstantObject("kCorePath", Object(runtime::GetBinaryPath()));
   }
 
-  void ActivateComponents(bool enable_SDL_comp) {
+  void ActivateComponents() {
     InitPlainTypesAndConstants();
 
-    if (enable_SDL_comp) {
-      for (const auto func : kEmbeddedComponents) func();
-    }
-    else {
-      for (const auto func : kMinimalComponents) func();
-    }
+    for (const auto func : kEmbeddedComponents) func();
   }
 
   void ReceiveExtReturningValue(void *value, void *slot, int type) {
@@ -318,522 +313,6 @@ namespace kagami {
       return_stack.push_back(new ObjectView(view));
       has_return_value_from_invoking = true;
     }
-  }
-
-  void ConfigProcessor::ElementProcessing(ObjectTable &obj_table, string id, 
-    const toml::value &elem_def, dawn::PlainWindow &window) {
-    optional<SDL_Color> color_key_value = std::nullopt;
-
-    auto type = toml::find<string>(elem_def, "type");
-    auto priority_value = ExpectParameter<int64_t>(elem_def, "priority");
-
-    if (type == "image") {
-      SDL_Rect dest_rect{
-        toml::find<int>(elem_def, "x"),
-        toml::find<int>(elem_def, "y"),
-        toml::find<int>(elem_def, "width"),
-        toml::find<int>(elem_def, "height")
-      };
-      optional<SDL_Rect> src_rect_value = std::nullopt;
-      //TODO:Texture reuse
-      auto image_file = toml::find<string>(elem_def, "image_file");
-      //these operations may throw std::out_or_range
-      auto cropper_table = toml::expect<TOMLValueTable>(elem_def, "cropper");
-      //0 - R, 1 - G, 2 - B, 3 - A
-      auto color_key_array = toml::expect<toml::array>(elem_def, "color_key");
-
-      if (cropper_table.is_ok()) {
-        auto &cropper = cropper_table.unwrap();
-        src_rect_value = SDL_Rect{
-          int(cropper.at("x").as_integer()),
-          int(cropper.at("y").as_integer()),
-          int(cropper.at("width").as_integer()),
-          int(cropper.at("height").as_integer())
-        };
-      }
-
-      if (color_key_array.is_ok()) {
-        auto array_size = color_key_array.unwrap().size();
-        auto color_key = color_key_array.unwrap();
-
-      if (array_size == 4) {
-          color_key_value = SDL_Color{
-            Uint8(color_key[0].as_integer()),
-            Uint8(color_key[1].as_integer()),
-            Uint8(color_key[2].as_integer()),
-            Uint8(color_key[3].as_integer())
-          };
-        }
-        else {
-          throw _CustomError("Invalid color key");
-        }
-      }
-
-      fs::path image_path(image_file);
-      auto image_type_str = lexical::ToLower(image_path.extension().string());
-      auto image_type = [&]() -> dawn::ImageType {
-        const auto it = kImageTypeMatcher.find(image_type_str);
-        if (it == kImageTypeMatcher.cend()) throw _CustomError("Unknown image type");
-        return it->second;
-      }();
-      //Init Texture Object
-      auto managed_texture = color_key_value.has_value() ?
-        make_shared<dawn::Texture>(
-        image_file, image_type, window.GetRenderer(),
-        true, color_key_value.value()) :
-        make_shared<dawn::Texture>(
-        image_file, image_type, window.GetRenderer());
-      Object texture_key_obj(id, kTypeIdString);
-      Object texture_obj(managed_texture, kTypeIdTexture);
-      obj_table.insert(make_pair(texture_key_obj, texture_obj));
-      //Register element
-      auto element = src_rect_value.has_value() ?
-        dawn::Element(*managed_texture, src_rect_value.value(), dest_rect) :
-        dawn::Element(*managed_texture, dest_rect);
-      if (priority_value.has_value()) {
-        element.SetPriority(int(priority_value.value()));
-      }
-      window.AddElement(id, element);
-    }
-    else if (type == "text") {
-      auto x = toml::find<int>(elem_def, "x");
-      auto y = toml::find<int>(elem_def, "y");
-      auto text = toml::find<string>(elem_def, "text");
-      auto size = toml::find<int64_t>(elem_def, "size");
-      //expect?
-      auto font_file = toml::find<string>(elem_def, "font");
-      auto font_path = fs::path(font_file);
-      string font_obj_id(kStrFontObjectHead);
-      font_obj_id.append(lexical::ReplaceInvalidChar(
-        font_path.filename().string()))
-        .append("_")
-        .append(to_string(size));
-
-      auto wrap_length = toml::expect<Uint32>(elem_def, "wrap_length");
-      auto color_key_array = toml::find<toml::array>(elem_def, "color_key");
-      auto color_key = [&]() -> SDL_Color {
-        SDL_Color color_key;
-        auto size = color_key_array.size();
-        if (size == 4) {
-          color_key = SDL_Color{
-            Uint8(color_key_array[0].as_integer()),
-            Uint8(color_key_array[1].as_integer()),
-            Uint8(color_key_array[2].as_integer()),
-            Uint8(color_key_array[3].as_integer())
-          };
-        }
-        else {
-          throw _CustomError("Invalid color key");
-        }
-        return color_key;
-      }();
-
-
-      if (auto ptr = obj_stack_.Find(font_obj_id); ptr != nullptr) {
-        if (!ptr->IsAlive()) {
-          throw _CustomError("Font object is dead");
-        }
-
-        auto &font = ptr->Cast<dawn::Font>();
-        auto managed_texture = make_shared<dawn::Texture>(
-          text, font, window.GetRenderer(), color_key,
-          wrap_length.is_ok() ? wrap_length.unwrap() : 0);
-        Object texture_key_obj(id, kTypeIdString);
-        Object texture_obj(managed_texture, kTypeIdTexture);
-        obj_table.insert(make_pair(texture_key_obj, texture_obj));
-
-        SDL_Rect dest_rect{
-          x, y, managed_texture->GetWidth(), managed_texture->GetHeight()
-        };
-
-        auto element = dawn::Element(*managed_texture, dest_rect);
-        if (priority_value.has_value()) {
-          element.SetPriority(int(priority_value.value()));
-        }
-        window.AddElement(id, element);
-      }
-      else {
-        auto managed_font = make_shared<dawn::Font>(font_file, int(size));
-        Object font_obj(managed_font, kTypeIdFont);
-        auto &font = *managed_font;
-        auto managed_texture = make_shared<dawn::Texture>(
-          text, font, window.GetRenderer(), color_key,
-          wrap_length.is_ok() ? wrap_length.unwrap() : 0);
-        obj_stack_.CreateObject(font_obj_id, font_obj);
-        Object texture_key_obj(id, kTypeIdString);
-        Object texture_obj(managed_texture, kTypeIdTexture);
-        obj_table.insert(make_pair(texture_key_obj, texture_obj));
-
-        SDL_Rect dest_rect{
-          x, y, managed_texture->GetWidth(), managed_texture->GetHeight()
-        };
-
-        auto element = dawn::Element(*managed_texture, dest_rect);
-        if (priority_value.has_value()) {
-          element.SetPriority(int(priority_value.value()));
-        }
-        window.AddElement(id, element);
-      }
-    }
-    else {
-      throw _CustomError("Unknown element type");
-    }
-  }
-
-  void ConfigProcessor::TextureProcessing(string id, const toml::value &elem_def, 
-    dawn::PlainWindow &window, ObjectTable &table) {
-    auto type = toml::find<string>(elem_def, "type");
-
-    if (type == "image") {
-      optional<SDL_Color> color_key_value = std::nullopt;
-      auto image_file = toml::find<string>(elem_def, "image_file");
-      auto color_key_array = toml::expect<toml::array>(elem_def, "color_key");
-
-      if (color_key_array.is_ok()) {
-        auto array_size = color_key_array.unwrap().size();
-        auto color_key = color_key_array.unwrap();
-
-        if (array_size == 4) {
-          color_key_value = SDL_Color{
-            Uint8(color_key[0].as_integer()),
-            Uint8(color_key[1].as_integer()),
-            Uint8(color_key[2].as_integer()),
-            Uint8(color_key[3].as_integer())
-          };
-        }
-        else {
-          throw _CustomError("Invalid color key");
-        }
-      }
-
-      fs::path image_path(image_file);
-      auto image_type_str = lexical::ToLower(image_path.extension().string());
-      auto image_type = [&]() -> dawn::ImageType {
-        const auto it = kImageTypeMatcher.find(image_type_str);
-        if (it == kImageTypeMatcher.cend()) throw _CustomError("Unknown image type");
-        return it->second;
-      }();
-
-      //Init Texture Object
-      auto managed_texture = color_key_value.has_value() ?
-        make_shared<dawn::Texture>(
-        image_file, image_type, window.GetRenderer(),
-        true, color_key_value.value()) :
-        make_shared<dawn::Texture>(
-        image_file, image_type, window.GetRenderer());
-      Object texture_key_obj(id, kTypeIdString);
-      Object texture_obj(managed_texture, kTypeIdTexture);
-
-      table.insert(make_pair(texture_key_obj, texture_obj));
-    }
-    else if (type == "text") {
-      auto text = toml::find<string>(elem_def, "text");
-      auto size = toml::find<int64_t>(elem_def, "size");
-      //expect?
-      auto font_file = toml::find<string>(elem_def, "font");
-      auto font_path = fs::path(font_file);
-      string font_obj_id(kStrFontObjectHead);
-      font_obj_id.append(lexical::ReplaceInvalidChar(
-        font_path.filename().string()))
-        .append("_")
-        .append(to_string(size));
-
-      auto wrap_length = toml::expect<Uint32>(elem_def, "wrap_length");
-      auto color_key_array = toml::find<toml::array>(elem_def, "color_key");
-      auto color_key = [&]() -> SDL_Color {
-        SDL_Color color_key;
-        auto size = color_key_array.size();
-        if (size == 4) {
-          color_key = SDL_Color{
-            Uint8(color_key_array[0].as_integer()),
-            Uint8(color_key_array[1].as_integer()),
-            Uint8(color_key_array[2].as_integer()),
-            Uint8(color_key_array[3].as_integer())
-          };
-        }
-        else {
-          throw _CustomError("Invalid color key");
-        }
-        return color_key;
-      }();
-
-      if (auto ptr = obj_stack_.Find(font_obj_id); ptr != nullptr) {
-        if (!ptr->IsAlive()) {
-          throw _CustomError("Font object is dead");
-        }
-
-        auto &font = ptr->Cast<dawn::Font>();
-        auto managed_texture = make_shared<dawn::Texture>(
-          text, font, window.GetRenderer(), color_key,
-          wrap_length.is_ok() ? wrap_length.unwrap() : 0);
-        Object texture_key_obj(id, kTypeIdString);
-        Object texture_obj(managed_texture, kTypeIdTexture);
-        table.insert(make_pair(texture_key_obj, texture_obj));
-      }
-      else {
-        auto managed_font = make_shared<dawn::Font>(font_file, int(size));
-        Object font_obj(managed_font, kTypeIdFont);
-        auto &font = *managed_font;
-        auto managed_texture = make_shared<dawn::Texture>(
-          text, font, window.GetRenderer(), color_key,
-          wrap_length.is_ok() ? wrap_length.unwrap() : 0);
-        obj_stack_.CreateObject(font_obj_id, font_obj);
-        Object texture_key_obj(id, kTypeIdString);
-        Object texture_obj(managed_texture, kTypeIdTexture);
-        table.insert(make_pair(texture_key_obj, texture_obj));
-      }
-    }
-    else {
-      throw _CustomError("Unknown element type");
-    }
-  }
-
-  void ConfigProcessor::RectangleProcessing(string id, const toml::value &elem_def,
-    ObjectTable &table) {
-    SDL_Rect rect{
-      toml::find<int>(elem_def, "x"),
-      toml::find<int>(elem_def, "y"),
-      toml::find<int>(elem_def, "width"),
-      toml::find<int>(elem_def, "height")
-    };
-
-    Object rect_key_obj(id, kTypeIdString);
-    Object rect_obj(rect, kTypeIdRectangle);
-    table.insert(make_pair(rect_key_obj, rect_obj));
-  }
-
-  void ConfigProcessor::InterfaceLayoutProcessing(string target_elem_id,
-    const toml::value &elem_def, dawn::PlainWindow &window) {
-    auto *elem = window.GetElementById(target_elem_id);
-
-    if (elem == nullptr) {
-      frame_stack_.top().MakeError("Element is not found: " + target_elem_id);
-      return;
-    }
-
-    //Pypass PlainWindow class to avoid redundant querying
-    auto &dest_info = elem->GetDestInfo();
-    auto &src_info = elem->GetSrcInfo();
-
-    auto select_value = [](int origin, const toml::value &def, string id) -> int {
-      auto expected = toml::expect<int>(def, id);
-      if (expected.is_ok()) return expected.unwrap();
-      return origin;
-    };
-
-    dest_info = SDL_Rect{
-      select_value(dest_info.x, elem_def, "x"),
-      select_value(dest_info.y, elem_def, "y"),
-      select_value(dest_info.w, elem_def, "width"),
-      select_value(dest_info.h, elem_def, "height")
-    };
-
-    auto cropper = toml::expect<toml::value>(elem_def, "cropper");
-
-    if (cropper.is_ok()) {
-      src_info = SDL_Rect{
-        select_value(src_info.x, cropper.unwrap(), "x"),
-        select_value(src_info.y, cropper.unwrap(), "y"),
-        select_value(src_info.w, cropper.unwrap(), "width"),
-        select_value(src_info.h, cropper.unwrap(), "height")
-      };
-    }
-  }
-
-  string ConfigProcessor::GetTableVariant() {
-    auto &frame = frame_stack_.top();
-    string result;
-    try {
-      auto config = toml::find(toml_file_, "Config");
-
-      auto file_type = toml::find(config, "filetype");
-
-      if (file_type.as_string() != "table") {
-        frame.MakeError("Expected file type is 'table'");
-        return "";
-      }
-
-      auto variant_string = toml::find(config, "variant");
-      result = variant_string.as_string();
-    }
-    catch (std::out_of_range &e) {
-      frame_stack_.top().MakeError(e.what());
-    }
-    catch (toml::type_error &e) {
-      frame_stack_.top().MakeError(e.what());
-    }
-
-    return result;
-  }
-
-  void ConfigProcessor::InitWindowFromConfig() {
-    auto &frame = frame_stack_.top();
-    auto &base = obj_stack_.GetBase().front();
-
-    auto *texture_table_obj = base.Find(kStrTextureTable);
-    if (texture_table_obj == nullptr) {
-      base.Add(kStrTextureTable, Object(ObjectTable(), kTypeIdTable));
-      texture_table_obj = base.Find(kStrTextureTable);
-    }
-
-    auto &table = texture_table_obj->Cast<ObjectTable>();
-
-    //TODO:specific error processing
-    //TODO:Default font definition
-    try {
-      //Init TOML Layout
-      auto &layout_file = toml_file_;
-      auto config = toml::find(layout_file, "Config");
-      auto file_type = toml::find<string>(config, "filetype");
-
-      if (file_type != "window") throw _CustomError("Expected file type is 'window'");
-
-      auto &window_layout = toml::find(layout_file, "WindowLayout");
-      //Create Window Object
-      auto id = toml::find<string>(window_layout, "id"); //for window/texture table identifier
-      auto win_width = toml::find<int64_t>(window_layout, "width");
-      auto win_height = toml::find<int64_t>(window_layout, "height");
-      auto rtr_value = ExpectParameter<bool>(window_layout, "real_time_refreshing");
-      string title = [&]() -> string {
-        auto title_value = toml::expect<string>(window_layout, "title");
-        if (title_value.is_err()) {
-          return "";
-        }
-        return title_value.unwrap();
-      }();
-      
-      auto *obj = base.Find(id);
-      //No need to check life state
-
-      auto managed_window = [&]()-> shared_ptr<void> {
-        if (obj == nullptr) {
-          dawn::WindowOption option;
-          option.width = int(win_width);
-          option.height = int(win_height);
-          return make_shared<dawn::PlainWindow>(option);
-        }
-
-        if (obj->GetTypeId() != kTypeIdWindow) throw _CustomError("Invalid window object");
-        return obj->Get();
-      }();
-      Object window_obj(managed_window, kTypeIdWindow);
-      auto &window = *static_pointer_cast<dawn::PlainWindow>(managed_window);
-      Object window_id_obj(int64_t(window.GetId()), kTypeIdInt);
-
-      window.RealTimeRefreshingMode(rtr_value.has_value() ? rtr_value.value() : true);
-      window.SetWindowTitle(title);
-
-      if (obj == nullptr) {
-        base.Add(id, window_obj);
-      }
-      else {
-        window.ClearElements();
-        table.erase(window_id_obj);
-      }
-
-      //Processing Elements
-      auto elements = toml::find<TOMLValueTable>(layout_file, "Elements");
-      auto it = table.find(window_obj);
-
-      if (it != table.end()) {
-        table.erase(it);
-      }
-
-      Object sub_table_obj(ObjectTable(), kTypeIdTable);
-      table.insert(make_pair(window_id_obj, sub_table_obj));
-
-      for (const auto &unit : elements) {
-        ElementProcessing(
-          sub_table_obj.Cast<ObjectTable>(),
-          unit.first,
-          unit.second,
-          window
-        );
-      }
-    }
-    catch (std::exception &e) {
-      frame.MakeError(e.what());
-    }
-  }
-
-  void ConfigProcessor::InitTextureTable(ObjectTable &table, dawn::PlainWindow &window) {
-    auto &frame = frame_stack_.top();
-
-    try {
-      auto &table_file = toml_file_;
-      auto &config = toml::find(table_file, "Config");
-      auto file_type = toml::find<string>(config, "filetype");
-      auto variant_string = toml::find<string>(config, "variant");
-      if (file_type != "table") throw _CustomError("Expected file type is 'table'");
-      if (variant_string != "texture") throw _CustomError("Variant mismatch");
-
-      auto table_def = toml::find<TOMLValueTable>(table_file, "Table");
-      
-      for (const auto &unit : table_def) {
-        TextureProcessing(
-          unit.first,
-          unit.second,
-          window,
-          table
-        );
-      }
-    }
-    catch (std::exception &e) {
-      frame.MakeError(e.what());
-    }
-  } 
-
-  void ConfigProcessor::InitRectangleTable(ObjectTable &table) {
-    auto &frame = frame_stack_.top();
-
-    try {
-      auto &table_file = toml_file_;
-      auto &config = toml::find(table_file, "Config");
-      auto file_type = toml::find<string>(config, "filetype");
-      auto variant_string = toml::find<string>(config, "variant");
-      if (file_type != "table") throw _CustomError("Expected file type is 'table'");
-      if (variant_string != "rectangle") throw _CustomError("Variant mismatch");
-
-      auto table_def = toml::find<TOMLValueTable>(table_file, "Table");
-
-      for (const auto &unit : table_def) {
-        RectangleProcessing(
-          unit.first,
-          unit.second,
-          table
-        );
-      }
-    }
-    catch (std::exception &e) {
-      frame.MakeError(e.what());
-    }
-  }
-
-  void ConfigProcessor::ApplyInterfaceLayout(dawn::PlainWindow &window) {
-    auto &frame = frame_stack_.top();
-
-    try {
-      auto &layout_file = toml_file_;
-      auto config = toml::find(layout_file, "Config");
-      auto file_type = toml::find<string>(config, "filetype");
-
-      if (file_type != "layout") throw _CustomError("Expected type is 'interface'");
-
-      auto interface_layout = toml::find<TOMLValueTable>(layout_file, "Layout");
-
-      for (const auto &unit : interface_layout) {
-        InterfaceLayoutProcessing(
-          unit.first, 
-          unit.second,
-          window
-        );
-      }
-    }
-    catch (std::exception &e) {
-      frame.MakeError(e.what());
-    }
-
-    if (window.GetRefreshingMode()) window.DrawElements();
   }
 
   void Machine::RecoverLastState() {
@@ -2286,58 +1765,6 @@ namespace kagami {
       if (cond.Cast<bool>()) left.swap(right);
     }
   }
-
-  void Machine::CommandCSwapIf(ArgumentList &args) {
-    auto &frame = frame_stack_.top();
-
-    if (!EXPECTED_COUNT(4)) {
-      frame.MakeError("Argument missing");
-      return;
-    }
-
-    auto &rhs = FetchObjectView(args[2]).Seek();
-    auto &lhs = FetchObjectView(args[1]).Seek();
-    auto &container = FetchObjectView(args[0]).Seek();
-
-    if (frame.error) return;
-
-    if (!compare(container.GetTypeId(), kTypeIdArray)) {
-      frame.MakeError("Unsupported container type (array only)");
-      return;
-    }
-
-    if (!compare(rhs.GetTypeId(), lhs.GetTypeId(), kTypeIdInt)) {
-      frame.MakeError("Invalid index");
-      return;
-    }
-
-
-    if (frame.is_there_a_cond) {
-      auto &base = container.Cast<ObjectArray>();
-      auto &lhs_obj = base[size_t(lhs.Cast<int64_t>())];
-      auto &rhs_obj = base[size_t(rhs.Cast<int64_t>())];
-
-      if (frame.reserved_cond) {
-        lhs_obj.swap(rhs_obj);
-      }
-      frame.is_there_a_cond = false;
-    }
-    else {
-      auto &condition = FetchObjectView(args[3]).Seek();
-      if (compare(condition.GetTypeId(), kTypeIdBool)) {
-        auto &base = container.Cast<ObjectArray>();
-        auto &lhs_obj = base[size_t(lhs.Cast<int64_t>())];
-        auto &rhs_obj = base[size_t(rhs.Cast<int64_t>())];
-
-        if (condition.Cast<bool>()) {
-          lhs_obj.swap(rhs_obj);
-        }
-      }
-      else {
-        frame.MakeError("Unsupported condition expression");
-      }
-    }
-  }
   
   void Machine::CommandObjectAt(ArgumentList &args) {
     auto &frame = frame_stack_.top();
@@ -2724,101 +2151,9 @@ namespace kagami {
         frame.MakeError("Invalid script - " + path);
       }
     }
-    else if (extension_name == ".toml") {
-      ConfigProcessor config_proc(obj_stack_, frame_stack_, path_obj.Cast<string>());
-      if (frame.error) return;
-      config_proc.InitWindowFromConfig();
-    }
     else {
       frame.MakeError("Unknown file type");
     }
-  }
-
-  void Machine::CommandUsingTable(ArgumentList &args) {
-    auto &frame = frame_stack_.top();
-
-    if (!EXPECTED_COUNT(2)) {
-      frame.MakeError("Argument mismatching: using_table(obj, obj)");
-      return;
-    }
-
-    auto window_obj = FetchObject(args[1]);
-    auto path_obj = FetchObject(args[0]);
-    if (frame.error) return;
-    
-    if (path_obj.GetTypeId() != kTypeIdString) {
-      frame.MakeError("Invalid table file path");
-      return;
-    }
-
-    if (window_obj.GetTypeId() != kTypeIdWindow) {
-      frame.MakeError("Invalid window object");
-    }
-
-    auto &window = window_obj.Cast<dawn::PlainWindow>();
-    ConfigProcessor config_proc(obj_stack_, frame_stack_, path_obj.Cast<string>());
-    if (frame.error) return;
-    auto managed_table = make_shared<ObjectTable>();
-    Object table_obj(managed_table, kTypeIdTable);
-
-    string variant_string = config_proc.GetTableVariant();
-    if (frame.error) return;
-
-    if (variant_string == "texture") {
-      config_proc.InitTextureTable(*managed_table, window);
-    }
-    else if (variant_string == "rectangle") {
-      config_proc.InitRectangleTable(*managed_table);
-    }
-    
-    if (frame.error) return;
-    frame.RefreshReturnStack(table_obj);
-  }
-
-  void Machine::CommandApplyLayout(ArgumentList &args) {
-    auto &frame = frame_stack_.top();
-
-    if (!EXPECTED_COUNT(2)) {
-      frame.MakeError("Argument mismatching: apply_layout(obj, obj)");
-      return;
-    }
-
-    auto window_obj = FetchObject(args[1]);
-    auto path_obj = FetchObject(args[0]);
-    if (frame.error) return;
-
-    if (path_obj.GetTypeId() != kTypeIdString) {
-      frame.MakeError("Invalid table file path");
-      return;
-    }
-
-    if (window_obj.GetTypeId() != kTypeIdWindow) {
-      frame.MakeError("Invalid window object");
-    }
-
-    auto &window = window_obj.Cast<dawn::PlainWindow>();
-    ConfigProcessor config_proc(obj_stack_, frame_stack_, path_obj.Cast<string>());
-    if (frame.error) return;
-
-    config_proc.ApplyInterfaceLayout(window);
-  }
-
-  void Machine::CommandOffensiveMode(ArgumentList &args) {
-    auto &frame = frame_stack_.top();
-
-    if (!EXPECTED_COUNT(1)) {
-      frame.MakeError("Argument mismatching: offensive_mode(obj, obj)");
-      return;
-    }
-
-    auto value_obj = FetchObject(args[0]);
-    if (frame.error) return;
-
-    if (value_obj.GetTypeId() != kTypeIdBool) {
-      frame.MakeError("Invalid boolean value");
-    }
-
-    offensive_ = value_obj.Cast<bool>();
   }
 
   void Machine::CommandTime() {
@@ -3074,7 +2409,6 @@ namespace kagami {
       return;
     }
     impl_cache_.clear();
-    bool dispose_return_value = frame_stack_.top().event_processing;
     ObjectPointer constraint_type_obj = obj_stack_.GetCurrent().Find(kStrReturnValueConstrantObj);
     string constraint_type = constraint_type_obj == nullptr ?
       "" : constraint_type_obj->Cast<string>();
@@ -3097,9 +2431,8 @@ namespace kagami {
       }
 
       RecoverLastState();
-      if (!dispose_return_value) {
-        frame_stack_.top().RefreshReturnStack(ret_obj);
-      }
+      frame_stack_.top().RefreshReturnStack(ret_obj);
+     
     }
     else if (args.size() == 0) {
       if (!constraint_type.empty() && constraint_type != kTypeIdNull) {
@@ -3114,9 +2447,7 @@ namespace kagami {
       }
 
       RecoverLastState();
-      if (!dispose_return_value) {
-        frame_stack_.top().RefreshReturnStack(Object());
-      }
+      frame_stack_.top().RefreshReturnStack(Object());
     }
     else {
       if (!constraint_type.empty() && constraint_type != kTypeIdArray) {
@@ -3141,9 +2472,7 @@ namespace kagami {
       }
 
       RecoverLastState();
-      if (!dispose_return_value) {
-        frame_stack_.top().RefreshReturnStack(ret_obj);
-      }
+      frame_stack_.top().RefreshReturnStack(ret_obj);
     }
   }
 
@@ -3172,44 +2501,6 @@ namespace kagami {
         frame.MakeError("User assertion failed.");
       }
     }
-  }
-
-  void Machine::CommandHandle(ArgumentList &args) {
-    auto &frame = frame_stack_.top();
-
-    if (!EXPECTED_COUNT(3)) {
-      frame.MakeError("Argument mismatching: handle(win, event, func)");
-      return;
-    }
-
-    auto func = FetchObject(args[2]);
-    auto event_type_obj = FetchObject(args[1]);
-    auto window_obj = FetchObject(args[0]);
-    if (frame.error) return;
-
-    auto window_id = window_obj.Cast<dawn::PlainWindow>().GetId();
-    auto event_type = static_cast<Uint32>(event_type_obj.Cast<int64_t>());
-    EventHandlerMark handler(window_id, event_type);
-
-    auto it = event_list_.find(handler);
-
-    if (it != event_list_.end()) {
-      auto &func_impl = func.Cast<FunctionImpl>();
-      it->second = func_impl;
-    }
-    else {
-      auto &func_impl = func.Cast<FunctionImpl>();
-      auto dest = make_pair(EventHandlerMark(window_id, event_type), func_impl);
-      event_list_.insert(dest);
-    }
-  }
-
-  void Machine::CommandWait(ArgumentList &args) {
-    hanging_ = true;
-  }
-
-  void Machine::CommandLeave(ArgumentList &args) {
-    hanging_ = false;
   }
 
   void Machine::DomainAssert(ArgumentList &args) {
@@ -3396,9 +2687,6 @@ namespace kagami {
     case kKeywordSwapIf:
       CommandSwapIf(args);
       break;
-    case kKeywordCSwapIf:
-      CommandCSwapIf(args);
-      break;
     case kKeywordObjectAt:
       CommandObjectAt(args);
       break;
@@ -3473,26 +2761,8 @@ namespace kagami {
     case kKeywordWhile:
       CommandIfOrWhile(token, args, request.option.nest_end);
       break;
-    case kKeywordHandle:
-      CommandHandle(args);
-      break;
-    case kKeywordWait:
-      CommandWait(args);
-      break;
-    case kKeywordLeave:
-      CommandLeave(args);
-      break;
     case kKeywordUsing:
       CommandUsing(args);
-      break;
-    case kKeywordUsingTable:
-      CommandUsingTable(args);
-      break;
-    case kKeywordApplyLayout:
-      CommandApplyLayout(args);
-      break;
-    case kKeywordOffensiveMode:
-      CommandOffensiveMode(args);
       break;
     case kKeywordStruct:
       CommandStructBegin(args);
@@ -3633,62 +2903,6 @@ namespace kagami {
         pos -= 1;
       }
       param_pos -= 1;
-    }
-  }
-
-  void Machine::LoadEventInfo(SDL_Event &event, ObjectMap &obj_map, FunctionImpl &impl, Uint32 id) {
-    auto &frame = frame_stack_.top();
-    auto window = dynamic_cast<dawn::PlainWindow *>(dawn::GetWindowById(id));
-    Object this_window_obj(window, kTypeIdWindow);
-    obj_map.insert(NamedObject(kStrThisWindow, this_window_obj));
-
-    if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
-      if (impl.GetParamSize() != 1) {
-        frame.MakeError("Invalid function for KeyDown/KeyUp event");
-        return;
-      }
-      auto &params = impl.GetParameters();
-      int64_t keysym = static_cast<int64_t>(event.key.keysym.sym);
-      obj_map.insert(NamedObject(params[0], Object(keysym, kTypeIdInt)));
-    }
-
-    if (event.type == SDL_WINDOWEVENT) {
-      if (impl.GetParamSize() != 1) {
-        frame.MakeError("Invalid function for window event");
-        return;
-      }
-      auto &params = impl.GetParameters();
-      obj_map.insert(NamedObject(params[0], Object(event.window, kTypeIdWindowEvent)));
-    }
-
-    if (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_MOUSEBUTTONUP) {
-      if (impl.GetParamSize() != 3) {
-        frame.MakeError("Invalid function for MouseDown/MouseUp event");
-        return;
-      }
-      auto &params = impl.GetParameters();
-      auto y = static_cast<int64_t>(event.button.y);
-      auto x = static_cast<int64_t>(event.button.x);
-      auto button = static_cast<int64_t>(event.button.button);
-      obj_map.insert(NamedObject(params[2], Object(y, kTypeIdInt)));
-      obj_map.insert(NamedObject(params[1], Object(x, kTypeIdInt)));
-      obj_map.insert(NamedObject(params[0], Object(button, kTypeIdInt)));
-    }
-
-    if (event.type == SDL_MOUSEMOTION) {
-      if (impl.GetParamSize() != 4) {
-        frame.MakeError("Invalid function for MouseMotion event");
-        return;
-      }
-      auto &params = impl.GetParameters();
-      auto yrel = static_cast<int64_t>(event.motion.yrel);
-      auto xrel = static_cast<int64_t>(event.motion.xrel);
-      auto y = static_cast<int64_t>(event.motion.y);
-      auto x = static_cast<int64_t>(event.motion.x);
-      obj_map.insert(NamedObject(params[3], Object(yrel, kTypeIdInt)));
-      obj_map.insert(NamedObject(params[2], Object(xrel, kTypeIdInt)));
-      obj_map.insert(NamedObject(params[1], Object(y, kTypeIdInt)));
-      obj_map.insert(NamedObject(params[0], Object(x, kTypeIdInt)));
     }
   }
 
@@ -3886,7 +3100,6 @@ namespace kagami {
     Message             msg;
     VMCode              *code = code_stack_.back();
     Command             *command = nullptr;
-    SDL_Event           event;
     ObjectMap           obj_map;
     FunctionImplPointer impl;
 
@@ -3909,7 +3122,6 @@ namespace kagami {
     //Protect current runtime environment and load another function
     auto update_stack_frame = [&](FunctionImpl &func) -> void {
       //block other event trigger while processing current event function
-      bool event_processing = frame->event_processing;
       bool inside_initializer_calling = frame->initializer_calling;
       frame->initializer_calling = false;
       code_stack_.push_back(&func.GetCode());
@@ -3920,12 +3132,10 @@ namespace kagami {
       obj_stack_.MergeMap(impl->GetClosureRecord());
       refresh_tick();
       frame->jump_offset = func.GetOffset();
-      frame->event_processing = event_processing;
       frame->inside_initializer_calling = inside_initializer_calling;
     };
     //Convert current environment to next self-calling 
     auto tail_recursion = [&]() -> void {
-      bool event_processing = frame->event_processing;
       string function_scope = frame_stack_.top().function_scope;
       size_t jump_offset = frame_stack_.top().jump_offset;
       obj_map.Naturalize(obj_stack_.GetCurrent());
@@ -3936,11 +3146,9 @@ namespace kagami {
       obj_stack_.MergeMap(impl->GetClosureRecord());
       refresh_tick();
       frame->jump_offset = jump_offset;
-      frame->event_processing = event_processing;
     };
     //Convert current environment to next calling
     auto tail_call = [&](FunctionImpl &func) -> void {
-      bool event_processing = frame->event_processing;
       code_stack_.pop_back();
       code_stack_.push_back(&func.GetCode());
       obj_map.Naturalize(obj_stack_.GetCurrent());
@@ -3951,7 +3159,6 @@ namespace kagami {
       obj_stack_.MergeMap(impl->GetClosureRecord());
       refresh_tick();
       frame->jump_offset = func.GetOffset();
-      frame->event_processing = event_processing;
     };
 
     auto load_function_impl = [&](bool invoking_request) -> bool {
@@ -3994,37 +3201,6 @@ namespace kagami {
         break;
       }
 
-      return switch_to_next_tick;
-    };
-
-    auto event_trigger_available = [&]() -> bool {
-      bool main_switch = !frame->event_processing;
-      if (!main_switch) return false;
-      //TODO:block all event trigger before wait() ? 
-      bool processing_before_wait = hanging_ && SDL_PollEvent(&event);
-      if (processing_before_wait) return true;
-      bool processing_after_wait = hanging_ && SDL_WaitEvent(&event);
-      return processing_after_wait;
-    };
-
-    auto load_event_trigger = [&]() -> bool {
-      bool switch_to_next_tick = false;
-      EventHandlerMark mark(event.window.windowID, event.type);
-      auto it = event_list_.find(mark);
-
-      if (it != event_list_.end()) {
-        obj_map.clear();
-        LoadEventInfo(event, obj_map, it->second, event.window.windowID);
-
-        if (frame->error) return switch_to_next_tick;
-
-        update_stack_frame(it->second);
-        refresh_tick();
-        frame->event_processing = true;
-        switch_to_next_tick = true;
-      }
-
-      if (!switch_to_next_tick && freezing_) switch_to_next_tick = true;
       return switch_to_next_tick;
     };
 
@@ -4076,28 +3252,15 @@ namespace kagami {
 
     // Main loop of virtual machine.
     // TODO:dispose return value in event function
-    while (frame->idx < size || frame_stack_.size() > 1 || hanging_) {
+    while (frame->idx < size || frame_stack_.size() > 1) {
       cleanup_cache();
 
       //break at stop point.
       if (frame->stop_point) break;
-      //freeze mainloop to keep querying events
-      // hanging_ is the main event handler switch.
-      freezing_ = (frame->idx >= size && hanging_ && frame_stack_.size() == 1);
 
       if (frame->warning) {
         AppendMessage(frame->msg_string, kStateWarning, logger_);
         frame->warning = false;
-      }
-
-      //Draw all windows
-      if (offensive_) dawn::ForceRefreshingAllWindow();
-
-      //window event handler
-      //cannot invoke new event inside a running event function
-      if (event_trigger_available()) {
-        next_tick = load_event_trigger();
-        if (next_tick) continue;
       }
 
       //switch to last stack frame when indicator reaches end of the block.
@@ -4110,7 +3273,7 @@ namespace kagami {
         //Update register data
         refresh_tick();
         impl_cache_.clear();
-        if (!freezing_ && !frame->stop_point) frame->Stepping();
+        frame->Stepping();
         continue;
       }
 

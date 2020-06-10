@@ -4,7 +4,6 @@
 using namespace std;
 using namespace kagami;
 using namespace kagami::management;
-using namespace minatsuki;
 
 using Processor = ArgumentProcessor<kHeadHorizon, kJoinerEqual>;
 
@@ -25,7 +24,6 @@ void ApplicationInfo() {
   printf(PRODUCT " " PRODUCT_VER "\n");
   printf("Codename:" CODENAME "\n");
   printf("Build date:" __DATE__ "\n");
-  printf("Dawn Version:" DAWN_VERSION "\n");
   printf(COPYRIGHT ", " AUTHOR "\n");
 }
 
@@ -151,18 +149,7 @@ void InitFromConfigFile() {
 int main(int argc, char **argv) {
   namespace fs = std::filesystem;
   runtime::InformBinaryPathAndName(argv[0]);
-
-  ActivateComponents([&]() -> bool {
-    auto state_code = dawn::EnvironmentSetup();
-    switch (state_code) {
-    case -1: puts("Failed: Loading SDL main components"); break;
-    case -2: puts("Failed: Loading SDL Audio components"); break;
-    case -3: puts("Failed: Opening Audio"); break;
-    }
-
-    if (state_code != 0) puts("Multimedia components are disabled.");
-    return state_code != 0;
-    }());
+  ActivateComponents();
 
   if (fs::exists(fs::path("init.toml"))) {
     InitFromConfigFile();
@@ -195,7 +182,5 @@ int main(int argc, char **argv) {
     }
   }
 
-  
-  dawn::EnvironmentCleanup();
   return 0;
 }

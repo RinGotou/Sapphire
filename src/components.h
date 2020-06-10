@@ -21,19 +21,6 @@ namespace kagami {
     InitContainerComponents,
     InitFunctionType,
     InitStreamComponents,
-    InitSoundComponents,
-    InitWindowComponents,
-    InitExtensionComponents,
-    InitExternalPointerComponents,
-    InitStructComponents
-  };
-
-  const ComponentLoader kMinimalComponents[] = {
-    InitConsoleComponents,
-    InitBaseTypes,
-    InitContainerComponents,
-    InitFunctionType,
-    InitStreamComponents,
     InitExtensionComponents,
     InitExternalPointerComponents,
     InitStructComponents

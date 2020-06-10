@@ -24,7 +24,7 @@ namespace kagami {
 
   string ParseRawString(const string &src);
   void InitPlainTypesAndConstants();
-  void ActivateComponents(bool enable_SDL_comp);
+  void ActivateComponents();
   void ReceiveError(void* vm, const char* msg);
 
   using ResultTraitKey = pair<PlainType, PlainType>;
@@ -187,8 +187,6 @@ namespace kagami {
   const string kForEachExceptions = "!iterator|!containter_keepalive";
 
   using CommandPointer = Command * ;
-  using EventHandlerMark = pair<Uint32, Uint32>;
-  using EventHandler = pair<EventHandlerMark, FunctionImpl>;
 
   class RuntimeFrame {
   public:
@@ -200,7 +198,6 @@ namespace kagami {
     bool disable_step;
     bool final_cycle;
     bool jump_from_end;
-    bool event_processing;
     bool initializer_calling;
     bool inside_initializer_calling;
     bool stop_point;
@@ -233,7 +230,6 @@ namespace kagami {
       disable_step(false),
       final_cycle(false),
       jump_from_end(false),
-      event_processing(false),
       initializer_calling(false),
       inside_initializer_calling(false),
       stop_point(false),
@@ -300,59 +296,6 @@ namespace kagami {
       std::exception(std::runtime_error(msg)) {}
   };
 
-  class ConfigProcessor {
-  private:
-    const unordered_map<string, dawn::ImageType> kImageTypeMatcher = {
-      make_pair(".jpg", dawn::kImageJPG),
-      make_pair(".png", dawn::kImagePNG),
-      make_pair(".tif", dawn::kImageTIF),
-      make_pair(".tiff", dawn::kImageTIF),
-      make_pair(".webp", dawn::kImageWEBP)
-    };
-
-  private:
-    ObjectStack &obj_stack_;
-    FrameStack &frame_stack_;
-    toml::value toml_file_;
-
-  private:
-    using TOMLValueTable = unordered_map<string, toml::value>;
-
-    template <typename _Type>
-    optional<_Type> ExpectParameter(const toml::value &value, string id) {
-      auto expected_value = toml::expect<_Type>(value, id);
-      if (expected_value.is_err()) return std::nullopt;
-      return expected_value.unwrap();
-    }
-
-    void ElementProcessing(ObjectTable &obj_table, string id, 
-      const toml::value &elem_def, dawn::PlainWindow &window);
-    void TextureProcessing(string id, const toml::value &elem_def, 
-      dawn::PlainWindow &window, ObjectTable &table);
-    void RectangleProcessing(string id, const toml::value &elem_def,
-      ObjectTable &table);
-    void InterfaceLayoutProcessing(string target_elem_id, 
-      const toml::value &elem_def, dawn::PlainWindow &window);
-  public:
-    ConfigProcessor() = delete;
-    ConfigProcessor(ObjectStack &obj_stack, FrameStack &frames, string file) noexcept :
-      obj_stack_(obj_stack), frame_stack_(frames), toml_file_() {
-      try { toml_file_ = toml::parse(file); }
-      catch (std::runtime_error &e) {
-        frame_stack_.top().MakeError(e.what());
-      }
-      catch (toml::syntax_error &e) {
-        frame_stack_.top().MakeError(e.what());
-      }
-    }
-
-    string GetTableVariant();
-    void InitWindowFromConfig();
-    void InitTextureTable(ObjectTable &table, dawn::PlainWindow &window);
-    void InitRectangleTable(ObjectTable &table);
-    void ApplyInterfaceLayout(dawn::PlainWindow &window);
-  };
-
   //TODO: new argument generator and storage?
   //TODO: spilt graphic implement, and add new event processing interface
   //TODO: reserve hanging_ as a common event handler switch
@@ -409,7 +352,6 @@ namespace kagami {
     void CommandHash(ArgumentList &args);
     void CommandSwap(ArgumentList &args);
     void CommandSwapIf(ArgumentList &args);
-    void CommandCSwapIf(ArgumentList &args);
     void CommandObjectAt(ArgumentList &args);
     void CommandBind(ArgumentList &args, bool local_value, bool ext_value);
     void CommandDelivering(ArgumentList &args, bool local_value, bool ext_value);
@@ -420,9 +362,6 @@ namespace kagami {
     void CommandDestroy(ArgumentList &args);
     void CommandConvert(ArgumentList &args);
     void CommandUsing(ArgumentList &args);
-    void CommandUsingTable(ArgumentList &args);
-    void CommandApplyLayout(ArgumentList &args);
-    void CommandOffensiveMode(ArgumentList &args);
 
     void CommandTime();
     void CommandVersion();
@@ -444,9 +383,6 @@ namespace kagami {
 
     void CommandReturn(ArgumentList &args);
     void CommandAssert(ArgumentList &args);
-    void CommandHandle(ArgumentList &args);
-    void CommandWait(ArgumentList &args);
-    void CommandLeave(ArgumentList &args);
     void DomainAssert(ArgumentList &args);
 
     void CommandIsBaseOf(ArgumentList &args);
@@ -461,11 +397,9 @@ namespace kagami {
     void Generate_Fixed(FunctionImpl &impl, ArgumentList &args, ObjectMap &obj_map);
     void Generate_AutoSize(FunctionImpl &impl, ArgumentList &args, ObjectMap &obj_map);
     void Generate_AutoFill(FunctionImpl &impl, ArgumentList &args, ObjectMap &obj_map);
-    void LoadEventInfo(SDL_Event &event, ObjectMap &obj_map, FunctionImpl &impl, Uint32 id);
     void CallExtensionFunction(ObjectMap &p, FunctionImpl &impl);
     //void CallExtensionFunctionEx
     bool BuiltinContainerAction(Command &command);
-
     void GenerateStructInstance(ObjectMap &p);
 
     void GenerateErrorMessages(size_t stop_index);
@@ -480,12 +414,8 @@ namespace kagami {
     FrameStack frame_stack_;
     ObjectStack obj_stack_;
     unordered_map<size_t, FunctionImplPointer, ImplCacheHash> impl_cache_;
-    map<EventHandlerMark, FunctionImpl> event_list_;
     vector<ObjectCommonSlot> view_delegator_;
-    bool hanging_;
-    bool freezing_;
     bool error_;
-    bool offensive_;
 
   public:
     ~Machine() { if (is_logger_host_) delete logger_; }
@@ -501,11 +431,7 @@ namespace kagami {
       code_stack_(),
       frame_stack_(),
       obj_stack_(),
-      event_list_(), 
-      hanging_(false), 
-      freezing_(false),
-      error_(false),
-      offensive_(false) { 
+      error_(false) { 
 
       code_stack_.push_back(&ir); 
       logger_ = rtlog ?
@@ -519,11 +445,7 @@ namespace kagami {
       code_stack_(),
       frame_stack_(),
       obj_stack_(),
-      event_list_(),
-      hanging_(false),
-      freezing_(false),
-      error_(false),
-      offensive_(false) {
+      error_(false) {
 
       code_stack_.push_back(&ir);
     }

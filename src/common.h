@@ -40,6 +40,7 @@
 #include <atomic>
 
 #include "toml11/toml.hpp"
+#include "log.h"
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -52,11 +53,7 @@
 
 #define USE_OLD_IMPL
 
-#include "dawn/src/dawn.ui.h"
-#include "dawn/src/dawn.sound.h"
-#include "minatsuki.log/src/minatsuki.log.h"
-
-#define PRODUCT     "Kagami Project Core(KPC)"
+#define PRODUCT     "Sapphire Prototype"
 #define PRODUCT_VER "2.5"
 #define CODENAME    "Oratorio"
 #define AUTHOR      "Kagami Project Contributor(s)"
@@ -97,10 +94,7 @@ namespace kagami {
   using std::optional;
   using std::mutex;
   using std::lock_guard;
-  
-  using minatsuki::StandardLogger;
-  using minatsuki::StandardCachedLogger;
-  using minatsuki::StandardRTLogger;
+
   namespace fs = std::filesystem;
 
 #ifdef _WIN32
@@ -144,14 +138,6 @@ namespace kagami {
   const string kTypeIdPair            = "pair";
   const string kTypeIdTable           = "table";
   const string kTypeIdStruct          = "struct";
-  const string kTypeIdWindowEvent     = "window_event";
-  const string kTypeIdWindow          = "window";
-  const string kTypeIdElement         = "element";
-  const string kTypeIdFont            = "font";
-  const string kTypeIdTexture         = "texture";
-  const string kTypeIdColorValue      = "color";
-  const string kTypeIdRectangle       = "rectangle";
-  const string kTypeIdPoint           = "point";
   const string kTypeIdModule          = "module";  
   const string kTypeIdExtension       = "extension";
   const string kTypeIdTOML            = "TOML";
