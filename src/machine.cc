@@ -2192,7 +2192,7 @@ namespace sapphire {
 
     if (frame.error) return;
 
-    if (type_lhs == kNotPlainType || type_rhs == kNotPlainType) {
+    if (type_lhs == kNotPlainType || type_rhs  == kNotPlainType) {
       frame.MakeError("Try to operate with non-plain type.");
       return;
     }
