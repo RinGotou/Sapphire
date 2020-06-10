@@ -2,7 +2,7 @@
 
 #define EXPECTED_COUNT(_Count) (args.size() == _Count)
 
-namespace kagami {
+namespace sapphire {
   using namespace management;
 
   CommentedResult TypeChecking(ExpectationList &&lst,
@@ -2128,9 +2128,9 @@ namespace kagami {
     fs::path path_cls(path);
     string extension_name = lexical::ToLower(path_cls.extension().string());
 
-    if (extension_name == ".kagami" || extension_name.empty()) {
+    if (extension_name == ".sp" || extension_name.empty()) {
       string absolute_path = fs::absolute(fs::path(path)).string();
-      if (extension_name.empty()) absolute_path.append(".kagami");
+      if (extension_name.empty()) absolute_path.append(".sp");
       VMCode &script_file = management::script::AppendBlankScript(absolute_path);
 
       if (!script_file.empty()) return;

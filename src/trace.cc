@@ -1,6 +1,6 @@
 #include "trace.h"
 
-namespace kagami {
+namespace sapphire {
   void AppendMessage(string msg, StateLevel level, 
     StandardLogger *std_logger, size_t index) {
     string buf;

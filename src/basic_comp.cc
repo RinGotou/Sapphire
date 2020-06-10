@@ -1,6 +1,6 @@
 #include "machine.h"
 
-namespace kagami {
+namespace sapphire {
   inline string MakeObjectString(Object& obj) {
     return string("<Object Type=") + obj.GetTypeId() + string(">");
   }

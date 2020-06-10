@@ -1,6 +1,6 @@
 #include "filestream.h"
 
-namespace kagami {
+namespace sapphire {
   FILE *GetVMStdout(FILE *dest) {
     static FILE *vm_stdout = stdout;
     if (dest != nullptr) {

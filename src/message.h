@@ -2,7 +2,7 @@
 #include "lexical.h"
 #include "object.h"
 
-namespace kagami {
+namespace sapphire {
   enum StateLevel {
     kStateNormal,
     kStateError,

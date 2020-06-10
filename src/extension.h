@@ -1,7 +1,7 @@
 #pragma once
 #include "function.h"
 
-namespace kagami {
+namespace sapphire {
   //TODO:External Type Facility
   using ExternalDelivery = void *(*)(void *);
 

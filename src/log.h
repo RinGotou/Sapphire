@@ -15,7 +15,7 @@
 
 #define DEFAULT_OUTPUT "sapphire.log"
 
-namespace kagami {
+namespace sapphire {
   using std::string;
   using std::exception;
   using std::move;

@@ -1,7 +1,7 @@
 #pragma once
 #include "vmcode.h"
 
-namespace kagami {
+namespace sapphire {
   using GenericFunctionPointer = void(*)();
   using ReturningTunnel = void(*)(void *, void *, int);
 

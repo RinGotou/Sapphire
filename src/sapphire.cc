@@ -2,10 +2,10 @@
 #include "argument.h"
 
 using namespace std;
-using namespace kagami;
-using namespace kagami::management;
+using namespace sapphire;
+using namespace sapphire::management;
 
-using Processor = ArgumentProcessor<kHeadHorizon, kJoinerEqual>;
+using Processor = ArgumentProcessor<kHeadDoubleHorizon, kJoinerEqual>;
 
 void BootMainVMObject(string path, string log_path, bool real_time_log) {
   string absolute_path = fs::absolute(fs::path(path)).string();
@@ -54,7 +54,7 @@ void Processing(Processor &processor) {
     string path = processor.ValueOf("script");
     string log = processor.Exist("log") ?
       processor.ValueOf("log") :
-      "project-kagami.log";
+      "project-sapphire.log";
 
     if (processor.Exist("vm_stdout")) {
       string vm_stdout = processor.ValueOf("vm_stdout");
@@ -104,7 +104,7 @@ void InitFromConfigFile() {
     auto log = [&startup]() -> string {
       auto temp = toml::expect<string>(startup, "log");
       if (temp.is_ok()) return temp.unwrap();
-      return "project-kagami.log";
+      return "project-sapphire.log";
     }();
     auto real_time_log = toml::expect<bool>(startup, "real_time_log");
     auto locale = toml::expect<string>(startup, "locale");

@@ -1,6 +1,6 @@
 #include "object.h"
 
-namespace kagami {
+namespace sapphire {
   vector<string> BuildStringVector(string source) {
     vector<string> result;
     string temp;

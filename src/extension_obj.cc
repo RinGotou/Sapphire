@@ -1,6 +1,6 @@
 #include "machine.h"
 
-namespace kagami {
+namespace sapphire {
   Message NewExtension(ObjectMap &p) { 
     using namespace ext;
     auto tc = TypeChecking({ Expect("path",kTypeIdString) }, p);

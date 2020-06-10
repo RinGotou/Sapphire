@@ -1,6 +1,6 @@
 #include "string_obj.h"
 
-namespace kagami {
+namespace sapphire {
   inline bool IsStringFamily(Object &obj) {
     return compare(obj.GetTypeId(), kTypeIdString, kTypeIdWideString);
   }

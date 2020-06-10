@@ -2,7 +2,7 @@
 #include "message.h"
 #include "object.h"
 
-namespace kagami {
+namespace sapphire {
   enum ArgumentType {
     kArgumentLiteral, 
     kArgumentObjectStack, 

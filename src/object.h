@@ -1,7 +1,7 @@
 #pragma once
 #include "common.h"
 
-namespace kagami {
+namespace sapphire {
   class Object;
   class ObjectContainer;
   class ObjectMap;

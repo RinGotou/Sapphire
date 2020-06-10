@@ -1,6 +1,6 @@
 #include "lexical.h"
 
-namespace kagami {
+namespace sapphire {
   wstring s2ws(const string &s) {
     if (s.empty()) return wstring();
     size_t length = s.size();
@@ -24,7 +24,7 @@ namespace kagami {
   }
 }
 
-namespace kagami::lexical {
+namespace sapphire::lexical {
   Terminator GetTerminatorCode(string src) {
     if (IsBinaryOperator(GetKeywordCode(src))) {
       return kTerminatorBinaryOperator;

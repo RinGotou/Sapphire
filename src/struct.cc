@@ -1,6 +1,6 @@
 #include "machine.h"
 
-namespace kagami {
+namespace sapphire {
   Message StructGetMembers(ObjectMap &p) {
     auto &struct_def = p.Cast<ObjectStruct>(kStrMe);
     auto managed_array = make_shared<ObjectArray>();

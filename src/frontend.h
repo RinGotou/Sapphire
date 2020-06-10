@@ -4,7 +4,7 @@
 
 #define INVALID_TOKEN Token(string(), kStringTypeNull)
 
-namespace kagami {
+namespace sapphire {
   using CombinedCodeline = pair<size_t, string>;
   using CombinedToken = pair<size_t, deque<Token>>;
 

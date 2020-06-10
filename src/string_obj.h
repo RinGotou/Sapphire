@@ -1,7 +1,7 @@
 #pragma once
 #include "machine.h"
 
-namespace kagami {
+namespace sapphire {
   template <typename StringType>
   Message GetStringFamilySize(ObjectMap &p) {
     StringType &str = p.Cast<StringType>(kStrMe);

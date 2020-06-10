@@ -1,6 +1,6 @@
 #include "management.h"
 
-namespace kagami::management {
+namespace sapphire::management {
 ///////////////////////////////////////////////////////////////
 //Inteface management
 
@@ -104,7 +104,7 @@ namespace kagami::management {
   /////////////////////////////////////////////////////////////
 }
 
-namespace kagami::management::type {
+namespace sapphire::management::type {
   auto &GetObjectTraitsCollection() {
     static unordered_map<string, ObjectTraits> base;
     return base;
@@ -286,7 +286,7 @@ namespace kagami::management::type {
   }
 }
 
-namespace kagami::management::script {
+namespace sapphire::management::script {
   mutex script_storage_gate;
 
   auto &GetScriptStorage() {
@@ -339,7 +339,7 @@ namespace kagami::management::script {
   }
 }
 
-namespace kagami::management::extension {
+namespace sapphire::management::extension {
   template <ObjectType _TypeCode>
   struct _Deleter {
     _Deleter(void *ptr) {
@@ -494,7 +494,7 @@ namespace kagami::management::extension {
   }
 }
 
-namespace kagami::management::runtime {
+namespace sapphire::management::runtime {
   static string binary_name;
   static string binary_path;
   static string script_work_dir;

@@ -1,6 +1,6 @@
 #include "machine.h"
 
-namespace kagami {
+namespace sapphire {
   Message FunctionGetId(ObjectMap &p) {
     auto &impl = p.Cast<FunctionImpl>(kStrMe);
     return Message(impl.GetId());

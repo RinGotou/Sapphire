@@ -1,6 +1,6 @@
 #include "log.h"
 
-namespace kagami {
+namespace sapphire {
   using namespace std;
 
   bool StandardWriter::Write(char c) {

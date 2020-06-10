@@ -1,7 +1,7 @@
 #pragma once
 #include "common.h"
 
-namespace kagami {
+namespace sapphire {
   using ComponentLoader = void(*)();
 
   void InitConsoleComponents();

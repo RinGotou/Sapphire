@@ -6,7 +6,7 @@
 #include <vector>
 #include <iostream>
 
-namespace kagami {
+namespace sapphire {
   struct Option {
     bool has_value;
     bool optional;

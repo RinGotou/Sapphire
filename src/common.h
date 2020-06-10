@@ -51,15 +51,13 @@
 #include <unistd.h>
 #endif
 
-#define USE_OLD_IMPL
-
 #define PRODUCT     "Sapphire Prototype"
 #define PRODUCT_VER "2.5"
 #define CODENAME    "Oratorio"
-#define AUTHOR      "Kagami Project Contributor(s)"
-#define COPYRIGHT   "Licensed under BSD-2. Copyright(c) 2020"
+#define AUTHOR      "Sapphire Language Project Contributor(s)"
+#define COPYRIGHT   "Licensed under BSD2. Copyright(c) 2020"
 
-namespace kagami {
+namespace sapphire {
   using std::string;
   using std::string_view;
   using std::pair;
@@ -140,7 +138,7 @@ namespace kagami {
   const string kTypeIdStruct          = "struct";
   const string kTypeIdModule          = "module";  
   const string kTypeIdExtension       = "extension";
-  const string kTypeIdTOML            = "TOML";
+  //const string kTypeIdTOML            = "TOML";
 
   template <typename _Lhs, typename... _Rhs>
   inline bool compare(_Lhs lhs, _Rhs... rhs) {

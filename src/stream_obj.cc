@@ -1,6 +1,6 @@
 #include "machine.h"
 
-namespace kagami {
+namespace sapphire {
   template <typename StreamType>
   Message StreamFamilyState(ObjectMap &p) {
     StreamType &stream = p.Cast<StreamType>(kStrMe);

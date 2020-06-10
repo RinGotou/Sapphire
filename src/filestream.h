@@ -7,7 +7,7 @@
 #pragma warning(disable:4996)
 #endif
 
-namespace kagami {
+namespace sapphire {
   using std::FILE;
   using std::fopen;
   using std::string;

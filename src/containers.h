@@ -3,7 +3,7 @@
 /*
   Base container implementations for Kagami script.
 */
-namespace kagami {
+namespace sapphire {
   /* Runtime type identifier for UnifiedIterator */
   enum BaseContainerCode {
     kContainerObjectArray,

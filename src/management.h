@@ -3,7 +3,7 @@
 #include "extension.h"
 #include "filestream.h"
 
-namespace kagami::management {
+namespace sapphire::management {
   using FunctionImplCollection = map<string, FunctionImpl>;
   using FunctionHashMap = unordered_map<string, FunctionImpl *>;
   
@@ -18,7 +18,7 @@ namespace kagami::management {
   bool IsAlive(initializer_list<Object> &&objects);
 }
 
-namespace kagami::management::type {
+namespace sapphire::management::type {
   const unordered_set<string> RepackableObjTypes = {
     kTypeIdInt, kTypeIdFloat, kTypeIdBool, kTypeIdString,
     kTypeIdWideString, kTypeIdInStream, kTypeIdOutStream
@@ -80,7 +80,7 @@ namespace kagami::management::type {
   };
 }
 
-namespace kagami::management::script {
+namespace sapphire::management::script {
   using ProcessedScript = pair<string, VMCode>;
   using ScriptStorage = unordered_map<string, VMCode>;
 
@@ -89,7 +89,7 @@ namespace kagami::management::script {
   VMCode &AppendBlankScript(string path);
 }
 
-namespace kagami::management::extension {
+namespace sapphire::management::extension {
   void DisposeMemoryUnit(void *ptr, int type);
   int FetchDescriptor(Descriptor *descriptor, void *obj_map, const char *id);
   int FetchArrayElementDescriptor(Descriptor *arr_desc, Descriptor *dest, size_t index);
@@ -98,7 +98,7 @@ namespace kagami::management::extension {
   int FetchObjectType(void *obj_map, const char *id);
 }
 
-namespace kagami::management::runtime {
+namespace sapphire::management::runtime {
   void InformBinaryPathAndName(string info);
   string GetBinaryPath();
   string GetBinaryName();
@@ -110,12 +110,12 @@ namespace kagami::management::runtime {
 
 namespace std {
   template <>
-  struct hash<kagami::Object> {
-    size_t operator()(kagami::Object const &rhs) const {
+  struct hash<sapphire::Object> {
+    size_t operator()(sapphire::Object const &rhs) const {
       auto copy = rhs; //solve with limitation
       size_t value = 0;
-      if (kagami::management::type::IsHashable(copy)) {
-        value = kagami::management::type::GetHash(copy);
+      if (sapphire::management::type::IsHashable(copy)) {
+        value = sapphire::management::type::GetHash(copy);
       }
 
       return value;
@@ -123,30 +123,30 @@ namespace std {
   };
 
   template <>
-  struct equal_to<kagami::Object> {
-    bool operator()(kagami::Object const &lhs, kagami::Object const &rhs) const {
+  struct equal_to<sapphire::Object> {
+    bool operator()(sapphire::Object const &lhs, sapphire::Object const &rhs) const {
       auto copy_lhs = lhs, copy_rhs = rhs;
-      return kagami::management::type::CompareObjects(copy_lhs, copy_rhs);
+      return sapphire::management::type::CompareObjects(copy_lhs, copy_rhs);
     }
   };
 
   template <>
-  struct not_equal_to<kagami::Object> {
-    bool operator()(kagami::Object const &lhs, kagami::Object const &rhs) const {
+  struct not_equal_to<sapphire::Object> {
+    bool operator()(sapphire::Object const &lhs, sapphire::Object const &rhs) const {
       auto copy_lhs = lhs, copy_rhs = rhs;
-      return !kagami::management::type::CompareObjects(copy_lhs, copy_rhs);
+      return !sapphire::management::type::CompareObjects(copy_lhs, copy_rhs);
     }
   };
 }
 
-namespace kagami {
+namespace sapphire {
   using ObjectTable = unordered_map<Object, Object>;
   using ManagedTable = shared_ptr<ObjectTable>;
 }
 
-namespace mgmt = kagami::management;
-namespace ext = kagami::management::extension;
-namespace rt = kagami::management::runtime;
+namespace mgmt = sapphire::management;
+namespace ext = sapphire::management::extension;
+namespace rt = sapphire::management::runtime;
 
 #define EXPORT_CONSTANT(ID) management::CreateConstantObject(#ID, Object(ID))
 

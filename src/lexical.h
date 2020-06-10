@@ -1,7 +1,7 @@
 #pragma once
 #include "common.h"
 
-namespace kagami {
+namespace sapphire {
   enum StringType {
     kStringTypeIdentifier,
     kStringTypeLiteralStr,
@@ -215,7 +215,7 @@ namespace kagami {
   string ws2s(const wstring &s);
 }
 
-namespace kagami::lexical {
+namespace sapphire::lexical {
   Terminator GetTerminatorCode(string src);
   bool IsBinaryOperator(Keyword token);
   bool IsMonoOperator(Keyword token);

@@ -2,7 +2,7 @@
 
 #define ERROR_MSG(_Msg) Message(_Msg, kStateError)
 
-namespace kagami {
+namespace sapphire {
   inline bool IsBranchKeyword(Keyword keyword) {
     return keyword == kKeywordElif || keyword == kKeywordElse || keyword == kKeywordWhen;
   }

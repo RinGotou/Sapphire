@@ -8,7 +8,7 @@
     putc('\n', VM_STDOUT);                             \
   }
 
-namespace kagami {
+namespace sapphire {
   using Expect = pair<string, string>;
   using ExpectationList = initializer_list<Expect>;
   using NullableList = initializer_list<string>;

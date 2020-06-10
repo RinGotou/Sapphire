@@ -1,6 +1,6 @@
 #include "containers.h"
 
-namespace kagami {
+namespace sapphire {
   Message IteratorStepForward(ObjectMap &p) {
     auto &it = p[kStrMe].Cast<UnifiedIterator>();
     it.StepForward();

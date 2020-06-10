@@ -1,6 +1,6 @@
 #include "machine.h"
 
-namespace kagami {
+namespace sapphire {
   void InitExternalPointerComponents() {
     using namespace mgmt::type;
 
