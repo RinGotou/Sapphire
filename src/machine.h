@@ -310,8 +310,6 @@ namespace sapphire {
 
     Object *FetchLiteralObject(Argument &arg);
     Object FetchFunctionObject(string id);
-    //deprecated
-    Object FetchObject(Argument &arg);
     ObjectView FetchObjectView(Argument &arg);
 
     bool FetchFunctionImplEx(FunctionImplPointer &dest, string id, string type_id = kTypeIdNull, 

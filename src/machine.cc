@@ -5,8 +5,7 @@
 namespace sapphire {
   using namespace management;
 
-  CommentedResult TypeChecking(ExpectationList &&lst,
-    ObjectMap &obj_map,
+  CommentedResult TypeChecking(ExpectationList &&lst, ObjectMap &obj_map,
     NullableList &&nullable) {
     bool result = true;
     string msg;
@@ -20,12 +19,10 @@ namespace sapphire {
         bool founded = (unit.second == obj.GetTypeId());
         bool null = find_in_list(unit.first, nullable);
 
-        if (founded) continue;
-        else if (null) continue;
+        if (founded || null) continue;
         else {
           result = false;
-          msg = "Expected type is " + unit.second +
-            ", but object type is " + obj.GetTypeId();
+          msg = "Expected type is " + unit.second + ", but object type is " + obj.GetTypeId();
           break;
         }
       }
@@ -36,11 +33,6 @@ namespace sapphire {
           msg = "Argument missing: " + unit.first;
           break;
         }
-      }
-      catch (...) {
-        result = false;
-        msg = "Internal error";
-        break;
       }
 #ifdef _MSC_VER
 #pragma warning(default:4101)
@@ -437,103 +429,6 @@ namespace sapphire {
       obj.PackContent(make_shared<FunctionImpl>(impl), kTypeIdFunction);
     }
 
-    return obj;
-  }
-
-  Object Machine::FetchObject(Argument &arg) {
-    if (arg.GetType() == kArgumentLiteral) {
-      auto obj = *FetchLiteralObject(arg);
-      return obj.SetDeliveringFlag();
-    }
-
-    auto &frame = frame_stack_.top();
-    auto &return_stack = frame.return_stack;
-    ObjectPointer ptr = nullptr;
-    Object obj;
-
-#define OBJECT_DEAD_MSG {                           \
-      frame.MakeError("Referenced object is dead"); \
-      return obj;                                   \
-    }
-
-#define MEMBER_NOT_FOUND_MSG {                                                                   \
-      frame.MakeError("Member '" + arg.GetData() + "' is not found inside " + arg.option.domain);\
-      return obj;                                                                                \
-    }
-
-    if (arg.GetType() == kArgumentObjectStack) {
-      if (!arg.option.domain.empty() || arg.option.use_last_assert) {
-        if (arg.option.use_last_assert) {
-          auto &base = frame.assert_rc_copy.Cast<ObjectStruct>();
-          ptr = base.Find(arg.GetData());
-
-          if (ptr != nullptr) {
-            if (!ptr->IsAlive()) OBJECT_DEAD_MSG;
-            obj.PackObject(*ptr);
-          }
-          else MEMBER_NOT_FOUND_MSG
-
-          if (arg.option.assert_chain_tail) frame.assert_rc_copy = Object();
-        }
-        else if (arg.option.domain_type == kArgumentObjectStack) {
-          ptr = obj_stack_.Find(arg.GetData(), arg.option.domain);
-
-          if (ptr != nullptr) {
-            if (!ptr->IsAlive()) OBJECT_DEAD_MSG;
-            obj.PackObject(*ptr);
-          }
-          else MEMBER_NOT_FOUND_MSG;
-        }
-        else if (arg.option.domain_type == kArgumentReturnStack) {
-          auto &sub_container = return_stack.back()->IsObjectView() ?
-            dynamic_cast<ObjectView *>(return_stack.back())->Seek().Cast<ObjectStruct>() :
-            dynamic_cast<ObjectPointer>(return_stack.back())->Cast<ObjectStruct>();
-          ptr = sub_container.Find(arg.GetData());
-          //keep object alive
-          if (ptr != nullptr) {
-            if (!ptr->IsAlive()) OBJECT_DEAD_MSG;
-            obj = *ptr;
-          }
-          else MEMBER_NOT_FOUND_MSG;
-          delete return_stack.back();
-          return_stack.pop_back();
-        }
-      }
-      else {
-        if (ptr = obj_stack_.Find(arg.GetData()); ptr != nullptr) {
-          if (!ptr->IsAlive()) OBJECT_DEAD_MSG;
-          obj.PackObject(*ptr);
-          return obj;
-        }
-
-        if (ptr = GetConstantObject(arg.GetData()); ptr != nullptr) {
-          obj.PackObject(*ptr);
-          return obj;
-        }
-
-        obj = FetchFunctionObject(arg.GetData());
-
-        if (obj.Null()) {
-          frame.MakeError("Object is not found: " + arg.GetData());
-        }
-      }
-    }
-    else if (arg.GetType() == kArgumentReturnStack) {
-      if (!return_stack.empty()) {
-        obj = return_stack.back()->IsObjectView() ?
-          dynamic_cast<ObjectView *>(return_stack.back())->Seek() :
-          *dynamic_cast<ObjectPointer>(return_stack.back());
-        if (!obj.IsAlive()) OBJECT_DEAD_MSG;
-        obj.SetDeliveringFlag();
-        delete return_stack.back();
-        return_stack.pop_back();
-      }
-      else {
-        frame.MakeError("Can't get object from stack(Internal error)");
-      }
-    }
-#undef OBJECT_DEAD_MSG
-#undef MEMBER_NOT_FOUND_MSG
     return obj;
   }
 
@@ -1358,8 +1253,8 @@ namespace sapphire {
 
     obj_stack_.Push(true);
     auto super_struct_obj = args.size() == 2 ?
-      FetchObject(args[1]) : Object();
-    auto id_obj = FetchObject(args[0]);
+      FetchObjectView(args[1]).Seek() : Object();
+    auto id_obj = FetchObjectView(args[0]).Seek();
 
     if (frame.error) return;
 
@@ -1383,7 +1278,7 @@ namespace sapphire {
     }
 
     obj_stack_.Push(true);
-    auto id_obj = FetchObject(args[0]);
+    auto id_obj = FetchObjectView(args[0]).Seek();
     //Use struct_id slot
     frame.struct_id = id_obj.Cast<string>();
   }
@@ -1877,7 +1772,7 @@ namespace sapphire {
       ManagedArray base = make_shared<ObjectArray>();
 
       for (auto &unit : args) {
-        base->emplace_back(Object(FetchObject(unit).GetTypeId()));
+        base->emplace_back(Object(FetchObjectView(unit).Seek().GetTypeId()));
       }
       if (frame.error) return;
 
@@ -1885,7 +1780,7 @@ namespace sapphire {
       frame.RefreshReturnStack(obj);
     }
     else if (args.size() == 1) {
-      frame.RefreshReturnStack(Object(FetchObject(args[0]).GetTypeId()));
+      frame.RefreshReturnStack(Object(FetchObjectView(args[0]).Seek().GetTypeId()));
     }
     else {
       frame.RefreshReturnStack(Object(kTypeIdNull));
@@ -1900,7 +1795,8 @@ namespace sapphire {
       return;
     }
 
-    Object obj = FetchObject(args[0]);
+    
+    Object &obj = FetchObjectView(args[0]).Seek();
     if (frame.error) return;
 
     auto methods = type::GetMethods(obj.GetTypeId());
@@ -1932,8 +1828,8 @@ namespace sapphire {
     }
 
     //Do not change the order
-    auto str_obj = FetchObject(args[1]);
-    auto obj = FetchObject(args[0]);
+    auto &str_obj = FetchObjectView(args[1]).Seek();
+    auto &obj = FetchObjectView(args[0]).Seek();
     if (frame.error) return;
 
     if (str_obj.GetTypeId() != kTypeIdString) {
@@ -1966,8 +1862,9 @@ namespace sapphire {
       return;
     }
 
-    Object obj = FetchObject(args[0]);
+    Object &obj = FetchObjectView(args[0]).Seek();
     if (frame.error) return;
+
     frame.RefreshReturnStack(Object(obj.GetTypeId() == kTypeIdNull, kTypeIdBool));
   }
 
@@ -1984,7 +1881,7 @@ namespace sapphire {
       frame.RefreshReturnStack(*FetchLiteralObject(arg));
     }
     else {
-      Object obj = FetchObject(args[0]);
+      Object &obj = FetchObjectView(args[0]).Seek();
       if (frame.error) return;
 
       string type_id = obj.GetTypeId();
@@ -2031,7 +1928,7 @@ namespace sapphire {
       return;
     }
 
-    auto path_obj = FetchObject(args[0]);
+    auto &path_obj = FetchObjectView(args[0]).Seek();
     if (frame.error) return;
 
     if (path_obj.GetTypeId() != kTypeIdString) {
@@ -2224,7 +2121,7 @@ namespace sapphire {
     }
 
     //TODO:ObjectView
-    auto rhs = FetchObject(args[0]);
+    auto &rhs = FetchObjectView(args[0]).Seek();
     if (frame.error) return;
 
     if (rhs.GetTypeId() != kTypeIdBool) {
@@ -2311,7 +2208,7 @@ namespace sapphire {
 
     if (!args.empty()) {
       for (auto &unit : args) {
-        base->emplace_back(FetchObject(unit));
+        base->emplace_back(FetchObjectView(unit).Seek());
       }
     }
     if (frame.error) return;
@@ -2332,7 +2229,7 @@ namespace sapphire {
 
     if (args.size() == 1) {
       //keep alive
-      Object ret_obj = FetchObject(args[0]).Unpack();
+      Object ret_obj = FetchObjectView(args[0]).Seek().Unpack();
 
       if (!constraint_type.empty() && ret_obj.GetTypeId() != constraint_type) {
         frame_stack_.top().MakeError("Mismatched return value type: " + constraint_type);
@@ -2374,10 +2271,10 @@ namespace sapphire {
 
       ManagedArray obj_array = make_shared<ObjectArray>();
       for (auto it = args.begin(); it != args.end(); ++it) {
-        auto obj = FetchObject(*it);
+        auto obj_view = FetchObjectView(*it);
         if (frame_stack_.top().error) return;
 
-        obj_array->emplace_back(obj.Unpack());
+        obj_array->emplace_back(obj_view.Seek().Unpack());
       }
 
       Object ret_obj(obj_array, kTypeIdArray);
@@ -2422,7 +2319,7 @@ namespace sapphire {
 
   void Machine::DomainAssert(ArgumentList &args) {
     auto &frame = frame_stack_.top();
-    frame.assert_rc_copy = FetchObject(args[0]).Unpack();
+    frame.assert_rc_copy = FetchObjectView(args[0]).Seek().Unpack();
   }
 
   void Machine::CommandIsBaseOf(ArgumentList &args) {
@@ -2433,8 +2330,8 @@ namespace sapphire {
       return;
     }
 
-    auto base_obj = FetchObject(args[1]);
-    auto dest_obj = FetchObject(args[0]);
+    auto &base_obj = FetchObjectView(args[1]).Seek();
+    auto &dest_obj = FetchObjectView(args[0]).Seek();
     if (frame.error) return;
 
     if (!compare(kTypeIdStruct, dest_obj.GetTypeId(), base_obj.GetTypeId())) {
@@ -2464,8 +2361,8 @@ namespace sapphire {
   void Machine::CommandHasBehavior(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
-    auto behavior_obj = FetchObject(args[1]);
-    auto obj = FetchObject(args[0]);
+    auto &behavior_obj = FetchObjectView(args[1]).Seek();
+    auto &obj = FetchObjectView(args[0]).Seek();
 
     if (frame.error) return;
 
@@ -2489,7 +2386,7 @@ namespace sapphire {
       return;
     }
 
-    auto func_obj = FetchObject(args[0]);
+    auto &func_obj = FetchObjectView(args[0]).Seek();
     if (frame.error) return;
 
     if (func_obj.GetTypeId() != kTypeIdFunction) {
@@ -2510,7 +2407,7 @@ namespace sapphire {
       frame.MakeError("Argument mismatching: optional_param_range(obj)");
     }
 
-    auto func_obj = FetchObject(args[0]);
+    auto &func_obj = FetchObjectView(args[0]).Seek();
     if (frame.error) return;
 
     if (func_obj.GetTypeId() != kTypeIdFunction) {
@@ -2764,7 +2661,7 @@ namespace sapphire {
     }
 
     while (diff != 0) {
-      temp_list.emplace_front(FetchObject(args[pos - 1]).RemoveDeliveringFlag());
+      temp_list.emplace_front(FetchObjectView(args[pos - 1]).Dump().RemoveDeliveringFlag());
       pos -= 1;
       diff -= 1;
     }
@@ -2781,7 +2678,7 @@ namespace sapphire {
 
 
     while (pos > 0) {
-      obj_map.emplace(params[pos - 1], FetchObject(args[pos - 1]).RemoveDeliveringFlag());
+      obj_map.emplace(params[pos - 1], FetchObjectView(args[pos - 1]).Dump().RemoveDeliveringFlag());
       pos -= 1;
     }
   }
@@ -2807,7 +2704,7 @@ namespace sapphire {
         obj_map.emplace(NamedObject(*it, Object()));
       }
       else {
-        obj_map.emplace(NamedObject(*it, FetchObject(args[pos]).RemoveDeliveringFlag()));
+        obj_map.emplace(NamedObject(*it, FetchObjectView(args[pos]).Dump().RemoveDeliveringFlag()));
         pos -= 1;
       }
       param_pos -= 1;
