@@ -1947,7 +1947,7 @@ namespace sapphire {
       if (extension_name.empty()) absolute_path.append(".sp");
 
       if (!fs::exists(fs::path(absolute_path))) {
-        fs::path wrapped_abs_path(management::runtime::GetBinaryPath());
+        fs::path wrapped_abs_path(management::runtime::GetBinaryPath() + "/lib");
         absolute_path = fs::absolute(wrapped_abs_path).string();
         absolute_path.append(wrapped_path.filename().string());
         if (extension_name.empty()) absolute_path.append(".sp");
