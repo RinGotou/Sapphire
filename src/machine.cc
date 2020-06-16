@@ -2859,114 +2859,6 @@ namespace sapphire {
     frame.struct_base = Object();
   }
 
-  bool Machine::BuiltinContainerAction(Command &command) {
-    auto &frame = frame_stack_.top();
-    auto id = command.first.GetInterfaceId();
-    auto domain = command.first.GetInterfaceDomain();
-    auto has_domain = domain.GetType() != kArgumentNull ||
-      command.first.option.use_last_assert;
-    auto &args = command.second;
-    bool wrapped = false;
-
-    if (!has_domain) return wrapped;
-
-    auto view = command.first.option.use_last_assert ?
-      ObjectView(&frame.assert_rc_copy) :
-      FetchObjectView(domain);
-    if (frame.error) return wrapped;
-
-    auto type_id = view.Seek().GetTypeId();
-
-    if (type_id == kTypeIdArray) {
-      if (id == kStrAt) {
-        if (args.size() != 1) {
-          frame.MakeError("Invalid array index");
-          return wrapped;
-        }
-
-        auto &base = view.Seek().Cast<ObjectArray>();
-        auto index_view = FetchObjectView(args[0]);
-
-        if (frame.error) { return wrapped; }
-
-        if (index_view.Seek().GetTypeId() != kTypeIdInt) {
-          frame.MakeError("Invalid array index type");
-          return wrapped;
-        }
-
-        int64_t index = index_view.Seek().Cast<int64_t>();
-        if (size_t(index) > base.size() - 1) {
-          frame.MakeError("Index is out of range");
-          return wrapped;
-        }
-
-        frame.RefreshReturnStack(ObjectView(&base[index]));
-        wrapped = true;
-      }
-      else if (id == kStrSize) {
-        if (args.size() != 0) {
-          frame.MakeError("Unknown argument for array.size()");
-          return wrapped;
-        }
-
-        auto &base = view.Seek().Cast<ObjectArray>();
-        frame.RefreshReturnStack(Object(int64_t(base.size()), kTypeIdInt));
-        wrapped = true;
-      }
-      else if (id == kStrEmpty) {
-        if (args.size() != 0) {
-          frame.MakeError("Unknown argument for array.empty()");
-          return wrapped;
-        }
-
-        auto &base = view.Seek().Cast<ObjectArray>();
-        frame.RefreshReturnStack(Object(int64_t(base.empty()), kTypeIdBool));
-        wrapped = true;
-      }
-    }
-    else if (type_id == kTypeIdTable) {
-      if (id == kStrAt) {
-        if (args.size() != 1) {
-          frame.MakeError("Invalid table index");
-          return wrapped;
-        }
-
-        auto &base = view.Seek().Cast<ObjectTable>();
-        auto index_view = FetchObjectView(args[0]);
-
-        if (frame.error) { return wrapped; }
-
-        auto &result = base[index_view.Seek()];
-        frame.RefreshReturnStack(ObjectView(&result));
-        wrapped = true;
-      }
-      else if (id == kStrSize) {
-        if (args.size() != 0) {
-          frame.MakeError("Unknown argument for array.size()");
-          return wrapped;
-        }
-
-        auto &base = view.Seek().Cast<ObjectTable>();
-        frame.RefreshReturnStack(Object(int64_t(base.size()), kTypeIdInt));
-        wrapped = true;
-      }
-      else if (id == kStrEmpty) {
-        if (args.size() != 0) {
-          frame.MakeError("Unknown argument for table.empty()");
-          return wrapped;
-        }
-
-        auto &base = view.Seek().Cast<ObjectTable>();
-        frame.RefreshReturnStack(Object(int64_t(base.empty()), kTypeIdBool));
-        wrapped = true;
-      }
-    }
-    //todo: more methods
-
-    if (wrapped && !frame.assert_rc_copy.Null()) frame.assert_rc_copy = Object();
-    return wrapped;
-  }
-
   void Machine::GenerateErrorMessages(size_t stop_index) {
     //Under consideration
     if (frame_stack_.top().error) {
@@ -3209,13 +3101,7 @@ namespace sapphire {
         //Query function(Interpreter built-in or user-defined)
         //error string will be generated in FetchFunctionImpl.
         if (command->first.type == kRequestFunction) {
-          wrapped = BuiltinContainerAction(*command);
-          if (frame->error) break;
-          if (wrapped) {
-            frame->Stepping();
-            continue;
-          }
-          else if (!FetchFunctionImpl(impl, command, obj_map)) {
+          if (!FetchFunctionImpl(impl, command, obj_map)) {
             break;
           }
         }

@@ -393,9 +393,7 @@ namespace sapphire {
     void Generate_AutoSize(FunctionImpl &impl, ArgumentList &args, ObjectMap &obj_map);
     void Generate_AutoFill(FunctionImpl &impl, ArgumentList &args, ObjectMap &obj_map);
     void CallExtensionFunction(ObjectMap &p, FunctionImpl &impl);
-    bool BuiltinContainerAction(Command &command);
     void GenerateStructInstance(ObjectMap &p);
-
     void GenerateErrorMessages(size_t stop_index);
   private:
     struct ImplCacheHash {
