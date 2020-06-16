@@ -1,7 +1,9 @@
 =begin
-  Type facilities for Kagami Scripting Language
+
+  Type facilities for Sapphire Language
   Copyright(c) 2020, Rin Gotou
-  Licensed under BSD-2-Clause
+  Licensed under BSD2
+
 =end
 
 fn is_plain_type(obj)
