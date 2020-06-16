@@ -1939,14 +1939,23 @@ namespace sapphire {
     //TODO:Smarter directory strategy
 
     string path = path_obj.Cast<string>();
-    fs::path path_cls(path);
-    string extension_name = lexical::ToLower(path_cls.extension().string());
+    fs::path wrapped_path(path);
+    string extension_name = lexical::ToLower(wrapped_path.extension().string());
 
     if (extension_name == ".sp" || extension_name.empty()) {
       string absolute_path = fs::absolute(fs::path(path)).string();
       if (extension_name.empty()) absolute_path.append(".sp");
+
+      if (!fs::exists(fs::path(absolute_path))) {
+        fs::path wrapped_abs_path(management::runtime::GetBinaryPath());
+        absolute_path = fs::absolute(wrapped_abs_path).string();
+        absolute_path.append(wrapped_path.filename().string());
+        if (extension_name.empty()) absolute_path.append(".sp");
+      }
+
       VMCode &script_file = management::script::AppendBlankScript(absolute_path);
 
+      //already loaded
       if (!script_file.empty()) return;
 
       VMCodeFactory factory(absolute_path, script_file, logger_);
