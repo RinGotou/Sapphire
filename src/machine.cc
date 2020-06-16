@@ -1949,7 +1949,7 @@ namespace sapphire {
       if (!fs::exists(fs::path(absolute_path))) {
         fs::path wrapped_abs_path(management::runtime::GetBinaryPath() + "/lib");
         absolute_path = fs::absolute(wrapped_abs_path).string();
-        absolute_path.append(wrapped_path.filename().string());
+        absolute_path.append("/" + wrapped_path.filename().string());
         if (extension_name.empty()) absolute_path.append(".sp");
       }
 
@@ -2801,7 +2801,6 @@ namespace sapphire {
     if (code_stack_.empty()) return;
 
     bool                next_tick;
-    bool                wrapped;
     size_t              script_idx = 0;
     Message             msg;
     VMCode              *code = code_stack_.back();

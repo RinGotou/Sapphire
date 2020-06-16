@@ -208,7 +208,9 @@ namespace sapphire {
       writer_(dest, mode) {}
 
     RTLogger(string dest, string mode) :
-      writer_(dest.data(), mode.data()) {}
+      writer_(nullptr) {
+      writer_ = (dest == "stdout") ? _Writer(stdout) : _Writer(dest.data(), mode.data());
+    }
 
     bool WriteLine(const char *data, size_t size = 0) override;
     bool WriteLine(string &data) override;

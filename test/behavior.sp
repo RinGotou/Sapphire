@@ -28,6 +28,8 @@ if obj0.value == 1
   println('pass 0')
 end
 
+println('comparing test')
+
 println(obj0 == obj1)
 println(obj0 == obj2)
 
