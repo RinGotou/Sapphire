@@ -148,9 +148,7 @@ namespace sapphire {
   template <typename T>
   inline bool find_in_vector(T t, const vector<T> &&vec) {
     for (auto &unit : vec) {
-      if (t == unit) {
-        return true;
-      }
+      if (t == unit) { return true; }
     }
 
     return false;
@@ -159,9 +157,7 @@ namespace sapphire {
   template <typename T>
   inline bool find_in_vector(T t, const vector<T> &vec) {
     for (auto &unit : vec) {
-      if (t == unit) {
-        return true;
-      }
+      if (t == unit) { return true; }
     }
 
     return false;

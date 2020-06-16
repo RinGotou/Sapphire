@@ -78,7 +78,7 @@ namespace sapphire {
   void InitStreamComponents() {
     using namespace management::type;
 
-    ObjectTraitsSetup(kTypeIdInStream, ShallowDelivery, PointerHasher)
+    ObjectTraitsSetup(kTypeIdInStream, ShallowDelivery)
       .InitConstructor(
         FunctionImpl(NewInStream, "path", "instream")
       )
@@ -90,7 +90,7 @@ namespace sapphire {
         }
     );
 
-    ObjectTraitsSetup(kTypeIdOutStream, ShallowDelivery, PointerHasher)
+    ObjectTraitsSetup(kTypeIdOutStream, ShallowDelivery)
       .InitConstructor(
         FunctionImpl(NewOutStream, "path|binary|append", "outstream")
       )

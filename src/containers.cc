@@ -30,12 +30,6 @@ namespace sapphire {
     return Message().SetObject(it.Unpack());
   }
 
-  bool IteratorComparator(Object &lhs, Object &rhs) {
-    auto &lhs_value = lhs.Cast<UnifiedIterator>();
-    auto &rhs_value = rhs.Cast<UnifiedIterator>();
-    return lhs_value.Compare(rhs_value);
-  }
-
   Message NewArray(ObjectMap &p) {
     auto tc_result = TypeChecking(
       { Expect("size", kTypeIdInt) }, p,
@@ -124,32 +118,6 @@ namespace sapphire {
     return Message();
   }
 
-  size_t ArrayHasher(shared_ptr<void> ptr) {
-    auto &base = *static_pointer_cast<ObjectArray>(ptr);
-    size_t result = 0;
-
-    for (auto it = base.begin(); it != base.end(); ++it) {
-      if (management::type::IsHashable(*it)) {
-        result ^= management::type::GetHash(*it);
-        result = result << 1;
-      }
-    }
-
-    return result;
-  }
-
-  shared_ptr<void> ArrayDelivery(shared_ptr<void> ptr) {
-    using namespace management::type;
-    auto &src_base = *static_pointer_cast<ObjectArray>(ptr);
-    ManagedArray dest_base = make_shared<ObjectArray>();
-
-    for (auto &unit : src_base) {
-      dest_base->emplace_back(CreateObjectCopy(unit));
-    }
-
-    return dest_base;
-  }
-
   Message NewPair(ObjectMap &p) {
     auto &left = p["left"];
     auto &right = p["right"];
@@ -167,15 +135,6 @@ namespace sapphire {
   Message PairRight(ObjectMap &p) {
     auto &base = p.Cast<ObjectPair>(kStrMe);
     return Message().SetObject(Object().PackObject(base.second));
-  }
-
-  shared_ptr<void> PairDelivery(shared_ptr<void> ptr) {
-    auto &src_base = *static_pointer_cast<ObjectPair>(ptr);
-    ManagedPair dest_base = make_shared<ObjectPair>(
-      management::type::CreateObjectCopy(src_base.first),
-      management::type::CreateObjectCopy(src_base.second)
-      );
-    return dest_base;
   }
 
   Message NewTable(ObjectMap &p) {
@@ -252,26 +211,11 @@ namespace sapphire {
     return Message().SetObject(Object(it, kTypeIdIterator));
   }
 
-  shared_ptr<void> TableDelivery(shared_ptr<void> ptr) {
-    using namespace management::type;
-    auto &table = *static_pointer_cast<ObjectTable>(ptr);
-    ManagedTable dest = make_shared<ObjectTable>();
-    Object key_copy;
-
-    for (auto &unit : table) {
-      key_copy = unit.first;
-      dest->insert(make_pair(CreateObjectCopy(key_copy), 
-          CreateObjectCopy(unit.second)));
-    }
-
-    return dest;
-  }
-
   void InitContainerComponents() {
     using management::type::ObjectTraitsSetup;
 
     //TODO:insert()
-    ObjectTraitsSetup(kTypeIdArray, ArrayDelivery, ArrayHasher)
+    ObjectTraitsSetup(kTypeIdArray, ShallowDelivery)
       .InitConstructor(
         FunctionImpl(NewArray, "size|init_value", "array", kParamAutoFill).SetLimit(0)
       )
@@ -288,8 +232,8 @@ namespace sapphire {
         }
     );
 
-    ObjectTraitsSetup(kTypeIdIterator, PlainDeliveryImpl<UnifiedIterator>)
-      .InitComparator(IteratorComparator)
+    //TODO: Remove iterator type
+    ObjectTraitsSetup(kTypeIdIterator, ShallowDelivery)
       .InitMethods(
         {
           FunctionImpl(IteratorGet, "", "obj"),
@@ -299,7 +243,7 @@ namespace sapphire {
         }
     );
 
-    ObjectTraitsSetup(kTypeIdPair, PairDelivery)
+    ObjectTraitsSetup(kTypeIdPair, ShallowDelivery)
       .InitConstructor(
         FunctionImpl(NewPair, "left|right", "pair")
       )
@@ -310,7 +254,7 @@ namespace sapphire {
         }
     );
 
-    ObjectTraitsSetup(kTypeIdTable, TableDelivery)
+    ObjectTraitsSetup(kTypeIdTable, ShallowDelivery)
       .InitConstructor(
         FunctionImpl(NewTable, "", "table")
       )

@@ -37,8 +37,7 @@ namespace sapphire {
   void InitFunctionType() {
     using namespace management::type;
 
-    ObjectTraitsSetup(kTypeIdFunction, PlainDeliveryImpl<FunctionImpl>)
-      .InitComparator(PlainComparator<FunctionImpl>)
+    ObjectTraitsSetup(kTypeIdFunction, ShallowDelivery)
       .InitMethods(
         {
           FunctionImpl(FunctionGetId, "", "id"),

@@ -180,7 +180,6 @@ namespace sapphire {
     CreateImpl(FunctionImpl(CharFromInt, "value", "int2str"));
     CreateImpl(FunctionImpl(IntFromChar, "value", "str2int"));
 
-
     EXPORT_CONSTANT(kTypeIdString);
     EXPORT_CONSTANT(kTypeIdWideString);
   }

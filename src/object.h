@@ -55,6 +55,8 @@ namespace sapphire {
   class ObjectTraits {
   private:
     DeliveryImpl delivering_impl_;
+    //For ObjectTable. Typical object type cannot be used 
+    // as table key without comparator
     Comparator comparator_;
     HasherFunction hasher_;
     vector<string> methods_;
