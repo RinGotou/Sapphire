@@ -143,7 +143,7 @@ namespace sapphire::lexical {
       T(kStrIn             ,kKeywordIn),
       T(kStrNullObj        ,kKeywordNullObj),
       T(kStrDestroy        ,kKeywordDestroy),
-      T(kStrConvert        ,kKeywordConvert),
+      T(kStrToString       ,kKeywordToString),
       T(kStrTime           ,kKeywordTime),
       T(kStrVersion        ,kKeywordVersion),
       T(kStrCodeNameCmd    ,kKeywordCodeName),

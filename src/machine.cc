@@ -1971,26 +1971,7 @@ namespace sapphire {
     frame.RefreshReturnStack(Object(obj.GetTypeId() == kTypeIdNull, kTypeIdBool));
   }
 
-  void Machine::CommandDestroy(ArgumentList &args) {
-    auto &frame = frame_stack_.top();
-
-    if (!EXPECTED_COUNT(1)) {
-      frame.MakeError("Argument mismatching: destroy(obj)");
-      return;
-    }
-
-    if (args[0].GetType() == kArgumentLiteral) {
-      frame.MakeError("Cannot modify a literal value");
-      return;
-    }
-
-    Object &obj = FetchObject(args[0]).Unpack();
-
-    if (frame.error) return;
-    obj.swap(Object());
-  }
-
-  void Machine::CommandConvert(ArgumentList &args) {
+  void Machine::CommandToString(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     if (!EXPECTED_COUNT(1)) {
@@ -2599,11 +2580,8 @@ namespace sapphire {
     case kKeywordNullObj:
       CommandNullObj(args);
       break;
-    case kKeywordDestroy:
-      CommandDestroy(args);
-      break;
-    case kKeywordConvert:
-      CommandConvert(args);
+    case kKeywordToString:
+      CommandToString(args);
       break;
     case kKeywordTime:
       CommandTime();

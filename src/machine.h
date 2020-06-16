@@ -349,15 +349,13 @@ namespace sapphire {
 
     void CommandSwap(ArgumentList &args);
     void CommandSwapIf(ArgumentList &args);
-    void CommandObjectAt(ArgumentList &args);
     void CommandBind(ArgumentList &args, bool local_value, bool ext_value);
     void CommandDelivering(ArgumentList &args, bool local_value, bool ext_value);
     void CommandTypeId(ArgumentList &args);
     void CommandMethods(ArgumentList &args);
     void CommandExist(ArgumentList &args);
     void CommandNullObj(ArgumentList &args);
-    void CommandDestroy(ArgumentList &args);
-    void CommandConvert(ArgumentList &args);
+    void CommandToString(ArgumentList &args);
     void CommandUsing(ArgumentList &args);
 
     void CommandTime();
