@@ -1654,21 +1654,6 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandHash(ArgumentList &args) {
-    auto &frame = frame_stack_.top();
-    auto obj = FetchObjectView(args[0]);
-
-    if (frame.error) return;
-
-    if (type::IsHashable(obj.Seek())) {
-      int64_t hash = type::GetHash(obj.Seek());
-      frame.RefreshReturnStack(Object(make_shared<int64_t>(hash), kTypeIdInt));
-    }
-    else {
-      frame.RefreshReturnStack(Object());
-    }
-  }
-
   void Machine::CommandSwap(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
@@ -1763,55 +1748,6 @@ namespace sapphire {
       }
 
       if (cond.Cast<bool>()) left.swap(right);
-    }
-  }
-  
-  void Machine::CommandObjectAt(ArgumentList &args) {
-    auto &frame = frame_stack_.top();
-
-    if (!EXPECTED_COUNT(2)) {
-      frame.MakeError("Argument missing");
-      return;
-    }
-
-    auto &container = FetchObjectView(args[1]).Seek();
-    auto &index = FetchObjectView(args[0]).Seek();
-    auto container_type = container.GetTypeId();
-
-    if (frame.error) return;
-
-    if (container_type == kTypeIdArray) {
-      if (index.GetTypeId() != kTypeIdInt) {
-        frame.MakeError("Invalid array index");
-        return;
-      }
-
-      auto &base = container.Cast<ObjectArray>();
-      auto &index_value = index.Cast<int64_t>();
-
-      if (base.size() < size_t(index_value)) {
-        frame.MakeError("Index is out of range");
-        return;
-      }
-
-      frame.RefreshReturnStack(ObjectView(&base[index_value]));
-      //frame.RefreshReturnStack(
-      //  std::forward<Object>(Object().PackObject(base[index_value])));
-    }
-    else if (container_type == kTypeIdTable) {
-      auto &base = container.Cast<ObjectTable>();
-
-      auto it = base.find(index);
-      if (it != base.end()) {
-        frame.RefreshReturnStack(
-          std::forward<Object>(Object().PackObject(it->second)));
-      }
-      else {
-        frame.MakeError("Element is not found in this table");
-      }
-    }
-    else {
-      frame.MakeError("Unsupported container type");
     }
   }
 
@@ -2657,9 +2593,6 @@ namespace sapphire {
     case kKeywordNot:
       OperatorLogicNot(args);
       break;
-    case kKeywordHash:
-      CommandHash(args);
-      break;
     case kKeywordFor:
       CommandForEach(args, request.option.nest_end);
       break;
@@ -2686,9 +2619,6 @@ namespace sapphire {
       break;
     case kKeywordSwapIf:
       CommandSwapIf(args);
-      break;
-    case kKeywordObjectAt:
-      CommandObjectAt(args);
       break;
     case kKeywordBind:
       CommandBind(args, request.option.local_object,

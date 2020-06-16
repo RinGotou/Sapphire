@@ -30,7 +30,7 @@ void ApplicationInfo() {
 void HelpFile() {
   printf("Usage:");
   printf("%s", runtime::GetBinaryName().data());
-  printf(" [-OPTION][-OPTION=VALUE]...\n\n");
+  printf(" [--OPTION][--OPTION=VALUE]...\n\n");
   printf(
     "\tscript=FILE         Path of script file.\n"
     "\tlog=(FILE|stdout)   Output of error log.\n"

@@ -297,8 +297,6 @@ namespace sapphire {
   };
 
   //TODO: new argument generator and storage?
-  //TODO: spilt graphic implement, and add new event processing interface
-  //TODO: reserve hanging_ as a common event handler switch
   class Machine {
   private:
     StandardLogger *logger_;
@@ -349,7 +347,6 @@ namespace sapphire {
     void CommandSuper(ArgumentList &args);
     void CommandAttribute(ArgumentList &args);
 
-    void CommandHash(ArgumentList &args);
     void CommandSwap(ArgumentList &args);
     void CommandSwapIf(ArgumentList &args);
     void CommandObjectAt(ArgumentList &args);
@@ -398,7 +395,6 @@ namespace sapphire {
     void Generate_AutoSize(FunctionImpl &impl, ArgumentList &args, ObjectMap &obj_map);
     void Generate_AutoFill(FunctionImpl &impl, ArgumentList &args, ObjectMap &obj_map);
     void CallExtensionFunction(ObjectMap &p, FunctionImpl &impl);
-    //void CallExtensionFunctionEx
     bool BuiltinContainerAction(Command &command);
     void GenerateStructInstance(ObjectMap &p);
 
