@@ -373,11 +373,9 @@ namespace sapphire {
 
     void ExpList(ArgumentList &args);
     void InitArray(ArgumentList &args);
-
     void CommandReturn(ArgumentList &args);
     void CommandAssert(ArgumentList &args);
     void DomainAssert(ArgumentList &args);
-
     void CommandIsBaseOf(ArgumentList &args);
     void CommandHasBehavior(ArgumentList &args);
     template <ParameterPattern pattern>
