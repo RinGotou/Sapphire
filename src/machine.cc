@@ -321,7 +321,7 @@ namespace sapphire {
     frame_stack_.pop();
     code_stack_.pop_back();
     obj_stack_.Pop();
-    if (!analyzed_vmcode_.empty()) analyzed_vmcode_.pop();
+    
     frame_stack_.top().RefreshReturnStack(Object());
   }
 
@@ -1219,7 +1219,7 @@ namespace sapphire {
       frame.jump_stack.pop();
       if (!scope_stack.empty() && scope_stack.top()) {
         obj_stack_.Pop();
-        if (!analyzed_vmcode_.empty()) analyzed_vmcode_.pop();
+        
       }
       scope_stack.pop();
       escape_depth -= 1;
@@ -1290,7 +1290,7 @@ namespace sapphire {
       frame.condition_stack.pop();
       frame.scope_stack.pop();
       obj_stack_.Pop();
-      if (!analyzed_vmcode_.empty()) analyzed_vmcode_.pop();
+      
       while (!frame.branch_jump_stack.empty()) frame.branch_jump_stack.pop();
       frame.cancel_cleanup = false;
     }
@@ -1317,7 +1317,7 @@ namespace sapphire {
         }
         frame.jump_stack.pop();
         obj_stack_.Pop();
-        if (!analyzed_vmcode_.empty()) analyzed_vmcode_.pop();
+        
       }
       frame.scope_stack.pop();
       frame.final_cycle = false;
@@ -1348,7 +1348,7 @@ namespace sapphire {
         if (frame.activated_break) frame.activated_break = false;
         frame.jump_stack.pop();
         obj_stack_.Pop();
-        if (!analyzed_vmcode_.empty()) analyzed_vmcode_.pop();
+        
       }
       if(!frame.scope_stack.empty()) frame.scope_stack.pop();
       frame.final_cycle = false;
@@ -1419,7 +1419,7 @@ namespace sapphire {
     managed_struct->Add(kStrStructId, Object(frame.struct_id));
 
     obj_stack_.Pop();
-    if (!analyzed_vmcode_.empty()) analyzed_vmcode_.pop();
+    
     obj_stack_.CreateObject(frame.struct_id, Object(managed_struct, kTypeIdStruct));
     frame.struct_id.clear();
     frame.struct_id.shrink_to_fit();
@@ -1437,7 +1437,7 @@ namespace sapphire {
     managed_module->Add(kStrStructId, Object(frame.struct_id));
 
     obj_stack_.Pop();
-    if (!analyzed_vmcode_.empty()) analyzed_vmcode_.pop();
+    
     obj_stack_.CreateObject(frame.struct_id, Object(managed_module, kTypeIdStruct));
     frame.struct_id.clear();
     frame.struct_id.shrink_to_fit();
@@ -2256,7 +2256,7 @@ namespace sapphire {
       auto *container = &obj_stack_.GetCurrent();
       while (container->Find(kStrUserFunc) == nullptr) {
         obj_stack_.Pop();
-        if (!analyzed_vmcode_.empty()) analyzed_vmcode_.pop();
+        
         container = &obj_stack_.GetCurrent();
       }
 
@@ -2273,7 +2273,7 @@ namespace sapphire {
       auto *container = &obj_stack_.GetCurrent();
       while (container->Find(kStrUserFunc) == nullptr) {
         obj_stack_.Pop();
-        if (!analyzed_vmcode_.empty()) analyzed_vmcode_.pop();
+        
         container = &obj_stack_.GetCurrent();
       }
 
@@ -2299,7 +2299,7 @@ namespace sapphire {
       auto *container = &obj_stack_.GetCurrent();
       while (container->Find(kStrUserFunc) == nullptr) {
         obj_stack_.Pop();
-        if (!analyzed_vmcode_.empty()) analyzed_vmcode_.pop();
+        
         container = &obj_stack_.GetCurrent();
       }
 

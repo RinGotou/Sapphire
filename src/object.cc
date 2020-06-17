@@ -92,18 +92,13 @@ namespace sapphire {
   bool ObjectContainer::Add(string id, Object &source) {
     if (IsDelegated()) return delegator_->Add(id, source);
 
-    if (CheckObject(id)) return false;
-
-    container_.emplace(NamedObject(id, source));
-    return true;
+    return container_.try_emplace(id, source).second;
   }
 
   bool ObjectContainer::Add(string id, Object &&source) {
     if (IsDelegated()) return delegator_->Add(id, std::move(source));
 
-    if (CheckObject(id)) return false;
-    container_.emplace(NamedObject(id, source));
-    return true;
+    return container_.try_emplace(id, source).second;
   }
 
   void ObjectContainer::Replace(string id, Object &source) {

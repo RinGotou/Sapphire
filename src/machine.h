@@ -298,11 +298,6 @@ namespace sapphire {
       std::exception(std::runtime_error(msg)) {}
   };
 
-  using ViewList = vector<ObjectView>;
-  using VMCObjCache = map<size_t, ViewList>;
-  using VMCAnalyzedCache = unordered_map<VMCode *, VMCObjCache>;
-  using AnalyzedCacheStack = stack<VMCAnalyzedCache, vector<VMCAnalyzedCache>>;
-
   //TODO: new argument generator and storage?
   class Machine {
   private:
@@ -403,7 +398,6 @@ namespace sapphire {
     FrameStack frame_stack_;
     ObjectStack obj_stack_;
     unordered_map<size_t, FunctionImplPointer> impl_cache_;
-    AnalyzedCacheStack analyzed_vmcode_;
     vector<ObjectCommonSlot> view_delegator_;
     bool error_;
 

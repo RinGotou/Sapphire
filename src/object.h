@@ -342,10 +342,6 @@ namespace sapphire {
     bool IsDelegated() const { 
       return delegator_ != nullptr; 
     }
-
-    bool CheckObject(string &id) {
-      return (container_.find(id) != container_.end());
-    }
   public:
     bool Add(string id, Object &source);
     bool Add(string id, Object &&source);
