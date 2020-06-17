@@ -338,17 +338,20 @@ namespace sapphire {
     ObjectContainer *delegator_;
     ObjectContainer *prev_;
     unordered_map<string, Object> container_;
+    unordered_map<size_t, ObjectPointer> token_cache_;
 
     bool IsDelegated() const { 
       return delegator_ != nullptr; 
     }
   public:
-    bool Add(string id, Object &source);
-    bool Add(string id, Object &&source);
-    void Replace(string id, Object &source);
-    void Replace(string id, Object &&source);
+    bool Add(string id, Object &source, size_t token_id = 0);
+    bool Add(string id, Object &&source, size_t token_id = 0);
+    void Replace(string id, Object &source, size_t token_id = 0);
+    void Replace(string id, Object &&source, size_t token_id = 0);
     Object *Find(const string &id, bool forward_seeking = true);
+    Object *FindByTokenId(size_t token_id, bool forward_seeking = true);
     Object *FindWithDomain(const string &id, const string &domain, bool forward_seeking = true);
+    Object *FindWithDomainByTokenId(size_t token_id, const string &domain, bool forward_seeking = true);
     bool IsInside(Object *ptr);
     void ClearExcept(string exceptions);
 

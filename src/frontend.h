@@ -8,6 +8,13 @@ namespace sapphire {
   using CombinedCodeline = pair<size_t, string>;
   using CombinedToken = pair<size_t, deque<Token>>;
 
+  size_t &GetTokenIdTick();
+
+  using TokenIdMap = unordered_map<string, size_t>;
+
+  TokenIdMap &GetTokenIdMap();
+  size_t TryAppendTokenId(string_view id);
+
   class LexicalFactory {
   private:
     StandardLogger *logger_;

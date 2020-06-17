@@ -44,6 +44,7 @@ namespace sapphire {
     size_t nest;
     size_t nest_end;
     size_t escape_depth;
+    size_t token_id;
     Keyword nest_root;
 
     RequestOption() : 
@@ -51,6 +52,7 @@ namespace sapphire {
       local_object(false), 
       ext_object(false),
       use_last_assert(false),
+      token_id(0),
       nest(0),
       nest_end(0),
       escape_depth(0),
