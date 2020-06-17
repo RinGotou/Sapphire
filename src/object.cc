@@ -91,26 +91,40 @@ namespace sapphire {
 
   bool ObjectContainer::Add(string id, Object &source, size_t token_id) {
     if (IsDelegated()) return delegator_->Add(id, source);
+    auto result = container_.try_emplace(id, source);
+    if (result.second && token_id != 0) {
+      token_cache_[token_id] = &result.first->second;
+    }
 
-    return container_.try_emplace(id, source).second;
+    return result.second;
   }
 
   bool ObjectContainer::Add(string id, Object &&source, size_t token_id) {
     if (IsDelegated()) return delegator_->Add(id, std::move(source));
+    auto result = container_.try_emplace(id, source);
+    if (result.second && token_id != 0) {
+      token_cache_[token_id] = &result.first->second;
+    }
 
-    return container_.try_emplace(id, source).second;
+    return result.second;
   }
 
   void ObjectContainer::Replace(string id, Object &source, size_t token_id) {
     if (IsDelegated()) delegator_->Replace(id, source);
 
     container_[id] = source;
+    if (token_id != 0) {
+      token_cache_[token_id] = &container_[id];
+    }
   }
 
   void ObjectContainer::Replace(string id, Object &&source, size_t token_id) {
     if (IsDelegated()) delegator_->Replace(id, std::move(source));
 
     container_[id] = source;
+    if (token_id != 0) {
+      token_cache_[token_id] = &container_[id];
+    }
   }
 
   Object *ObjectContainer::Find(const string &id, bool forward_seeking) {
@@ -130,7 +144,19 @@ namespace sapphire {
   }
 
   Object *ObjectContainer::FindByTokenId(size_t token_id, bool forward_seeking) {
-    return nullptr;
+    if (IsDelegated()) return delegator_->FindByTokenId(token_id, forward_seeking);
+    ObjectPointer ptr = nullptr;
+    
+    auto it = token_cache_.find(token_id);
+
+    if (it != token_cache_.end()) {
+      ptr = it->second;
+    }
+    else if (prev_ != nullptr && forward_seeking) {
+      ptr = prev_->FindByTokenId(token_id, forward_seeking);
+    }
+
+    return ptr;
   }
 
   Object *ObjectContainer::FindWithDomain(const string &id, 
@@ -141,15 +167,22 @@ namespace sapphire {
 
     ObjectPointer container_ptr = Find(domain, true);
 
-    if (container_ptr == nullptr) return nullptr;
-    if (!container_ptr->IsSubContainer()) return nullptr;
+    if (container_ptr == nullptr || (!container_ptr->IsSubContainer())) return nullptr;
 
     auto &sub_container = container_ptr->Cast<ObjectStruct>();
     return sub_container.Find(id, false);
   }
 
-  Object *ObjectContainer::FindWithDomainByTokenId(size_t token_id, const string &domain, bool forward_seeking) {
-    return nullptr;
+  Object *ObjectContainer::FindWithDomainByTokenId(size_t token_id, const string &id, bool forward_seeking) {
+    if (IsDelegated()) return delegator_->FindWithDomainByTokenId(token_id, id, forward_seeking);
+    
+    if (token_cache_.empty() && prev_ == nullptr) return nullptr;
+
+    auto container_ptr = FindByTokenId(token_id, true);
+    if (container_ptr == nullptr || (!container_ptr->IsSubContainer())) return nullptr;
+
+    auto &sub_container = container_ptr->Cast<ObjectStruct>();
+    return sub_container.Find(id, false);
   }
 
   bool ObjectContainer::IsInside(Object *ptr) {

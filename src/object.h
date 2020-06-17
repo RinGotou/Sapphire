@@ -351,7 +351,7 @@ namespace sapphire {
     Object *Find(const string &id, bool forward_seeking = true);
     Object *FindByTokenId(size_t token_id, bool forward_seeking = true);
     Object *FindWithDomain(const string &id, const string &domain, bool forward_seeking = true);
-    Object *FindWithDomainByTokenId(size_t token_id, const string &domain, bool forward_seeking = true);
+    Object *FindWithDomainByTokenId(size_t token_id, const string &id, bool forward_seeking = true);
     bool IsInside(Object *ptr);
     void ClearExcept(string exceptions);
 

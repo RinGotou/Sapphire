@@ -1001,6 +1001,7 @@ namespace sapphire {
 
     if (!good) return false;
 
+    //code generating & analyzing
     for (auto it = tokens_.begin(); it != tokens_.end(); ++it) {
       if (!good) break;
 
@@ -1150,6 +1151,25 @@ namespace sapphire {
       AppendMessage("'end' token is not found for line " + 
         to_string(nest_origin_.top()), kStateError, logger_);
       good = false;
+    }
+
+    //toke id generating
+    if (good) {
+      for (auto it = dest_->begin(); it != dest_->end(); ++it) {
+        //request domain
+        if (it->first.HasDomain()) {
+          it->first.SetDomainTokenId(TryAppendTokenId(
+            it->first.GetInterfaceDomain().GetData()));
+        }
+
+        //argument
+        for (auto &unit : it->second) {
+          if (unit.GetType() == kArgumentObjectStack) {
+            unit.option.token_id = TryAppendTokenId(
+              unit.HasDomain() ? unit.option.domain : unit.GetData());
+          }
+        }
+      }
     }
 
     return good;

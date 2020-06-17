@@ -22,7 +22,7 @@ namespace sapphire {
     bool use_last_assert;
     bool assert_chain_tail;
     bool is_constraint; //for fnexpr
-
+    size_t token_id;
     string domain;
     ArgumentType domain_type;
 
@@ -32,6 +32,7 @@ namespace sapphire {
       use_last_assert(false),
       assert_chain_tail(false),
       is_constraint(false),
+      token_id(0),
       domain(), 
       domain_type(kArgumentNull) {}
   };
@@ -44,7 +45,7 @@ namespace sapphire {
     size_t nest;
     size_t nest_end;
     size_t escape_depth;
-    size_t token_id;
+
     Keyword nest_root;
 
     RequestOption() : 
@@ -52,7 +53,6 @@ namespace sapphire {
       local_object(false), 
       ext_object(false),
       use_last_assert(false),
-      token_id(0),
       nest(0),
       nest_end(0),
       escape_depth(0),
@@ -87,6 +87,10 @@ namespace sapphire {
     void SetDomain(string id, ArgumentType type) {
       option.domain = id;
       option.domain_type = type;
+    }
+
+    bool HasDomain() {
+      return option.domain_type != kArgumentNull;
     }
 
     auto &GetData() { return data_; }
@@ -141,6 +145,18 @@ namespace sapphire {
       }
 
       return Argument();
+    }
+
+    bool HasDomain() {
+      if (type != kRequestFunction) return false;
+      auto &func_info = std::get<FunctionInfo>(data_);
+      return func_info.domain.GetType() != kArgumentNull;
+    }
+
+    void SetDomainTokenId(size_t token_id) {
+      if (type != kRequestFunction) return;
+      auto &func_info = std::get<FunctionInfo>(data_);
+      func_info.domain.option.token_id = token_id;
     }
 
     Keyword GetKeywordValue() {
