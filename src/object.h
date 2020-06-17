@@ -28,6 +28,7 @@ namespace sapphire {
   string CombineStringVector(vector<string> target);
 
   enum ObjectMode {
+    kObjectInvalid   = 0,
     kObjectNormal    = 1,
     kObjectRef       = 2,
     kObjectExternal  = 3,

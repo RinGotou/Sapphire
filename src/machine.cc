@@ -710,7 +710,6 @@ namespace sapphire {
         || (keyword == kKeywordDomainAssertCommand && first_assert));
 
     if (!need_catching) return;
-    if (domain.GetData() == kStrThisWindow) return;
     
     auto view = req.option.use_last_assert ?
       ObjectView(&frame.assert_rc_copy) :
