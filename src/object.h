@@ -570,9 +570,9 @@ namespace sapphire {
     }
 
     void MergeMap(ObjectMap &p);
-    Object *Find(const string &id);
-    Object *Find(const string &id, const string &domain);
-    bool CreateObject(string id, Object &obj);
-    bool CreateObject(string id, Object &&obj);
+    Object *Find(const string &id, size_t token_id = 0);
+    Object *Find(const string &id, const string &domain, size_t token_id = 0);
+    bool CreateObject(string id, Object &obj, size_t token_id = 0);
+    bool CreateObject(string id, Object &&obj, size_t token_id = 0);
   };
 }

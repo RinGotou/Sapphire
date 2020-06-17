@@ -251,9 +251,12 @@ namespace sapphire {
     }
   }
 
-  Object *ObjectStack::Find(const string &id) {
+  Object *ObjectStack::Find(const string &id, size_t token_id) {
     if (base_.empty() && prev_ == nullptr) return nullptr;
-    ObjectPointer ptr = base_.back().Find(id);
+    //default: forward_seeking = true
+    ObjectPointer ptr = token_id == 0 ?
+      base_.back().Find(id) : 
+      base_.back().FindByTokenId(token_id);
 
     if (prev_ != nullptr && ptr == nullptr) {
       ptr = prev_->Find(id);
@@ -262,9 +265,12 @@ namespace sapphire {
     return ptr;
   }
 
-  Object *ObjectStack::Find(const string &id, const string &domain) {
+  Object *ObjectStack::Find(const string &id, const string &domain, size_t token_id) {
     if (base_.empty() && prev_ == nullptr) return nullptr;
-    ObjectPointer ptr = base_.back().FindWithDomain(id, domain);
+    //default: forward_seeking = true
+    ObjectPointer ptr = token_id == 0 ?
+      base_.back().FindWithDomain(id, domain) :
+      base_.back().FindWithDomainByTokenId(token_id, id);
 
     if (prev_ != nullptr && ptr == nullptr) {
       ptr = prev_->Find(id, domain);
@@ -273,7 +279,7 @@ namespace sapphire {
     return ptr;
   }
 
-  bool ObjectStack::CreateObject(string id, Object &obj) {
+  bool ObjectStack::CreateObject(string id, Object &obj, size_t token_id) {
     if (!creation_info_.empty() && !creation_info_.top().first) {
       ScopeCreation(creation_info_.top().second);
       creation_info_.top().first = true;
@@ -283,14 +289,14 @@ namespace sapphire {
       if (prev_ == nullptr) {
         return false;
       }
-      return prev_->CreateObject(id, obj);
+      return prev_->CreateObject(id, obj, token_id);
     }
     auto &top = base_.back();
 
-    return top.Add(id, obj);
+    return top.Add(id, obj, token_id);
   }
 
-  bool ObjectStack::CreateObject(string id, Object &&obj) {
+  bool ObjectStack::CreateObject(string id, Object &&obj, size_t token_id) {
     if (!creation_info_.empty() && !creation_info_.top().first) {
       ScopeCreation(creation_info_.top().second);
       creation_info_.top().first = true;
@@ -300,10 +306,10 @@ namespace sapphire {
       if (prev_ == nullptr) {
         return false;
       }
-      return prev_->CreateObject(id, std::move(obj));
+      return prev_->CreateObject(id, std::move(obj), token_id);
     }
     auto &top = base_.back();
     
-    return top.Add(id, std::move(obj));
+    return top.Add(id, std::move(obj), token_id);
   }
 }
