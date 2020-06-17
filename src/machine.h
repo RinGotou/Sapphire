@@ -207,6 +207,7 @@ namespace sapphire {
     bool is_there_a_cond;
     bool reserved_cond;
     bool direct_delivering;
+    VMCode *current_code;
     Object struct_base;
     Object assert_rc_copy;
     size_t jump_offset;
@@ -239,6 +240,7 @@ namespace sapphire {
       is_there_a_cond(false),
       reserved_cond(false),
       direct_delivering(false),
+      current_code(nullptr),
       assert_rc_copy(),
       jump_offset(0),
       idx(0),
@@ -295,6 +297,11 @@ namespace sapphire {
     _CustomError(const char *msg) : 
       std::exception(std::runtime_error(msg)) {}
   };
+
+  using ViewList = vector<ObjectView>;
+  using VMCObjCache = map<size_t, ViewList>;
+  using VMCAnalyzedCache = unordered_map<VMCode *, VMCObjCache>;
+  using AnalyzedCacheStack = stack<VMCAnalyzedCache, vector<VMCAnalyzedCache>>;
 
   //TODO: new argument generator and storage?
   class Machine {
@@ -392,16 +399,11 @@ namespace sapphire {
     void GenerateStructInstance(ObjectMap &p);
     void GenerateErrorMessages(size_t stop_index);
   private:
-    struct ImplCacheHash {
-      size_t operator()(size_t const &rhs) const {
-        return rhs;
-      }
-    };
-
     deque<VMCodePointer> code_stack_;
     FrameStack frame_stack_;
     ObjectStack obj_stack_;
-    unordered_map<size_t, FunctionImplPointer, ImplCacheHash> impl_cache_;
+    unordered_map<size_t, FunctionImplPointer> impl_cache_;
+    AnalyzedCacheStack analyzed_vmcode_;
     vector<ObjectCommonSlot> view_delegator_;
     bool error_;
 
