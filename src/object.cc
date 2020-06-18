@@ -94,6 +94,7 @@ namespace sapphire {
     auto result = container_.try_emplace(id, source);
     if (result.second && token_id != 0) {
       token_cache_[token_id] = &result.first->second;
+      token_cache_.rehash(token_cache_.size());
     }
 
     return result.second;

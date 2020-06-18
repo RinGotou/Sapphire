@@ -335,10 +335,18 @@ namespace sapphire {
 
   class ObjectContainer {
   private:
+    //struct 
+    struct TokenIdHash {
+      size_t operator()(size_t const &rhs) const { return rhs; }
+    };
+
+    using CacheContainer = unordered_map<size_t, ObjectPointer, TokenIdHash>;
+
+  private:
     ObjectContainer *delegator_;
     ObjectContainer *prev_;
     unordered_map<string, Object> container_;
-    unordered_map<size_t, ObjectPointer> token_cache_;
+    CacheContainer token_cache_;
 
     bool IsDelegated() const { 
       return delegator_ != nullptr; 
@@ -356,15 +364,20 @@ namespace sapphire {
     void ClearExcept(string exceptions);
 
     ObjectContainer() : delegator_(nullptr),
-      prev_(nullptr), container_() {}
+      prev_(nullptr), container_() {
+      token_cache_.max_load_factor(1);
+    }
 
     ObjectContainer(const ObjectContainer &&mgr) :
-    delegator_(mgr.delegator_), prev_(mgr.prev_) {}
+    delegator_(mgr.delegator_), prev_(mgr.prev_) {
+      token_cache_.max_load_factor(1);
+    }
 
     ObjectContainer(const ObjectContainer &container) :
       delegator_(container.delegator_), prev_(container.prev_),
       container_() {
       if (!container.Empty()) container_ = container.container_;
+      token_cache_.max_load_factor(1);
     }
 
     bool Empty() const {
