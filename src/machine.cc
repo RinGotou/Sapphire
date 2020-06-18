@@ -468,7 +468,7 @@ namespace sapphire {
           if (arg.option.assert_chain_tail) frame.assert_rc_copy = Object();
         }
         else if (arg.option.domain_type == kArgumentObjectStack) {
-          ptr = obj_stack_.Find(arg.GetData(), arg.option.domain);
+          ptr = obj_stack_.Find(arg.GetData(), arg.option.domain, arg.option.token_id);
 
           if (ptr != nullptr) {
             if (!ptr->IsAlive()) OBJECT_DEAD_MSG;
@@ -493,7 +493,7 @@ namespace sapphire {
         }
       }
       else {
-        if (ptr = obj_stack_.Find(arg.GetData()); ptr != nullptr) {
+        if (ptr = obj_stack_.Find(arg.GetData(), arg.option.token_id); ptr != nullptr) {
           if (!ptr->IsAlive()) OBJECT_DEAD_MSG;
           view = ObjectView(ptr);
         }
@@ -733,10 +733,10 @@ namespace sapphire {
       type = unit.GetType();
 
       if (unit.option.domain_type == kArgumentObjectStack) {
-        view = ObjectView(obj_stack_.Find(unit.option.domain));
+        view = ObjectView(obj_stack_.Find(unit.option.domain, unit.option.token_id));
       }
       else if (type == kArgumentObjectStack) {
-        view = ObjectView(obj_stack_.Find(string(data)));
+        view = ObjectView(obj_stack_.Find(string(data), unit.option.token_id));
       }
       else {
         continue;
@@ -816,8 +816,11 @@ namespace sapphire {
       impl.AppendClosureRecord(kStrReturnValueConstrantObj, Object(return_value_constraint));
     }
 
-    obj_stack_.CreateObject(args[0].GetData(),
-      Object(make_shared<FunctionImpl>(impl), kTypeIdFunction));
+    obj_stack_.CreateObject(
+      args[0].GetData(),
+      Object(make_shared<FunctionImpl>(impl), kTypeIdFunction),
+      TryAppendTokenId(args[0].GetData())
+    );
 
     frame.Goto(nest_end + 1);
   }
@@ -1044,7 +1047,7 @@ namespace sapphire {
     obj_stack_.Push(true);
     obj_stack_.CreateObject(kStrIteratorObj, iterator_obj);
     obj_stack_.CreateObject(kStrContainerKeepAliveSlot, container_obj);
-    obj_stack_.CreateObject(unit_id, unit);
+    obj_stack_.CreateObject(unit_id, unit, TryAppendTokenId(unit_id));
   }
 
   void Machine::ForEachChecking(ArgumentList &args, size_t nest_end) {
@@ -1082,7 +1085,7 @@ namespace sapphire {
     else {
       auto unit = CallMethod(*iterator, "obj").GetObj();
       if (frame.error) return;
-      obj_stack_.CreateObject(unit_id, unit);
+      obj_stack_.CreateObject(unit_id, unit, TryAppendTokenId(unit_id));
     }
   }
 
@@ -1265,7 +1268,8 @@ namespace sapphire {
       frame.super_struct_id = super_struct_obj.Cast<string>();
     }
 
-    if (auto *ptr = obj_stack_.Find(frame.struct_id); ptr != nullptr) {
+    //NOTICE: frame.struct_id = id_obj.Cast<string>();
+    if (auto *ptr = obj_stack_.Find(frame.struct_id, args[0].option.token_id); ptr != nullptr) {
       frame.MakeError("Struct is existed: " + frame.struct_id);
     }
   }
@@ -1420,7 +1424,11 @@ namespace sapphire {
 
     obj_stack_.Pop();
     
-    obj_stack_.CreateObject(frame.struct_id, Object(managed_struct, kTypeIdStruct));
+    obj_stack_.CreateObject(
+      frame.struct_id, 
+      Object(managed_struct, kTypeIdStruct),
+      TryAppendTokenId(frame.struct_id)
+    );
     frame.struct_id.clear();
     frame.struct_id.shrink_to_fit();
   }
@@ -1438,7 +1446,11 @@ namespace sapphire {
 
     obj_stack_.Pop();
     
-    obj_stack_.CreateObject(frame.struct_id, Object(managed_module, kTypeIdStruct));
+    obj_stack_.CreateObject(
+      frame.struct_id, 
+      Object(managed_module, kTypeIdStruct),
+      TryAppendTokenId(frame.struct_id)
+    );
     frame.struct_id.clear();
     frame.struct_id.shrink_to_fit();
   }
@@ -1547,7 +1559,7 @@ namespace sapphire {
         break;
       }
 
-      obj_stack_.CreateObject(unit.GetData(), Object());
+      obj_stack_.CreateObject(unit.GetData(), Object(), unit.option.token_id);
     }
 
     if (error) {
@@ -1662,6 +1674,9 @@ namespace sapphire {
       return;
     }
 
+    //TODO: Append token id
+    //NOTICE: processing for sub container(struct)
+
     //Do not change the order!
     auto rhs = FetchObjectView(args[1]);
     auto lhs = FetchObjectView(args[0]);
@@ -1688,6 +1703,7 @@ namespace sapphire {
       }
 
       if (!local_value && frame.struct_id.empty()) {
+        // pending modification
         ObjectPointer ptr = obj_stack_.Find(id);
 
         if (ptr != nullptr) {
@@ -1701,7 +1717,8 @@ namespace sapphire {
         }
       }
 
-      if (!obj_stack_.CreateObject(id, CreateObjectCopy(rhs.Seek()))) {
+      if (!obj_stack_.CreateObject(id, CreateObjectCopy(rhs.Seek()), 
+        args[0].option.token_id)) {
         frame.MakeError("Object binding is failed");
         return;
       }
@@ -1764,7 +1781,7 @@ namespace sapphire {
 
       rhs.Seek().Unpack() = Object();
 
-      if (!obj_stack_.CreateObject(id, rhs.Seek().Unpack())) {
+      if (!obj_stack_.CreateObject(id, rhs.Seek().Unpack(), args[0].option.token_id)) {
         frame.MakeError("Object delivering is failed");
         return;
       }
@@ -2793,7 +2810,7 @@ namespace sapphire {
   //for extension callback facilities
   bool Machine::PushObject(string id, Object object) {
     auto &frame = frame_stack_.top();
-    auto result = obj_stack_.CreateObject(id, object);
+    auto result = obj_stack_.CreateObject(id, object, TryAppendTokenId(id));
     if (!result) {
       frame.MakeError("Cannot create object");
       return false;

@@ -14,6 +14,8 @@ namespace sapphire {
 
   TokenIdMap &GetTokenIdMap();
   size_t TryAppendTokenId(string_view id);
+  // It is unnecessary.
+  // size_t TryGetTokenId(string_view id);
 
   class LexicalFactory {
   private:

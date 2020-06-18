@@ -116,8 +116,6 @@ namespace sapphire {
     return result;
   }
 
-
-
   void LexicalFactory::Scan(deque<string> &output, string target) {
     string current_token, temp;
     bool inside_string = false;
@@ -1156,6 +1154,12 @@ namespace sapphire {
     //toke id generating
     if (good) {
       for (auto it = dest_->begin(); it != dest_->end(); ++it) {
+        if (compare(it->first.GetKeywordValue(), kKeywordBind, kKeywordDelivering)
+          && it->second.size() == 2
+          && it->second[0].GetType() == kArgumentLiteral) {
+          it->second[0].option.token_id = TryAppendTokenId(it->second[0].GetData());
+        }
+
         //request domain
         if (it->first.HasDomain()) {
           it->first.SetDomainTokenId(TryAppendTokenId(
