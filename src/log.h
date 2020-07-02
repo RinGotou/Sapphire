@@ -28,6 +28,7 @@ namespace sapphire {
 
   using CharList = list<char>;
 
+  //Writer Interface
   class Writer {
   public:
     virtual ~Writer() {}
@@ -205,7 +206,10 @@ namespace sapphire {
     RTLogger() : writer_(DEFAULT_OUTPUT, "a") {}
 
     RTLogger(const char *dest, const char *mode) :
-      writer_(dest, mode) {}
+      writer_(nullptr) {
+      writer_ =  (std::strcmp(dest, "stdout") == 0) ?
+            _Writer(stdout) : _Writer(dest, mode);
+    }
 
     RTLogger(string dest, string mode) :
       writer_(nullptr) {
