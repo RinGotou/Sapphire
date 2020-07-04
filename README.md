@@ -20,8 +20,8 @@ MacOS is NOT OFFICIAL SUPPORTED for now and I don't have Apple device for testin
 sudo pacman -S cmake make gcc
 
 # clone & build
-git clone https://github.com/kagami-project/kagami --depth=1
-cd kagami
+git clone https://github.com/kagami-project/sapphire-adhoc.git
+cd sapphire-adhoc
 git submodule init && git submodule update
 cmake .
 make
