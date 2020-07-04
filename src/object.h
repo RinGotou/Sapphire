@@ -7,6 +7,15 @@ namespace sapphire {
   class ObjectMap;
   class Message;
 
+  size_t &GetTokenIdTick();
+
+  using TokenIdMap = unordered_map<string, size_t>;
+
+  TokenIdMap &GetTokenIdMap();
+  size_t TryAppendTokenId(string_view id);
+  // It is unnecessary.
+  // size_t TryGetTokenId(string_view id);
+
   struct _ObjectCommonBase {
     virtual bool IsObjectView() const = 0;
     virtual bool IsAlive() const = 0;

@@ -1,6 +1,33 @@
 #include "object.h"
 
 namespace sapphire {
+  size_t &GetTokenIdTick() {
+    static size_t token_id_counter = 0;
+    return token_id_counter;
+  }
+
+  TokenIdMap &GetTokenIdMap() {
+    static TokenIdMap base;
+    return base;
+  }
+
+  size_t TryAppendTokenId(string_view id) {
+    auto &base = GetTokenIdMap();
+    auto &tick = GetTokenIdTick();
+    size_t result = 0;
+
+    auto emplace_result = base.try_emplace(string(id), tick + 1);
+    if (emplace_result.second) {
+      result = tick + 1;
+      tick += 1;
+    }
+    else {
+      result = emplace_result.first->second;
+    }
+
+    return result;
+  }
+
   vector<string> BuildStringVector(string source) {
     vector<string> result;
     string temp;
@@ -246,9 +273,11 @@ namespace sapphire {
 
     auto &container = base_.back();
     for (auto &unit : p) {
-      container.Add(unit.first, unit.second.IsRef() ?
-        Object().PackObject(unit.second) :
-        unit.second);
+      container.Add(
+        unit.first, 
+        (unit.second.IsRef() ? Object().PackObject(unit.second) : unit.second), 
+        TryAppendTokenId(unit.first)
+      );
     }
   }
 
