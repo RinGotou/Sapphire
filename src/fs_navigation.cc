@@ -173,6 +173,7 @@ namespace sapphire {
     CreateImpl(FunctionImpl(GetScriptAbsolutePath, "", "boot_directory"));
     CreateImpl(FunctionImpl(GetCoreAbsolutePath, "", "core_directory"));
     CreateImpl(FunctionImpl(GetPlatform, "", "get_platform"));
+    //TODO: Migration
     CreateImpl(FunctionImpl(GetFunctionPointer, "library|id", "get_function_ptr"));
     CreateImpl(FunctionImpl(ExistFSObject, "path", "exist_fsobj"));
     CreateImpl(FunctionImpl(CreateNewDirectory, "path", "create_dir"));

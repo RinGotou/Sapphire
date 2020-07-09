@@ -2036,12 +2036,12 @@ namespace sapphire {
     }
     else {
       //Try to invoke 'print' method
-      if (!mgmt::type::CheckMethod(kStrPrint, obj)) {
+      if (!mgmt::type::CheckMethod(kStrPrintDo, obj)) {
         string msg("<Object Type=" + obj.GetTypeId() + string(">"));
         fputs(msg.data(), VM_STDOUT);
       }
       else {
-        CallMethod(obj, kStrPrint);
+        CallMethod(obj, kStrPrintDo);
       }
     }
   }
@@ -2103,9 +2103,9 @@ namespace sapphire {
     }
    
     auto value = view.Seek().Cast<int64_t>();
-
+    
 #ifdef _MSC_VER
-    Sleep(value);
+    Sleep(static_cast<DWORD>(value));
 #else
     timespec spec;
 
@@ -3163,6 +3163,7 @@ namespace sapphire {
         if (!frame->rstk_operated) {
           frame->RefreshReturnStack(Object());
         }
+        frame->rstk_operated = false;
         continue;
       }
       else {

@@ -151,6 +151,7 @@ namespace sapphire {
     kStrUsing          = "using",
     kStrPrint          = "print",
     kStrPrintLine      = "println",
+    kStrPrintDo        = "print_do",
     kStrInput          = "input",
     kStrConsole        = "console",
     kStrGetChar        = "getchar",
