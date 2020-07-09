@@ -188,7 +188,13 @@ namespace sapphire::lexical {
       T(kStrIsOptionalParam ,kKeywordIsOptionalParam),
       T(kStrOptionalParamRange ,kKeywordOptionalParamRange),
       T(kStrAttribute          ,kKeywordAttribute),
-      T(kStrConstraintArrow    , kKeywordConstaint)
+      T(kStrConstraintArrow    ,kKeywordConstaint),
+      T(kStrPrint              ,kKeywordPrint),
+      T(kStrPrintLine          ,kKeywordPrintLine),
+      T(kStrInput              ,kKeywordInput),
+      T(kStrConsole            ,kKeywordConole),
+      T(kStrGetChar            ,kKeywordGetChar),
+      T(kStrSleep              ,kKeywordSleep)
     };
     return base;
   }

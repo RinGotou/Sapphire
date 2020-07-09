@@ -207,6 +207,8 @@ namespace sapphire {
     bool is_there_a_cond;
     bool reserved_cond;
     bool direct_delivering;
+    bool is_command;
+    bool rstk_operated;
     VMCode *current_code;
     Object struct_base;
     Object assert_rc_copy;
@@ -240,6 +242,8 @@ namespace sapphire {
       is_there_a_cond(false),
       reserved_cond(false),
       direct_delivering(false),
+      is_command(false),
+      rstk_operated(false),
       current_code(nullptr),
       assert_rc_copy(),
       jump_offset(0),
@@ -357,6 +361,15 @@ namespace sapphire {
     void CommandNullObj(ArgumentList &args);
     void CommandToString(ArgumentList &args);
     void CommandUsing(ArgumentList &args);
+    void CommandPrint(ArgumentList &args);
+    void CommandInput(ArgumentList &args);
+    void CommandGetChar(ArgumentList &args);
+    void SysCommand(ArgumentList &args);
+    void CommandSleep(ArgumentList &args);
+
+    //TODO: Smaller command implementations
+    //void CommandJumpIf();
+    //void CommandJumpIfNot();
 
     void CommandTime();
     void CommandVersion();

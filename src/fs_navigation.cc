@@ -1,116 +1,6 @@
 #include "machine.h"
 
 namespace sapphire {
-  inline string MakeObjectString(Object& obj) {
-    return string("<Object Type=") + obj.GetTypeId() + string(">");
-  }
-
-  Message SystemCommand(ObjectMap &p) {
-    auto tc_result = TypeChecking(
-      { Expect("command", kTypeIdString) }, p);
-
-    if (TC_FAIL(tc_result)) { return TC_ERROR(tc_result); }
-
-    int64_t result = system(p.Cast<string>("command").data());
-    return Message().SetObject(Object(result, kTypeIdInt));
-  }
-
-  Message ThreadSleep(ObjectMap& p) {
-    auto tc_result = TypeChecking(
-      { Expect("milliseconds", kTypeIdInt) }, p);
-
-    if (TC_FAIL(tc_result)) { return TC_ERROR(tc_result); }
-
-    auto value = p.Cast<int64_t>("milliseconds");
-#ifdef _MSC_VER
-    Sleep(DWORD(p.Cast<int64_t>("milliseconds")));
-#else
-    timespec spec;
-    
-    if (value >= 1000) {
-      spec.tv_sec = value / 1000;
-      spec.tv_nsec = (value - (static_cast<int64_t>(spec.tv_sec) * 1000))
-        * 1000000;
-    }
-    else {
-      spec.tv_sec = 0;
-      spec.tv_nsec = value * 1000000;
-    }
-    
-    nanosleep(&spec, nullptr);
-#endif
-
-    return Message();
-  }
-
-  //Print single object
-  Message Print(ObjectMap &p) {
-    Object &obj = p[kStrMe];
-    string type_id = obj.GetTypeId();
-    if (lexical::IsPlainType(type_id)) {
-      if (type_id == kTypeIdInt) {
-#ifndef _MSC_VER
-        fprintf(VM_STDOUT, "%ld", obj.Cast<int64_t>());
-#else
-        fprintf(VM_STDOUT, "%lld", obj.Cast<int64_t>());
-#endif
-      }
-      else if (type_id == kTypeIdFloat) {
-        fprintf(VM_STDOUT, "%f", obj.Cast<double>());
-      }
-      else if (type_id == kTypeIdString) {
-        fputs(obj.Cast<string>().data(), VM_STDOUT);
-      }
-      else if (type_id == kTypeIdBool) {
-        fputs(obj.Cast<bool>() ? "true" : "false", VM_STDOUT);
-      }
-
-      CHECK_PRINT_OPT(p);
-
-      return Message();
-    }
-
-    vector<string> methods = management::type::GetMethods(obj.GetTypeId());
-
-    //TODO: add support of user-defined type
-    if (!management::type::CheckMethod(kStrPrint, obj)) {
-      puts(MakeObjectString(obj).data());
-      return Message();
-    }
-
-    return MakeInvokePoint(kStrPrint, obj.GetTypeId(), obj);
-  }
-
-  //Print object and switch to next line
-  Message PrintLine(ObjectMap &p) {
-    p.insert(NamedObject(kStrSwitchLine, Object()));
-    Message msg = Print(p);
-    return msg;
-  }
-
-  Message Input(ObjectMap &p) {
-    auto &msg = p["msg"];
-    auto type_id = msg.GetTypeId();
-
-    if (!msg.Null()) {
-      if (type_id != kTypeIdString && type_id != kTypeIdWideString) {
-        return Message("Invalid message string", kStateError);
-      }
-      
-      ObjectMap obj_map = { NamedObject(kStrMe, p["msg"]) };
-
-      Print(obj_map);
-    }
-
-    string buf = GetLine();
-    return Message().SetObject(buf);
-  }
-
-  Message GetChar(ObjectMap &p) {
-    auto value = static_cast<char>(fgetc(VM_STDIN));
-    return Message().SetObject(string().append(1, value));
-  }
-
   Message ExistFSObject(ObjectMap &p) {
     auto tc = TypeChecking(
       { Expect("path", kTypeIdString) }, p);
@@ -278,12 +168,6 @@ namespace sapphire {
   void InitConsoleComponents() {
     using management::CreateImpl;
 
-    CreateImpl(FunctionImpl(Input, "msg", "input", kParamAutoFill).SetLimit(0));
-    CreateImpl(FunctionImpl(GetChar, "", "getchar"));
-    CreateImpl(FunctionImpl(Print, kStrMe, "print"));
-    CreateImpl(FunctionImpl(PrintLine, kStrMe, "println"));
-    CreateImpl(FunctionImpl(SystemCommand, "command", "console"));
-    CreateImpl(FunctionImpl(ThreadSleep, "milliseconds", "sleep"));
     CreateImpl(FunctionImpl(SetWorkingDir, "dir", "chdir", kParamAutoFill).SetLimit(0));
     CreateImpl(FunctionImpl(GetWorkingDir, "", "current_directory"));
     CreateImpl(FunctionImpl(GetScriptAbsolutePath, "", "boot_directory"));

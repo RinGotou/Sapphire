@@ -197,8 +197,6 @@ namespace sapphire {
       return offset_;
     }
   };
-  
-  Message MakeInvokePoint(string id, string type_id, Object obj);
 
   using FunctionImplPointer = FunctionImpl *;
 }

@@ -259,6 +259,7 @@ namespace sapphire {
       return_stack.push_back(new Object(obj));
       has_return_value_from_invoking = true;
     }
+    if (is_command) rstk_operated = true;
   }
 
   void RuntimeFrame::RefreshReturnStack(Object &&obj) {
@@ -269,6 +270,7 @@ namespace sapphire {
       return_stack.push_back(new Object(std::move(obj)));
       has_return_value_from_invoking = true;
     }
+    if (is_command) rstk_operated = true;
   }
 
   void RuntimeFrame::RefreshReturnStack(const ObjectInfo &info, const shared_ptr<void> &ptr) {
@@ -279,6 +281,7 @@ namespace sapphire {
       return_stack.push_back(new Object(info, ptr));
       has_return_value_from_invoking = true;
     }
+    if (is_command) rstk_operated = true;
   }
   
   void RuntimeFrame::RefreshReturnStack(bool value) {
@@ -295,6 +298,7 @@ namespace sapphire {
         has_return_value_from_invoking = true;
       }
     }
+    if (is_command) rstk_operated = true;
   }
 
   void RuntimeFrame::RefreshReturnStack(ObjectView &&view) {
@@ -305,6 +309,7 @@ namespace sapphire {
       return_stack.push_back(new ObjectView(view));
       has_return_value_from_invoking = true;
     }
+    if (is_command) rstk_operated = true;
   }
 
   void Machine::RecoverLastState() {
@@ -2002,6 +2007,122 @@ namespace sapphire {
     }
   }
 
+  void Machine::CommandPrint(ArgumentList &args) {
+    auto &frame = frame_stack_.top();
+
+    auto view = FetchObjectView(args[0]);
+    if (frame.error) return;
+
+    auto type_id = view.Seek().GetTypeId();
+    auto &obj = view.Seek();
+
+    if (lexical::IsPlainType(type_id)) {
+      if (type_id == kTypeIdInt) {
+#ifndef _MSC_VER
+        fprintf(VM_STDOUT, "%ld", obj.Cast<int64_t>());
+#else
+        fprintf(VM_STDOUT, "%lld", obj.Cast<int64_t>());
+#endif
+      }
+      else if (type_id == kTypeIdFloat) {
+        fprintf(VM_STDOUT, "%f", obj.Cast<double>());
+      }
+      else if (type_id == kTypeIdString) {
+        fputs(obj.Cast<string>().data(), VM_STDOUT);
+      }
+      else if (type_id == kTypeIdBool) {
+        fputs(obj.Cast<bool>() ? "true" : "false", VM_STDOUT);
+      }
+    }
+    else {
+      //Try to invoke 'print' method
+      if (!mgmt::type::CheckMethod(kStrPrint, obj)) {
+        string msg("<Object Type=" + obj.GetTypeId() + string(">"));
+        fputs(msg.data(), VM_STDOUT);
+      }
+      else {
+        CallMethod(obj, kStrPrint);
+      }
+    }
+  }
+
+  void Machine::CommandInput(ArgumentList &args) {
+    auto &frame = frame_stack_.top();
+    if (!args.empty()) {
+      frame.MakeError("Invalid arguments: input()");
+      return;
+    }
+
+    string buf = GetLine();
+    frame.RefreshReturnStack(Object(buf, kTypeIdString));
+  }
+
+  void Machine::CommandGetChar(ArgumentList &args) {
+    auto &frame = frame_stack_.top();
+    if (!args.empty()) {
+      frame.MakeError("Invalid arguments: getchar()");
+      return;
+    }
+
+    auto value = static_cast<char>(fgetc(VM_STDIN));
+    frame.RefreshReturnStack(Object(string().append(1, value), kTypeIdString));
+  }
+
+  void Machine::SysCommand(ArgumentList &args) {
+    auto &frame = frame_stack_.top();
+    if (args.size() != 1) {
+      frame.MakeError("Invalid argument: console(command)");
+      return;
+    }
+
+    auto view = FetchObjectView(args[0]);
+    if (frame.error) return;
+
+    if (view.Seek().GetTypeId() != kTypeIdString) {
+      frame.MakeError("Invalid command string");
+      return;
+    }
+
+    int64_t result = system(view.Seek().Cast<string>().data());
+    frame.RefreshReturnStack(Object(result, kTypeIdInt));
+  }
+
+  void Machine::CommandSleep(ArgumentList &args) {
+    auto &frame = frame_stack_.top();
+
+    if (args.size() != 1) {
+      frame.MakeError("Invalid argument: sleep(ms)");
+      return;
+    }
+
+    auto view = FetchObjectView(args[0]);
+    if (frame.error) return;
+    if (view.Seek().GetTypeId() != kTypeIdInt) {
+      frame.MakeError("Invalid sleep duration");
+      return;
+    }
+   
+    auto value = view.Seek().Cast<int64_t>();
+
+#ifdef _MSC_VER
+    Sleep(value);
+#else
+    timespec spec;
+
+    if (value >= 1000) {
+      spec.tv_sec = value / 1000;
+      spec.tv_nsec = (value - (static_cast<int64_t>(spec.tv_sec) * 1000))
+        * 1000000;
+    }
+    else {
+      spec.tv_sec = 0;
+      spec.tv_nsec = value * 1000000;
+    }
+
+    nanosleep(&spec, nullptr);
+#endif
+  }
+
   void Machine::CommandTime() {
     auto &frame = frame_stack_.top();
     time_t now = time(nullptr);
@@ -2637,6 +2758,21 @@ namespace sapphire {
     case kKeywordOptionalParamRange:
       CommandOptionalParamRange(args);
       break;
+    case kKeywordPrint:
+      CommandPrint(args);
+      break;
+    case kKeywordPrintLine:
+      CommandPrint(args);
+      fputs("\n", VM_STDOUT);
+      break;
+    case kKeywordInput:
+      CommandInput(args);
+      break;
+    case kKeywordConole:
+      SysCommand(args);
+      break;
+    case kKeywordGetChar:
+      CommandGetChar(args);
     default:
       break;
     }
@@ -3014,6 +3150,7 @@ namespace sapphire {
       frame->void_call = command->first.option.void_call; // dispose returning value
       frame->required_by_next_cond = is_required_by_cond();
       frame->current_code = code;
+      frame->is_command = command->first.type == kRequestCommand;
 
       //Built-in machine commands.
       if (command->first.type == kRequestCommand) {
@@ -3023,6 +3160,9 @@ namespace sapphire {
         if (command->first.GetKeywordValue() == kKeywordReturn) refresh_tick();
         if (frame->error) break;
         if (!frame->stop_point) frame->Stepping();
+        if (!frame->rstk_operated) {
+          frame->RefreshReturnStack(Object());
+        }
         continue;
       }
       else {

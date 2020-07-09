@@ -80,6 +80,12 @@ namespace sapphire {
     kKeywordOptionalParamRange,
     kKeywordIsSameCopy,
     kKeywordAttribute,
+    kKeywordPrint,
+    kKeywordPrintLine,
+    kKeywordInput,
+    kKeywordConole, 
+    kKeywordGetChar,
+    kKeywordSleep,
     kKeywordNull
   };
 
@@ -122,7 +128,6 @@ namespace sapphire {
     kStrVersion        = "version",
     kStrCodeNameCmd    = "codename",
     kStrEnd            = "end",
-    kStrPrint          = "print",
     kStrSwitchLine     = "!switch_line",
     kStrCaseObj        = "!case",
     kStrIteratorObj    = "!iterator",
@@ -144,6 +149,12 @@ namespace sapphire {
     kStrHead           = "head",
     kStrTail           = "tail",
     kStrUsing          = "using",
+    kStrPrint          = "print",
+    kStrPrintLine      = "println",
+    kStrInput          = "input",
+    kStrConsole        = "console",
+    kStrGetChar        = "getchar",
+    kStrSleep          = "sleep",
     kStrPlus           = "+",
     kStrMinus          = "-",
     kStrTimes          = "*",
