@@ -1,61 +1,83 @@
 #include "management.h"
 
+namespace sapphire::components {
+  //New implementation for built-in function and types
+  unordered_map<string, Object> &GetBuiltinComponentsObjBase() {
+    static unordered_map<string, Object> base;
+    return base;
+  }
+
+  void CreateFunctionObject(string id, FunctionImpl &&impl) {
+    auto &base = GetBuiltinComponentsObjBase();
+    base.try_emplace(id, Object(std::move(impl), kTypeIdFunction));
+  }
+
+  //We don't need FindFunction() in new implementation.
+  //Every machine will copy these info into their own base scope
+  
+  //Functions that are deprecated:
+  //  GetMethods() CheckMethod()
+
+  void CreateStruct(string id) {
+    auto &base = GetBuiltinComponentsObjBase();
+    auto obj_struct = make_shared<ObjectStruct>();
+    auto result = base.try_emplace(id, Object(obj_struct, kTypeIdStruct));
+    auto &struct_base = result.first->second.Cast<ObjectStruct>();
+    struct_base.Add(kStrStructId, Object(id));
+  }
+
+  bool StructMethodGenerator::Create(initializer_list<FunctionImpl> &&impls) {
+    auto &base = GetBuiltinComponentsObjBase();
+    auto it = base.find(id_);
+
+    if (it == base.end()) return false;
+
+    auto &struct_base = it->second.Cast<ObjectStruct>();
+    
+    for (auto &unit : impls) {
+      struct_base.Add(unit.GetId(), Object(unit, kTypeIdFunction));
+    }
+
+    return true;
+  }
+
+  void DumpObject(ObjectView source, ObjectView dest) {
+    if (!lexical::IsPlainType(source.Seek().GetTypeId())) {
+      dest.Seek() = source.Seek();
+      return;
+    }
+
+    auto type_id = source.Seek().GetTypeId();
+
+#define DUMP_VALUE(_Type, _Id)                                \
+    auto &value = source.Seek().Cast<_Type>();                \
+    dest.Seek().PackContent(make_shared<_Type>(value), _Id);
+
+    if (type_id == kTypeIdInt) {
+      DUMP_VALUE(int64_t, kTypeIdInt)
+    }
+    else if (type_id == kTypeIdFloat) {
+      DUMP_VALUE(double, kTypeIdFloat)
+    }
+    else if (type_id == kTypeIdString) {
+      DUMP_VALUE(string, kTypeIdString)
+    }
+    else if (type_id == kTypeIdBool) {
+      DUMP_VALUE(bool, kTypeIdBool)
+    }
+#undef DUMP_VALUE
+  }
+
+  Object DumpObject(Object &source) {
+    Object result;
+    DumpObject(ObjectView(&source), ObjectView(&result));
+    return result;
+  }
+}
+
+
+
 namespace sapphire::management {
-///////////////////////////////////////////////////////////////
-//Inteface management
-
-  auto &GetFunctionImplCollections() {
-    static map<string, FunctionImplCollection> collection_base;
-    return collection_base;
-  }
-
-  auto &GetFunctionImplCache() {
-    static unordered_map<string, FunctionHashMap> cache;
-    return cache;
-  }
-
-  void BuildFunctionImplCache(string domain) {
-    auto &base = GetFunctionImplCache();
-    auto &col = GetFunctionImplCollections().at(domain);
-
-    for (auto &unit : col) {
-      base[domain].insert(make_pair(unit.first, &unit.second));
-    }
-  }
-
-  void CreateImpl(FunctionImpl impl, string domain) {
-    auto &collection_base = GetFunctionImplCollections();
-    auto it = collection_base.find(domain);
-
-    if (it != collection_base.end()) {
-      it->second.insert(make_pair(impl.GetId(), impl));
-    }
-    else {
-      collection_base.insert(make_pair(domain, FunctionImplCollection()));
-      collection_base[domain].insert(make_pair(impl.GetId(), impl));
-    }
-
-    BuildFunctionImplCache(domain);
-  }
-
-  FunctionImpl *FindFunction(string id, string domain) {
-    auto &cache = GetFunctionImplCache();
-    auto it = cache.find(domain);
-
-    if (it != cache.end()) {
-      auto dest = it->second.find(id);
-      if (dest != it->second.end()) {
-        return dest->second;
-      }
-    }
-
-    return nullptr;
-  }
-  ////////////////////////////////////////////////////////////////
-
-  ////////////////////////////////////////////////////////////////
-  //Constant object management
-
   auto &GetConstantBase() {
     static ObjectContainer base;
     return base;
@@ -89,200 +111,6 @@ namespace sapphire::management {
     ObjectContainer &base = GetConstantBase();
     auto ptr = base.Find(id);
     return ptr;
-  }
-
-  bool IsAlive(initializer_list<Object> &&objects) {
-    for (const auto &unit : objects) {
-      if (!unit.IsAlive()) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  /////////////////////////////////////////////////////////////
-}
-
-namespace sapphire::management::type {
-  auto &GetObjectTraitsCollection() {
-    static unordered_map<string, ObjectTraits> base;
-    return base;
-  }
-
-  vector<string> GetMethods(string id) {
-    vector<string> result;
-    const auto it = GetObjectTraitsCollection().find(id);
-
-    if (it != GetObjectTraitsCollection().end()) {
-      result = it->second.GetMethods();
-    }
-    return result;
-  }
-
-  bool CheckMethod(string func_id, Object &obj) {
-    bool result = false;
-    const auto it = GetObjectTraitsCollection().find(obj.GetTypeId());
-
-    if (it != GetObjectTraitsCollection().end() && obj.GetTypeId() != kTypeIdStruct) {
-      result = find_in_vector(func_id, it->second.GetMethods());
-    }
-    else if (obj.IsSubContainer()) {
-      auto &base = obj.Cast<ObjectStruct>();
-      auto *ptr = base.Find(func_id);
-      if (ptr != nullptr) {
-        result = (ptr->GetTypeId() == kTypeIdFunction);
-      }
-    }
-
-    return result;
-  }
-
-  size_t GetHash(Object &obj) {
-    auto &base = GetObjectTraitsCollection();
-    const auto it = base.find(obj.GetTypeId());
-    auto hasher = it->second.GetHasher();
-    return hasher(obj.Get());
-  }
-
-  bool IsHashable(Object &obj) {
-    bool result = false;
-    auto &base = GetObjectTraitsCollection();
-    const auto it = base.find(obj.GetTypeId());
-
-    if (it != base.end()) {
-      result = (it->second.GetHasher() != nullptr);
-    }
-
-    return result;
-  }
-
-  bool IsCopyable(Object &obj) {
-    bool result = false;
-    auto &base = GetObjectTraitsCollection();
-    const auto it = base.find(obj.GetTypeId());
-
-    if (it != base.end()) {
-      result = (it->second.GetDeliveringImpl() != ShallowDelivery);
-    }
-
-    return result;
-  }
-
-  void CreateObjectTraits(string id, ObjectTraits temp) {
-    GetObjectTraitsCollection().insert(pair<string, ObjectTraits>(id, temp));
-  }
-
-  //TODO:External/Delegator object processing
-  Object CreateObjectCopy(Object &object) {
-    lock_guard<mutex> guard(object.GetMutex());
-
-    if (object.GetDeliveringFlag()) {
-      return object;
-    }
-
-    Object result;
-    const auto it = GetObjectTraitsCollection().find(object.GetTypeId());
-
-    if (object.GetMode() == kObjectExternal) {
-      //TODO:Implementations (After finishing callback facility for types)
-    }
-    else if (object.GetMode() == kObjectDelegator) {
-      result = object;
-    }
-    else if (object.IsSubContainer() && object.GetTypeId() != kTypeIdStruct) {
-      auto &instance_src = object.Cast<ObjectStruct>();
-      auto &base = instance_src.GetContent();
-      auto managed_instance = make_shared<ObjectStruct>();
-      for (auto &unit : base) {
-        auto copy = CreateObjectCopy(unit.second);
-        managed_instance->Add(unit.first, copy);
-      }
-      result = Object(managed_instance, object.GetTypeId());
-      result.SetContainerFlag();
-    }
-    else if (it != GetObjectTraitsCollection().end()) {
-      auto deliver = it->second.GetDeliveringImpl();
-      result.PackContent(deliver(object.Get()), object.GetTypeId());
-    }
-
-    return result;
-  }
-
-  bool CheckBehavior(Object &obj, string method_str) {
-    lock_guard<mutex> guard(obj.GetMutex());
-
-    auto obj_methods = GetMethods(obj.GetTypeId());
-    auto sample = BuildStringVector(method_str);
-    bool result = true;
-
-    for (auto &unit : sample) {
-      if (!find_in_vector(unit, obj_methods)) {
-        result = false;
-        break;
-      }
-    }
-
-    if (obj.IsSubContainer()) {
-      result = true;
-      auto &base = obj.Cast<ObjectStruct>().GetContent();
-
-      for (auto &unit : sample) {
-        auto it = base.find(unit);
-        if (it == base.end()) {
-          result = false;
-          break;
-        }
-
-        if (it->second.GetTypeId() != kTypeIdFunction) {
-          result = false;
-          break;
-        }
-      }
-    }
-
-    return result;
-  }
-
-  bool CompareObjects(Object &lhs, Object &rhs) {
-    lock_guard<mutex> lhs_guard(lhs.GetMutex());
-    lock_guard<mutex> rhs_guard(rhs.GetMutex());
-
-    if (lhs.GetTypeId() != rhs.GetTypeId()) return false;
-    auto &collection = GetObjectTraitsCollection();
-    const auto it = collection.find(lhs.GetTypeId());
-    bool value = false;
-
-    if (it != collection.end()) {
-      auto comparator = it->second.GetComparator();
-      if (comparator != nullptr) value = comparator(lhs, rhs);
-      else value = (lhs.Get() == rhs.Get());
-    }
-
-    return value;
-  }
-
-  ObjectTraitsSetup &ObjectTraitsSetup::InitMethods(initializer_list<FunctionImpl> && rhs) {
-    impl_ = rhs;
-    string method_list("");
-
-    for (auto &unit : impl_) {
-      method_list.append(unit.GetId()).append("|");
-    }
-
-    if (method_list != "") {
-      methods_ = method_list.substr(0, method_list.size() - 1);
-    }
-
-    return *this;
-  }
-
-  ObjectTraitsSetup::~ObjectTraitsSetup() {
-    CreateObjectTraits(type_id_, ObjectTraits(delivering_impl_, methods_, hasher_, comparator_));
-    CreateImpl(delivering_);
-    for (auto &unit : impl_) {
-      CreateImpl(unit, type_id_);
-    }
   }
 }
 

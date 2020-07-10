@@ -3,81 +3,68 @@
 #include "extension.h"
 #include "filestream.h"
 
+namespace sapphire::components {
+  unordered_map<string, Object> &GetBuiltinComponentsObjBase();
+
+  void CreateFunctionObject(string id, FunctionImpl &&impl);
+  void CreateStruct(string id);
+  void DumpObject(ObjectView source, ObjectView dest);
+  Object DumpObject(Object &source);
+
+  class StructMethodGenerator {
+  protected:
+    string id_;
+  public:
+    StructMethodGenerator() = delete;
+    StructMethodGenerator(string id) : id_(id) {}
+    bool Create(initializer_list<FunctionImpl> &&impls);
+  };
+
+  //lexical::IsPlainType() is existed inside lexical.h
+
+  //Dump plain object
+  void DumpObject(ObjectView source, ObjectView dest);
+
+  struct PlainTypeHash {
+    size_t operator()(Object const &rhs) const {
+      auto copy = rhs; //bypass
+      size_t value = 0;
+      auto type_id = rhs.GetTypeId();
+      
+#define GET_HASH(_Type) value = std::hash<_Type>()(copy.Cast<_Type>())
+
+      if (type_id == kTypeIdInt) GET_HASH(int64_t);
+      else if (type_id == kTypeIdFloat) GET_HASH(double);
+      else if (type_id == kTypeIdString) GET_HASH(string);
+      else if (type_id == kTypeIdBool) GET_HASH(bool);
+
+      return value;
+#undef GET_HASH
+    }
+  };
+
+  struct PlainTypeComparaion {
+    bool operator()(Object const &lhs, Object const &rhs) const {
+      //bypass
+      auto copy_lhs = lhs, copy_rhs = rhs;
+      bool result = false;
+      if (lhs.GetTypeId() != rhs.GetTypeId()) return result;
+#define COMPARE(_Type) (copy_lhs.Cast<_Type>() == copy_rhs.Cast<_Type>())
+      auto type_id = lhs.GetTypeId();
+      if (type_id == kTypeIdInt) result = COMPARE(int64_t);
+      else if (type_id == kTypeIdFloat) result = COMPARE(double);
+      else if (type_id == kTypeIdString) result = COMPARE(string);
+      else if (type_id == kTypeIdBool) result = COMPARE(bool);
+      return result;
+#undef COMPARE
+    }
+  };
+}
+
 namespace sapphire::management {
-  using FunctionImplCollection = map<string, FunctionImpl>;
-  using FunctionHashMap = unordered_map<string, FunctionImpl *>;
-  
-
-  void CreateImpl(FunctionImpl impl, string domain = kTypeIdNull);
-  FunctionImpl *FindFunction(string id, string domain = kTypeIdNull);
-
   Object *CreateConstantObject(string id, Object &object);
   Object *CreateConstantObject(string id, Object &&object);
   Object *GetConstantObject(string &id);
-
-  bool IsAlive(initializer_list<Object> &&objects);
-}
-
-namespace sapphire::management::type {
-  const unordered_set<string> RepackableObjTypes = {
-    kTypeIdInt, kTypeIdFloat, kTypeIdBool, kTypeIdString,
-    kTypeIdWideString, kTypeIdInStream, kTypeIdOutStream
-  };
-
-  template <typename T>
-  bool PlainComparator(Object &lhs, Object &rhs) {
-    return lhs.Cast<T>() == rhs.Cast<T>();
-  }
-
-  vector<string> GetMethods(string id);
-  bool CheckMethod(string func_id, Object &obj);
-  size_t GetHash(Object &obj);
-  bool IsHashable(Object &obj);
-  bool IsCopyable(Object &obj);
-  void CreateObjectTraits(string id, ObjectTraits temp);
-  Object CreateObjectCopy(Object &object);
-  bool CheckBehavior(Object &obj, string method_str);
-  bool CompareObjects(Object &lhs, Object &rhs);
-
-  class ObjectTraitsSetup {
-  private:
-    string type_id_;
-    string methods_;
-    DeliveryImpl delivering_impl_;
-    Comparator comparator_;
-    HasherFunction hasher_;
-    vector<FunctionImpl> impl_;
-    FunctionImpl delivering_;  //deprecated
-
-  public:
-    ObjectTraitsSetup() = delete;
-
-    ObjectTraitsSetup(
-      string type_name,
-      DeliveryImpl dlvy,
-      HasherFunction hasher) :
-      type_id_(type_name),
-      delivering_impl_(dlvy),
-      comparator_(nullptr),
-      hasher_(hasher) {}
-
-    ObjectTraitsSetup(string type_name, DeliveryImpl dlvy) :
-      type_id_(type_name), delivering_impl_(dlvy), 
-      comparator_(nullptr), hasher_(nullptr) {}
-
-    //TODO:multi constructor injector
-    ObjectTraitsSetup &InitConstructor(FunctionImpl impl) {
-
-      delivering_ = impl; return *this; 
-    }
-
-    ObjectTraitsSetup &InitComparator(Comparator comparator) {
-      comparator_ = comparator; return *this; 
-    }
-
-    ObjectTraitsSetup &InitMethods(initializer_list<FunctionImpl> &&rhs);
-    ~ObjectTraitsSetup();
-  };
 }
 
 namespace sapphire::management::script {
@@ -108,39 +95,9 @@ namespace sapphire::management::runtime {
   string GetScriptAbsolutePath();
 }
 
-namespace std {
-  template <>
-  struct hash<sapphire::Object> {
-    size_t operator()(sapphire::Object const &rhs) const {
-      auto copy = rhs; //solve with limitation
-      size_t value = 0;
-      if (sapphire::management::type::IsHashable(copy)) {
-        value = sapphire::management::type::GetHash(copy);
-      }
-
-      return value;
-    }
-  };
-
-  template <>
-  struct equal_to<sapphire::Object> {
-    bool operator()(sapphire::Object const &lhs, sapphire::Object const &rhs) const {
-      auto copy_lhs = lhs, copy_rhs = rhs;
-      return sapphire::management::type::CompareObjects(copy_lhs, copy_rhs);
-    }
-  };
-
-  template <>
-  struct not_equal_to<sapphire::Object> {
-    bool operator()(sapphire::Object const &lhs, sapphire::Object const &rhs) const {
-      auto copy_lhs = lhs, copy_rhs = rhs;
-      return !sapphire::management::type::CompareObjects(copy_lhs, copy_rhs);
-    }
-  };
-}
-
 namespace sapphire {
-  using ObjectTable = unordered_map<Object, Object>;
+  using ObjectTable = unordered_map<Object, Object, 
+    components::PlainTypeHash, components::PlainTypeComparaion>;
   using ManagedTable = shared_ptr<ObjectTable>;
 }
 

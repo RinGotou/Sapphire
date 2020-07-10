@@ -20,8 +20,6 @@ namespace sapphire {
 #define TC_ERROR(_Obj) Message(std::get<string>(_Obj), kStateError)
 #define TC_FAIL(_Obj) !std::get<bool>(_Obj)
 
-  using management::type::PlainComparator;
-
   string ParseRawString(const string &src);
   void InitPlainTypesAndConstants();
   void ActivateComponents();
@@ -315,8 +313,10 @@ namespace sapphire {
     bool IsTailCall(size_t idx);
 
     Object *FetchLiteralObject(Argument &arg);
-    Object FetchFunctionObject(string id);
     ObjectView FetchObjectView(Argument &arg);
+    bool CheckObjectBehavior(Object &obj, string behaviors);
+    bool CheckObjectMethod(Object &obj, string id);
+    void GetObjectMethods(Object &obj, vector<string> &dest);
 
     bool FetchFunctionImplEx(FunctionImplPointer &dest, string id, string type_id = kTypeIdNull, 
       Object *obj_ptr = nullptr);
@@ -410,9 +410,10 @@ namespace sapphire {
     deque<VMCodePointer> code_stack_;
     FrameStack frame_stack_;
     ObjectStack obj_stack_;
-    unordered_map<size_t, FunctionImplPointer> impl_cache_;
     vector<ObjectCommonSlot> view_delegator_;
+    bool delegated_base_scope_;
     bool error_;
+    
 
   public:
     ~Machine() { if (is_logger_host_) delete logger_; }
@@ -428,6 +429,7 @@ namespace sapphire {
       code_stack_(),
       frame_stack_(),
       obj_stack_(),
+      delegated_base_scope_(false),
       error_(false) { 
 
       code_stack_.push_back(&ir); 
@@ -442,6 +444,7 @@ namespace sapphire {
       code_stack_(),
       frame_stack_(),
       obj_stack_(),
+      delegated_base_scope_(false),
       error_(false) {
 
       code_stack_.push_back(&ir);
@@ -456,8 +459,10 @@ namespace sapphire {
 
     void SetDelegatedRoot(ObjectContainer &root) {
       obj_stack_.SetDelegatedRoot(root);
+      delegated_base_scope_ = true;
     }
 
+    void CopyComponents();
     void Run(bool invoke = false);
 
     bool ErrorOccurred() const {

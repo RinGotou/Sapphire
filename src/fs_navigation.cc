@@ -112,10 +112,6 @@ namespace sapphire {
     return Message().SetObject(mgmt::runtime::GetBinaryPath());
   }
 
-  //Message GetPlatform(ObjectMap &p) {
-  //  return Message().SetObject(kPlatformType);
-  //}
-
   Message GetDirectoryContent(ObjectMap &p) {
     auto tc = TypeChecking({ Expect("path", kTypeIdString) }, p);
     if (TC_FAIL(tc)) return TC_ERROR(tc);
@@ -144,7 +140,6 @@ namespace sapphire {
     CreateImpl(FunctionImpl(GetWorkingDir, "", "current_directory"));
     CreateImpl(FunctionImpl(GetScriptAbsolutePath, "", "boot_directory"));
     CreateImpl(FunctionImpl(GetCoreAbsolutePath, "", "core_directory"));
-    //CreateImpl(FunctionImpl(GetPlatform, "", "get_platform"));
     CreateImpl(FunctionImpl(ExistFSObject, "path", "exist_fsobj"));
     CreateImpl(FunctionImpl(CreateNewDirectory, "path", "create_dir"));
     CreateImpl(FunctionImpl(RemoveFSObject, "path", "remove_fsobj"));

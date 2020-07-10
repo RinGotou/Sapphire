@@ -146,23 +146,19 @@ namespace sapphire {
   }
 
   void InitPlainTypesAndConstants() {
-    using type::ObjectTraitsSetup;
+    using namespace components;
     using namespace management;
-    ObjectTraitsSetup(kTypeIdInt, PlainDeliveryImpl<int64_t>, PlainHasher<int64_t>)
-      .InitComparator(PlainComparator<int64_t>);
-    ObjectTraitsSetup(kTypeIdFloat, PlainDeliveryImpl<double>, PlainHasher<double>)
-      .InitComparator(PlainComparator<double>);
-    ObjectTraitsSetup(kTypeIdBool, PlainDeliveryImpl<bool>, PlainHasher<bool>)
-      .InitComparator(PlainComparator<bool>);
-    ObjectTraitsSetup(kTypeIdNull, ShallowDelivery)
-      .InitConstructor(FunctionImpl([](ObjectMap &p)->Message {
-        return Message().SetObject(Object());
-      }, "", kTypeIdNull));
+
+    CreateStruct(kTypeIdInt);
+    CreateStruct(kTypeIdFloat);
+    CreateStruct(kTypeIdBool);
+    CreateStruct(kTypeIdNull);
 
     EXPORT_CONSTANT(kTypeIdInt);
     EXPORT_CONSTANT(kTypeIdFloat);
     EXPORT_CONSTANT(kTypeIdBool);
     EXPORT_CONSTANT(kTypeIdNull);
+    EXPORT_CONSTANT(kPlatformType);
     CreateConstantObject("kCoreFilename", Object(runtime::GetBinaryName()));
     CreateConstantObject("kCorePath", Object(runtime::GetBinaryPath()));
   }
@@ -425,19 +421,6 @@ namespace sapphire {
     return ptr;
   }
 
-  Object Machine::FetchFunctionObject(string id) {
-    Object obj;
-    auto &frame = frame_stack_.top();
-    auto ptr = FindFunction(id);
-
-    if (ptr != nullptr) {
-      auto impl = *ptr;
-      obj.PackContent(make_shared<FunctionImpl>(impl), kTypeIdFunction);
-    }
-
-    return obj;
-  }
-
   ObjectView Machine::FetchObjectView(Argument &arg) {
 #define OBJECT_DEAD_MSG {                           \
       frame.MakeError("Referenced object is dead"); \
@@ -506,14 +489,7 @@ namespace sapphire {
           view = ObjectView(ptr);
         }
         else {
-          auto obj = FetchFunctionObject(arg.GetData());
-          if (obj.Null()) {
-            frame.MakeError("Object is not found: " + arg.GetData());
-          }
-          else {
-            view_delegator_.emplace_back(new Object(obj));
-            view = ObjectView(dynamic_cast<ObjectPointer>(view_delegator_.back()));
-          }
+          frame.MakeError("Object is not found: " + arg.GetData());
         }
       }
       view.source = ObjectViewSource::kSourceReference;
@@ -544,6 +520,76 @@ namespace sapphire {
     return view;
   }
 
+  bool Machine::CheckObjectBehavior(Object &obj, string behaviors) {
+    auto sample = BuildStringVector(behaviors);
+    bool result = true;
+
+    auto do_checking = [&sample, &result](ObjectStruct &base) -> void {
+      for (const auto &unit : sample) {
+        auto ptr = base.Find(unit);
+
+        if (ptr == nullptr) result = false;
+        else if (ptr->GetTypeId() != kTypeIdFunction) result = false;
+
+        if (!result) return;
+      }
+    };
+
+    if (obj.IsSubContainer()) {
+      //open this object directly
+      auto &base = obj.Cast<ObjectStruct>();
+      do_checking(base);
+    }
+    else {
+      //find object type struct and check the methods
+      auto *struct_obj_ptr = obj_stack_.Find(obj.GetTypeId(), TryAppendTokenId(obj.GetTypeId()));
+      if (struct_obj_ptr != nullptr && struct_obj_ptr->IsSubContainer()) {
+        auto &base = struct_obj_ptr->Cast<ObjectStruct>();
+        do_checking(base);
+      }
+      else result = false;
+    }
+
+    return result;
+  }
+
+  bool Machine::CheckObjectMethod(Object &obj, string id) {
+    bool result = false;
+
+    if (obj.IsSubContainer()) {
+      auto &base = obj.Cast<ObjectStruct>();
+      auto ptr = base.Find(id);
+      result = (ptr != nullptr && ptr->GetTypeId() == kTypeIdFunction);
+    }
+    else {
+      auto *struct_obj_ptr = obj_stack_.Find(obj.GetTypeId(), TryAppendTokenId(obj.GetTypeId()));
+      if (struct_obj_ptr != nullptr && struct_obj_ptr->IsSubContainer()) {
+        auto &base = struct_obj_ptr->Cast<ObjectStruct>();
+        auto ptr = base.Find(id);
+        result = (ptr != nullptr && ptr->GetTypeId() == kTypeIdFunction);
+      }
+    }
+
+    return result;
+  }
+
+  void Machine::GetObjectMethods(Object &obj, vector<string> &dest) {
+    if (obj.IsSubContainer()) {
+      auto &base = obj.Cast<ObjectStruct>().GetContent();
+
+      for (const auto &unit : base) dest.emplace_back(unit.first);
+      //apppend 'members' method
+      if (obj.GetTypeId() == kTypeIdStruct) dest.emplace_back("members");
+    }
+    else {
+      auto *struct_obj_ptr = obj_stack_.Find(obj.GetTypeId(), TryAppendTokenId(obj.GetTypeId()));
+      if (struct_obj_ptr != nullptr && struct_obj_ptr->IsSubContainer()) {
+        auto &base = struct_obj_ptr->Cast<ObjectStruct>().GetContent();
+        for (const auto &unit : base) dest.emplace_back(unit.first);
+      }
+    }
+  }
+
   bool Machine::FetchFunctionImplEx(FunctionImplPointer &dest, string id, string type_id,
     Object *obj_ptr) {
     auto &frame = frame_stack_.top();
@@ -561,8 +607,7 @@ namespace sapphire {
 
     //with domain
     if (type_id != kTypeIdNull) {
-      if (dest = mgmt::FindFunction(id, type_id); dest != nullptr) return true;
-      else if (Object *obj = obj_stack_.Find(type_id); obj != nullptr) {
+      if (Object *obj = obj_stack_.Find(type_id); obj != nullptr) {
         if (!obj->IsSubContainer()) METHOD_NOT_FOUND_MSG;
         auto &base = obj->Cast<ObjectStruct>();
         auto *ptr = base.Find(id);
@@ -587,8 +632,7 @@ namespace sapphire {
     //Hint: No need to implement the behavior of initializer,
     //just making error instead.
     else {
-      if (dest = mgmt::FindFunction(id); dest != nullptr) return true;
-      else if (auto *ptr = obj_stack_.Find(id); ptr != nullptr) {
+      if (auto *ptr = obj_stack_.Find(id); ptr != nullptr) {
         if (ptr->GetTypeId() != kTypeIdFunction) TYPE_ERROR_MSG;
         dest = &ptr->Cast<FunctionImpl>();
       }
@@ -615,91 +659,63 @@ namespace sapphire {
         FetchObjectView(domain);
 
       if (frame.error) return false;
-
+      if (!view.Seek().IsSubContainer()) {
+        frame.MakeError("Invalid object instance for this method");
+        return false;
+      }
       //find method in sub-container    
-      if (view.Seek().IsSubContainer()) {
-        //CXX function from components
-        impl = mgmt::FindFunction(id, view.Seek().GetTypeId());
 
-        //not found, try to find VMCode function
-        if (impl == nullptr) {
-          auto &base = view.Seek().Cast<ObjectStruct>();
-          auto *ptr = base.Find(id);
-          if (ptr == nullptr) {
-            frame.MakeError("Method is not found: " + id); 
-            return false;                                  
-          }
+      auto &base = view.Seek().Cast<ObjectStruct>();
+      auto *ptr = base.Find(id);
+      if (ptr == nullptr) {
+        frame.MakeError("Method is not found: " + id); 
+        return false;                                  
+      }
 
-          if (ptr->GetTypeId() != kTypeIdFunction) {
-            frame.MakeError(id + " is not a function object");
-            return false;
-          }
+      if (ptr->GetTypeId() != kTypeIdFunction) {
+        frame.MakeError(id + " is not a function object");
+        return false;
+      }
 
-          impl = &ptr->Cast<FunctionImpl>();
-        }
-      }
-      else if (auto it = impl_cache_.find(frame.idx); it != impl_cache_.end()) {
-        impl = it->second;
-      }
-      else {
-        impl = mgmt::FindFunction(id, view.Seek().GetTypeId());
-        if (impl != nullptr) {
-          impl_cache_.emplace(std::make_pair(frame.idx, impl));
-        }
-        else {
-          frame.MakeError("Method is not found: " + id);
-          return false;
-        }
-      }
+      impl = &ptr->Cast<FunctionImpl>();
+      
 
       obj_map.emplace(NamedObject(kStrMe, view.Seek()));
       if (!frame.assert_rc_copy.Null()) frame.assert_rc_copy = Object();
     }
     //Plain bulit-in function and user-defined function
-    //At first, Machine will querying in built-in function map,
-    //and then try to fetch function object in heap.
     else {
-      //CXX function from components
-      if (auto it = impl_cache_.find(frame.idx); it != impl_cache_.end()) {
-        impl = it->second;
+      ObjectPointer ptr = obj_stack_.Find(id);
+
+      if (ptr == nullptr) {
+        frame.MakeError("Function is not found: " + id);
+        return false;
       }
-      //not found,  try to find VMCode function
-      else if (impl = FindFunction(id); impl == nullptr) {
-        ObjectPointer ptr = obj_stack_.Find(id);
 
-        if (ptr == nullptr) {
-          frame.MakeError("Function is not found: " + id);
+      if (!ptr->IsAlive()) {
+        frame.MakeError("Referenced object is dead: " + id);
+        return false;
+      }
+
+      if (ptr->GetTypeId() == kTypeIdFunction) {
+        impl = &ptr->Cast<FunctionImpl>();
+      }
+      else if (ptr->IsSubContainer() && ptr->GetTypeId() == kTypeIdStruct) {
+        auto &base = ptr->Cast<ObjectStruct>();
+        auto *initializer_obj = base.Find(kStrInitializer);
+
+        if (initializer_obj == nullptr) {
+          frame.MakeError("Struct doesn't have initializer");
           return false;
         }
 
-        if (!ptr->IsAlive()) {
-          frame.MakeError("Referenced object is dead: " + id);
-          return false;
-        }
-
-        if (ptr->GetTypeId() == kTypeIdFunction) {
-          impl = &ptr->Cast<FunctionImpl>();
-        }
-        else if (ptr->IsSubContainer() && ptr->GetTypeId() == kTypeIdStruct) {
-          auto &base = ptr->Cast<ObjectStruct>();
-          auto *initializer_obj = base.Find(kStrInitializer);
-
-          if (initializer_obj == nullptr) {
-            frame.MakeError("Struct doesn't have initializer");
-            return false;
-          }
-
-          impl = &initializer_obj->Cast<FunctionImpl>();
-          frame.initializer_calling = true;
-          frame.struct_base = *ptr;
-        }
-        else {
-          frame.MakeError("Not function object: " + id);
-          return false;
-        }
+        impl = &initializer_obj->Cast<FunctionImpl>();
+        frame.initializer_calling = true;
+        frame.struct_base = *ptr;
       }
       else {
-        impl_cache_.emplace(std::make_pair(frame.idx, impl));
+        frame.MakeError("Not function object: " + id);
+        return false;
       }
     }
 #undef METHOD_NOT_FOUND_MSG
@@ -723,7 +739,7 @@ namespace sapphire {
 
     if (frame.error) return;
 
-    impl.AppendClosureRecord(domain.GetData(), type::CreateObjectCopy(view.Seek()));
+    impl.AppendClosureRecord(domain.GetData(), components::DumpObject(view.Seek()));
   }
 
   void Machine::CheckArgrumentList(FunctionImpl &impl, ArgumentList &args) {
@@ -757,7 +773,7 @@ namespace sapphire {
         break;
       }
 
-      impl.AppendClosureRecord(data, type::CreateObjectCopy(view.Seek()));
+      impl.AppendClosureRecord(data, components::DumpObject(view.Seek()));
     }
   }
 
@@ -1013,7 +1029,7 @@ namespace sapphire {
 
     if (frame.error) return;
 
-    if (!type::CheckBehavior(container_obj, kContainerBehavior)) {
+    if (!CheckObjectBehavior(container_obj, kContainerBehavior)) {
       frame.MakeError("Invalid container object");
       return;
     }
@@ -1040,7 +1056,7 @@ namespace sapphire {
     }
 
     auto iterator_obj = msg.GetObj();
-    if (!type::CheckBehavior(iterator_obj, kIteratorBehavior)) {
+    if (!CheckObjectBehavior(iterator_obj, kIteratorBehavior)) {
       frame.MakeError("Invalid iterator object");
       return;
     }
@@ -1066,7 +1082,7 @@ namespace sapphire {
 
     auto tail = CallMethod(*container, kStrTail).GetObj();
     if (frame.error) return;
-    if (!type::CheckBehavior(tail, kIteratorBehavior)) {
+    if (!CheckObjectBehavior(tail, kIteratorBehavior)) {
       frame.MakeError("Invalid container object");
       return;
     }
@@ -1391,7 +1407,7 @@ namespace sapphire {
       for (auto &unit : super_base.GetContent()) {
         if (compare(unit.first, kStrSuperStruct, kStrStructId)) continue;
         if (unit.second.GetTypeId() != kTypeIdFunction) {
-          managed_struct->Add(unit.first, type::CreateObjectCopy(unit.second));
+          managed_struct->Add(unit.first, components::DumpObject(unit.second));
         }
         else {
           managed_struct->Add(unit.first, unit.second);
@@ -1412,7 +1428,7 @@ namespace sapphire {
           if (unit.first == kStrStructId) continue;
 
           if (unit.second.GetTypeId() != kTypeIdFunction) {
-            managed_struct->Add(unit.first, type::CreateObjectCopy(unit.second));
+            managed_struct->Add(unit.first, components::DumpObject(unit.second));
           }
           else {
             managed_struct->Add(unit.first, unit.second);
@@ -1670,7 +1686,6 @@ namespace sapphire {
   }
 
   void Machine::CommandBind(ArgumentList &args, bool local_value, bool ext_value) {
-    using namespace type;
     auto &frame = frame_stack_.top();
 
     if (args[0].GetType() == kArgumentLiteral &&
@@ -1696,7 +1711,7 @@ namespace sapphire {
 
     if (lhs.source == ObjectViewSource::kSourceReference) {
       auto &real_lhs = lhs.Seek().Unpack();
-      real_lhs = CreateObjectCopy(rhs.Seek());
+      real_lhs = components::DumpObject(rhs.Seek());
       return;
     }
     else {
@@ -1717,12 +1732,12 @@ namespace sapphire {
             return;
           }
 
-          ptr->Unpack() = CreateObjectCopy(rhs.Seek());
+          ptr->Unpack() = components::DumpObject(rhs.Seek());
           return;
         }
       }
 
-      if (!obj_stack_.CreateObject(id, CreateObjectCopy(rhs.Seek()), 
+      if (!obj_stack_.CreateObject(id, components::DumpObject(rhs.Seek()), 
         args[0].option.token_id)) {
         frame.MakeError("Object binding is failed");
         return;
@@ -1827,7 +1842,8 @@ namespace sapphire {
     Object &obj = FetchObjectView(args[0]).Seek();
     if (frame.error) return;
 
-    auto methods = type::GetMethods(obj.GetTypeId());
+    vector<string> methods;
+    GetObjectMethods(obj, methods);
     ManagedArray base = make_shared<ObjectArray>();
 
     for (auto &unit : methods) {
@@ -1866,7 +1882,7 @@ namespace sapphire {
     }
 
     string str = str_obj.Cast<string>();
-    bool first_stage = type::CheckMethod(str, obj);
+    bool first_stage = CheckObjectMethod(obj, str);
     bool second_stage = obj.IsSubContainer() ?
       [&]() -> bool {
       auto &container = obj.Cast<ObjectStruct>().GetContent();
@@ -1935,7 +1951,7 @@ namespace sapphire {
         }
       }
       else {
-        if (!type::CheckMethod(kStrGetStr, obj)) {
+        if (!CheckObjectMethod(obj, kStrGetStr)) {
           frame.MakeError("Invalid argument for convert()");
           return;
         }
@@ -2036,7 +2052,7 @@ namespace sapphire {
     }
     else {
       //Try to invoke 'print' method
-      if (!mgmt::type::CheckMethod(kStrPrintDo, obj)) {
+      if (!CheckObjectMethod(obj, kStrPrintDo)) {
         string msg("<Object Type=" + obj.GetTypeId() + string(">"));
         fputs(msg.data(), VM_STDOUT);
       }
@@ -2375,7 +2391,7 @@ namespace sapphire {
       frame_stack_.top().MakeError("Unexpected return");
       return;
     }
-    impl_cache_.clear();
+
     ObjectPointer constraint_type_obj = obj_stack_.GetCurrent().Find(kStrReturnValueConstrantObj);
     string constraint_type = constraint_type_obj == nullptr ?
       "" : constraint_type_obj->Cast<string>();
@@ -2522,7 +2538,7 @@ namespace sapphire {
 
     if (frame.error) return;
 
-    auto result = type::CheckBehavior(obj, behavior_obj.Cast<string>());
+    auto result = CheckObjectBehavior(obj, behavior_obj.Cast<string>());
 
     frame.RefreshReturnStack(Object(result, kTypeIdBool));
   }
@@ -2896,7 +2912,6 @@ namespace sapphire {
   }
 
   void Machine::GenerateStructInstance(ObjectMap &p) {
-    using namespace type;
     auto &frame = frame_stack_.top();
 
     auto &base = frame.struct_base.Cast<ObjectStruct>().GetContent();
@@ -2913,8 +2928,7 @@ namespace sapphire {
         continue;
       }
 
-      //create new object copy instead of RC copy
-      managed_instance->Add(unit.first, CreateObjectCopy(unit.second));
+      managed_instance->Add(unit.first, components::DumpObject(unit.second));
     }
 
     if (!super_struct.Null()) {
@@ -2959,6 +2973,15 @@ namespace sapphire {
     frame.MakeError(msg);
   }
 
+  void Machine::CopyComponents() {
+    auto &base = obj_stack_.GetCurrent();
+    auto &comp_base = components::GetBuiltinComponentsObjBase();
+    
+    for (auto &unit : comp_base) {
+      base.Add(unit.first, unit.second);
+    }
+  }
+
   void Machine::Run(bool invoke) {
     if (code_stack_.empty()) return;
 
@@ -2973,6 +2996,7 @@ namespace sapphire {
     if (!invoke) {
       frame_stack_.push(RuntimeFrame());
       obj_stack_.Push();
+      if (!delegated_base_scope_) CopyComponents();
     }
 
     RuntimeFrame *frame = &frame_stack_.top();
@@ -3041,7 +3065,6 @@ namespace sapphire {
           update_stack_frame(*impl);
         }
         switch_to_next_tick = true;
-        impl_cache_.clear();
         break;
       case kFunctionExternal:
         if (invoking_request) {
@@ -3139,7 +3162,6 @@ namespace sapphire {
         if (frame->error) break;
         //Update register data
         refresh_tick();
-        impl_cache_.clear();
         frame->Stepping();
         continue;
       }

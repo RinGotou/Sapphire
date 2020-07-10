@@ -147,6 +147,11 @@ namespace sapphire {
     auto &table = p.Cast<ObjectTable>(kStrMe);
     auto &key = p["key"];
     auto &value = p["value"];
+
+    if (!lexical::IsPlainType(key.GetTypeId())) {
+      return Message("Invalid key type", kStateError);
+    }
+
     auto result = table.insert(
       make_pair(CreateObjectCopy(key), CreateObjectCopy(value))
     );
