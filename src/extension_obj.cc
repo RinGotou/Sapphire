@@ -1,6 +1,34 @@
 #include "machine.h"
 
 namespace sapphire {
+  Message GetFunctionPointer(ObjectMap &p) {
+    auto tc = TypeChecking(
+      {
+        Expect("library", kTypeIdString),
+        Expect("id", kTypeIdString)
+      }, p);
+    if (TC_FAIL(tc)) return TC_ERROR(tc);
+
+#ifdef _WIN32
+    wstring path = s2ws(p.Cast<string>("library"));
+    string id = p.Cast<string>("id");
+    HMODULE mod = LoadLibraryW(path.data());
+
+    if (mod == nullptr) return Message().SetObject(int64_t(0));
+
+    auto func = GenericFunctionPointer(GetProcAddress(mod, id.data()));
+#else
+    string path = p.Cast<string>("library");
+    string id = p.Cast<string>("id");
+    void *mod = dlopen(path.data(), RTLD_LAZY);
+
+    if (mod == nullptr) return Message().SetObject(int64_t(0));
+
+    auto func = GenericFunctionPointer(dlsym(mod, id.data()));
+#endif
+    return Message().SetObject(Object(func, kTypeIdFunctionPointer));
+  }
+
   Message NewExtension(ObjectMap &p) { 
     using namespace ext;
     auto tc = TypeChecking({ Expect("path",kTypeIdString) }, p);
@@ -68,6 +96,8 @@ namespace sapphire {
 
   void InitExtensionComponents() {
     using namespace mgmt::type;
+
+    mgmt::CreateImpl(FunctionImpl(GetFunctionPointer, "library|id", "get_function_ptr"));
 
     ObjectTraitsSetup(kTypeIdExtension, ShallowDelivery)
       .InitConstructor(

@@ -10,11 +10,16 @@ struct character
   fn print_name()
     println(me.name)
   end
+
+  fn print_do()
+    print('Character name is ' + me.name)
+  end
 end
 
 shiroha = character('shiroha', 'shiroha.png')
 println(shiroha.name + ' ' + shiroha.img)
 println(shiroha.name)
 shiroha.print_name()
+println(shiroha)
 
 
