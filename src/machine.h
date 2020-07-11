@@ -324,14 +324,14 @@ namespace sapphire {
     bool FetchFunctionImpl(FunctionImplPointer &impl, CommandPointer &command,
       ObjectMap &obj_map);
 
-    void CheckDomainObject(FunctionImpl &impl, Request &req, bool first_assert);
-    void CheckArgrumentList(FunctionImpl &impl, ArgumentList &args);
+    void CheckDomainObject(Function &impl, Request &req, bool first_assert);
+    void CheckArgrumentList(Function &impl, ArgumentList &args);
     void ClosureCatching(ArgumentList &args, size_t nest_end, bool closure);
 
     Message CallMethod(Object &obj, string id, ObjectMap &args);
     Message CallMethod(Object &obj, string id,
       const initializer_list<NamedObject> &&args = {});
-    Message CallVMCFunction(FunctionImpl &impl, ObjectMap &obj_map);
+    Message CallVMCFunction(Function &impl, ObjectMap &obj_map);
 
     void CommandIfOrWhile(Keyword token, ArgumentList &args, size_t nest_end);
     void CommandForEach(ArgumentList &args, size_t nest_end);
@@ -399,11 +399,11 @@ namespace sapphire {
 
     void MachineCommands(Keyword token, ArgumentList &args, Request &request);
 
-    void GenerateArgs(FunctionImpl &impl, ArgumentList &args, ObjectMap &obj_map);
-    void Generate_Fixed(FunctionImpl &impl, ArgumentList &args, ObjectMap &obj_map);
-    void Generate_AutoSize(FunctionImpl &impl, ArgumentList &args, ObjectMap &obj_map);
-    void Generate_AutoFill(FunctionImpl &impl, ArgumentList &args, ObjectMap &obj_map);
-    void CallExtensionFunction(ObjectMap &p, FunctionImpl &impl);
+    void GenerateArgs(Function &impl, ArgumentList &args, ObjectMap &obj_map);
+    void Generate_Fixed(Function &impl, ArgumentList &args, ObjectMap &obj_map);
+    void Generate_AutoSize(Function &impl, ArgumentList &args, ObjectMap &obj_map);
+    void Generate_AutoFill(Function &impl, ArgumentList &args, ObjectMap &obj_map);
+    void CallExtensionFunction(ObjectMap &p, Function &impl);
     void GenerateStructInstance(ObjectMap &p);
     void GenerateErrorMessages(size_t stop_index);
   private:

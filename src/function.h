@@ -59,7 +59,7 @@ namespace sapphire {
     kFunctionCXX, kFunctionVMCode, kFunctionExternal
   };
 
-  class FunctionImpl {
+  class Function {
   private:
     shared_ptr<_FunctionImpl> impl_;
     ObjectMap record_;
@@ -73,7 +73,7 @@ namespace sapphire {
     vector<string> params_;
 
   public:
-    FunctionImpl() :
+    Function() :
       impl_(nullptr),
       record_(),
       mode_(),
@@ -83,7 +83,7 @@ namespace sapphire {
       id_(),
       params_() {}
 
-    FunctionImpl(
+    Function(
       Activity activity,
       string params,
       string id,
@@ -98,7 +98,7 @@ namespace sapphire {
       id_(id),
       params_(BuildStringVector(params)) {}
 
-    FunctionImpl(
+    Function(
       size_t offset,
       VMCode ir,
       string id,
@@ -114,7 +114,7 @@ namespace sapphire {
       id_(id),
       params_(params) {}
 
-    FunctionImpl(
+    Function(
       ExtensionActivity activity,
       string id,
       string params_pattern,
@@ -141,7 +141,7 @@ namespace sapphire {
       return dynamic_pointer_cast<ExternalFunction>(impl_)->GetExtActivity();
     }
 
-    bool operator==(FunctionImpl &rhs) const {
+    bool operator==(Function &rhs) const {
       if (&rhs == this) return true;
       return impl_ == rhs.impl_;
     }
@@ -170,12 +170,12 @@ namespace sapphire {
       return (impl_ != nullptr);
     }
 
-    FunctionImpl &SetClosureRecord(ObjectMap record) {
+    Function &SetClosureRecord(ObjectMap record) {
       record_ = record;
       return *this;
     }
 
-    FunctionImpl &AppendClosureRecord(string_view id, Object &&obj) {
+    Function &AppendClosureRecord(string_view id, Object &&obj) {
       record_.insert(NamedObject(id, obj));
       return *this;
     }
@@ -184,7 +184,7 @@ namespace sapphire {
       return record_;
     }
 
-    FunctionImpl &SetLimit(size_t size) {
+    Function &SetLimit(size_t size) {
       limit_ = size;
       return *this;
     }
@@ -198,5 +198,5 @@ namespace sapphire {
     }
   };
 
-  using FunctionImplPointer = FunctionImpl *;
+  using FunctionImplPointer = Function *;
 }

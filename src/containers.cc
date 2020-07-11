@@ -222,15 +222,15 @@ namespace sapphire {
     CreateStruct(kTypeIdArray);
     StructMethodGenerator(kTypeIdArray).Create(
       {
-        FunctionImpl(NewArray, "size|init_value", kStrInitializer, kParamAutoFill).SetLimit(0),
-        FunctionImpl(ArrayGetElement, "index", "at"),
-        FunctionImpl(ArrayGetSize, "", "size"),
-        FunctionImpl(ArrayPush, "object", "push"),
-        FunctionImpl(ArrayPop, "", "pop"),
-        FunctionImpl(ArrayEmpty, "", "empty"),
-        FunctionImpl(ArrayHead, "", "head"),
-        FunctionImpl(ArrayTail, "", "tail"),
-        FunctionImpl(ArrayClear, "", "clear")
+        Function(NewArray, "size|init_value", kStrInitializer, kParamAutoFill).SetLimit(0),
+        Function(ArrayGetElement, "index", "at"),
+        Function(ArrayGetSize, "", "size"),
+        Function(ArrayPush, "object", "push"),
+        Function(ArrayPop, "", "pop"),
+        Function(ArrayEmpty, "", "empty"),
+        Function(ArrayHead, "", "head"),
+        Function(ArrayTail, "", "tail"),
+        Function(ArrayClear, "", "clear")
       }
     );
     
@@ -238,35 +238,35 @@ namespace sapphire {
     CreateStruct(kTypeIdIterator);
     StructMethodGenerator(kTypeIdIterator).Create(
       {
-        FunctionImpl(IteratorGet, "", "obj"),
-        FunctionImpl(IteratorStepForward, "", "step_forward"),
-        FunctionImpl(IteratorStepBack, "", "step_back"),
-        FunctionImpl(IteratorOperatorCompare, kStrRightHandSide, kStrCompare)
+        Function(IteratorGet, "", "obj"),
+        Function(IteratorStepForward, "", "step_forward"),
+        Function(IteratorStepBack, "", "step_back"),
+        Function(IteratorOperatorCompare, kStrRightHandSide, kStrCompare)
       }
     );
 
     CreateStruct(kTypeIdPair);
     StructMethodGenerator(kTypeIdPair).Create(
       {
-        //FunctionImpl(NewPair, "left|right", kStrInitializer),
-        FunctionImpl(PairLeft, "", "left"),
-        FunctionImpl(PairRight, "", "right")
+        //Function(NewPair, "left|right", kStrInitializer),
+        Function(PairLeft, "", "left"),
+        Function(PairRight, "", "right")
       }
     );
 
     CreateStruct(kTypeIdTable);
     StructMethodGenerator(kTypeIdTable).Create(
       {
-        FunctionImpl(NewTable, "", kStrInitializer),
-        FunctionImpl(TableInsert, "key|value", "insert"),
-        FunctionImpl(TableGetElement, "key", kStrAt),
-        FunctionImpl(TableFindElement, "key", "find"),
-        FunctionImpl(TableEraseElement, "key", "erase"),
-        FunctionImpl(TableEmpty, "", "empty"),
-        FunctionImpl(TableSize, "", "size"),
-        FunctionImpl(TableClear, "", "clear"),
-        FunctionImpl(TableHead, "", "head"),
-        FunctionImpl(TableTail, "", "tail")
+        Function(NewTable, "", kStrInitializer),
+        Function(TableInsert, "key|value", "insert"),
+        Function(TableGetElement, "key", kStrAt),
+        Function(TableFindElement, "key", "find"),
+        Function(TableEraseElement, "key", "erase"),
+        Function(TableEmpty, "", "empty"),
+        Function(TableSize, "", "size"),
+        Function(TableClear, "", "clear"),
+        Function(TableHead, "", "head"),
+        Function(TableTail, "", "tail")
       }
     );
 

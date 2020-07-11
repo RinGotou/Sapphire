@@ -30,7 +30,7 @@ namespace sapphire {
   }
 
   Message NewExtension(ObjectMap &p) { 
-    using namespace ext;
+    using namespace extension;
     auto tc = TypeChecking({ Expect("path",kTypeIdString) }, p);
     if (TC_FAIL(tc)) return TC_ERROR(tc);
     auto &path = p.Cast<string>("path");
@@ -85,8 +85,8 @@ namespace sapphire {
         param_pattern = param_pattern.substr(1, param_pattern.size() - 1);
       }
 
-      shared_ptr<FunctionImpl> impl_ptr =
-        make_shared<FunctionImpl>(activity, id, param_pattern, mode);
+      shared_ptr<Function> impl_ptr =
+        make_shared<Function>(activity, id, param_pattern, mode);
 
       return Message().SetObject(Object(impl_ptr, kTypeIdFunction));
     }
@@ -97,14 +97,14 @@ namespace sapphire {
   void InitExtensionComponents() {
     using namespace components;
 
-    CreateFunctionObject(FunctionImpl(GetFunctionPointer, "library|id", "get_function_ptr"));
+    CreateFunctionObject(Function(GetFunctionPointer, "library|id", "get_function_ptr"));
 
     CreateStruct(kTypeIdExtension);
     StructMethodGenerator(kTypeIdExtension).Create(
       {
-        FunctionImpl(NewExtension, "path", kStrInitializer),
-        FunctionImpl(ExtensionGood, "", "good"),
-        FunctionImpl(ExtensionFetchFunction, "id", "fetch")
+        Function(NewExtension, "path", kStrInitializer),
+        Function(ExtensionGood, "", "good"),
+        Function(ExtensionFetchFunction, "id", "fetch")
       }
     );
 

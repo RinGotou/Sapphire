@@ -3,7 +3,6 @@
 
 using namespace std;
 using namespace sapphire;
-using namespace sapphire::management;
 
 using Processor = ArgumentProcessor<kHeadDoubleHorizon, kJoinerEqual>;
 

@@ -3,8 +3,6 @@
 #define EXPECTED_COUNT(_Count) (args.size() == _Count)
 
 namespace sapphire {
-  using namespace management;
-
   CommentedResult TypeChecking(ExpectationList &&lst, ObjectMap &obj_map,
     NullableList &&nullable) {
     bool result = true;
@@ -147,7 +145,7 @@ namespace sapphire {
 
   void InitPlainTypesAndConstants() {
     using namespace components;
-    using namespace management;
+    using namespace constant;
 
     CreateStruct(kTypeIdInt);
     CreateStruct(kTypeIdFloat);
@@ -382,7 +380,7 @@ namespace sapphire {
   }
 
   Object *Machine::FetchLiteralObject(Argument &arg) {
-    using namespace mgmt;
+    using namespace constant;
     auto value = arg.GetData();
 
     auto *ptr = GetConstantObject(value);
@@ -426,6 +424,8 @@ namespace sapphire {
   }
 
   ObjectView Machine::FetchObjectView(Argument &arg) {
+    using namespace constant;
+
 #define OBJECT_DEAD_MSG {                           \
       frame.MakeError("Referenced object is dead"); \
       return ObjectView();                          \
@@ -633,7 +633,7 @@ namespace sapphire {
         if (result == nullptr) METHOD_NOT_FOUND_MSG;
         if (result->GetTypeId() != kTypeIdFunction) TYPE_ERROR_MSG;
 
-        dest = &result->Cast<FunctionImpl>();
+        dest = &result->Cast<Function>();
       }
       else if (obj_ptr != nullptr && type_id == kTypeIdStruct) {
         auto &base = obj_ptr->Cast<ObjectStruct>();
@@ -642,7 +642,7 @@ namespace sapphire {
         if (ptr == nullptr) METHOD_NOT_FOUND_MSG;
         if (ptr->GetTypeId() != kTypeIdFunction) TYPE_ERROR_MSG;
 
-        dest = &ptr->Cast<FunctionImpl>();
+        dest = &ptr->Cast<Function>();
       }
       else METHOD_NOT_FOUND_MSG;
     }
@@ -652,7 +652,7 @@ namespace sapphire {
     else {
       if (auto *ptr = obj_stack_.Find(id); ptr != nullptr) {
         if (ptr->GetTypeId() != kTypeIdFunction) TYPE_ERROR_MSG;
-        dest = &ptr->Cast<FunctionImpl>();
+        dest = &ptr->Cast<Function>();
       }
       else METHOD_NOT_FOUND_MSG;
     }
@@ -705,7 +705,7 @@ namespace sapphire {
         return false;
       }
 
-      impl = &result->Cast<FunctionImpl>();
+      impl = &result->Cast<Function>();
       
 
       obj_map.emplace(NamedObject(kStrMe, view.Seek()));
@@ -726,7 +726,7 @@ namespace sapphire {
       }
 
       if (ptr->GetTypeId() == kTypeIdFunction) {
-        impl = &ptr->Cast<FunctionImpl>();
+        impl = &ptr->Cast<Function>();
       }
       else if (ptr->IsSubContainer() && ptr->GetTypeId() == kTypeIdStruct) {
         auto &base = ptr->Cast<ObjectStruct>();
@@ -737,7 +737,7 @@ namespace sapphire {
           return false;
         }
 
-        impl = &initializer_obj->Cast<FunctionImpl>();
+        impl = &initializer_obj->Cast<Function>();
         if (impl->GetType() == kFunctionVMCode) {
           frame.initializer_calling = true;
           frame.struct_base = *ptr;
@@ -753,7 +753,7 @@ namespace sapphire {
     return true;
   }
 
-  void Machine::CheckDomainObject(FunctionImpl &impl, Request &req, bool first_assert) {
+  void Machine::CheckDomainObject(Function &impl, Request &req, bool first_assert) {
     auto &frame = frame_stack_.top();
     auto domain = req.GetInterfaceDomain();
     auto keyword = req.GetKeywordValue();
@@ -772,7 +772,7 @@ namespace sapphire {
     impl.AppendClosureRecord(domain.GetData(), components::DumpObject(view.Seek()));
   }
 
-  void Machine::CheckArgrumentList(FunctionImpl &impl, ArgumentList &args) {
+  void Machine::CheckArgrumentList(Function &impl, ArgumentList &args) {
     auto &frame = frame_stack_.top();
     string_view data;
     ArgumentType type;
@@ -848,7 +848,7 @@ namespace sapphire {
     if (optional) argument_mode = kParamAutoFill;
     if (variable) argument_mode = kParamAutoSize;
 
-    FunctionImpl impl(nest + 1, code, args[0].GetData(), params, argument_mode);
+    Function impl(nest + 1, code, args[0].GetData(), params, argument_mode);
 
     if (optional) {
       impl.SetLimit(params.size() - counter);
@@ -869,7 +869,7 @@ namespace sapphire {
 
     obj_stack_.CreateObject(
       args[0].GetData(),
-      Object(make_shared<FunctionImpl>(impl), kTypeIdFunction),
+      Object(make_shared<Function>(impl), kTypeIdFunction),
       TryAppendTokenId(args[0].GetData())
     );
 
@@ -908,7 +908,7 @@ namespace sapphire {
     return CallMethod(obj, id, obj_map);
   }
 
-  Message Machine::CallVMCFunction(FunctionImpl &impl, ObjectMap &obj_map) {
+  Message Machine::CallVMCFunction(Function &impl, ObjectMap &obj_map) {
     auto &frame = frame_stack_.top();
     Message result;
 
@@ -1568,7 +1568,7 @@ namespace sapphire {
         return;
       }
 
-      auto &initializer_impl = initializer->Cast<FunctionImpl>();
+      auto &initializer_impl = initializer->Cast<Function>();
       auto &params = initializer_impl.GetParameters();
       size_t pos = args.size() - 1;
 
@@ -2021,13 +2021,13 @@ namespace sapphire {
       if (extension_name.empty()) absolute_path.append(".sp");
 
       if (!fs::exists(fs::path(absolute_path))) {
-        fs::path wrapped_abs_path(management::runtime::GetBinaryPath() + "/lib");
+        fs::path wrapped_abs_path(runtime::GetBinaryPath() + "/lib");
         absolute_path = fs::absolute(wrapped_abs_path).string();
         absolute_path.append("/" + wrapped_path.filename().string());
         if (extension_name.empty()) absolute_path.append(".sp");
       }
 
-      VMCode &script_file = management::script::AppendBlankScript(absolute_path);
+      VMCode &script_file = script::AppendBlankScript(absolute_path);
 
       //already loaded
       if (!script_file.empty()) return;
@@ -2595,7 +2595,7 @@ namespace sapphire {
       return;
     }
 
-    auto &impl = func_obj.Cast<FunctionImpl>();
+    auto &impl = func_obj.Cast<Function>();
 
     Object result(impl.GetPattern() == pattern, kTypeIdBool);
     frame.RefreshReturnStack(result);
@@ -2616,7 +2616,7 @@ namespace sapphire {
       return;
     }
 
-    auto &impl = func_obj.Cast<FunctionImpl>();
+    auto &impl = func_obj.Cast<Function>();
     auto size = impl.GetParamSize();
     auto limit = impl.GetLimit();
     Object result(static_cast<int64_t>(size - limit), kTypeIdInt);
@@ -2823,7 +2823,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::GenerateArgs(FunctionImpl &impl, ArgumentList &args, ObjectMap &obj_map) {
+  void Machine::GenerateArgs(Function &impl, ArgumentList &args, ObjectMap &obj_map) {
     switch (impl.GetPattern()) {
     case kParamFixed:
       Generate_Fixed(impl, args, obj_map);
@@ -2839,7 +2839,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::Generate_Fixed(FunctionImpl &impl, ArgumentList &args, ObjectMap &obj_map) {
+  void Machine::Generate_Fixed(Function &impl, ArgumentList &args, ObjectMap &obj_map) {
     auto &frame = frame_stack_.top();
     auto &params = impl.GetParameters();
     size_t pos = args.size() - 1;
@@ -2864,7 +2864,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::Generate_AutoSize(FunctionImpl &impl, ArgumentList &args, ObjectMap &obj_map) {
+  void Machine::Generate_AutoSize(Function &impl, ArgumentList &args, ObjectMap &obj_map) {
     auto &frame = frame_stack_.top();
     vector<string> &params = impl.GetParameters();
     list<Object> temp_list;
@@ -2899,7 +2899,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::Generate_AutoFill(FunctionImpl &impl, ArgumentList &args, ObjectMap &obj_map) {
+  void Machine::Generate_AutoFill(Function &impl, ArgumentList &args, ObjectMap &obj_map) {
     auto &frame = frame_stack_.top();
     auto &params = impl.GetParameters();
     size_t limit = impl.GetLimit();
@@ -2927,7 +2927,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CallExtensionFunction(ObjectMap &p, FunctionImpl &impl) {
+  void Machine::CallExtensionFunction(ObjectMap &p, Function &impl) {
     auto &frame = frame_stack_.top();
     Object returning_slot;
     auto ext_activity = impl.GetExtActivity();
@@ -3040,7 +3040,7 @@ namespace sapphire {
       frame = &frame_stack_.top();
     };
     //Protect current runtime environment and load another function
-    auto update_stack_frame = [&](FunctionImpl &func) -> void {
+    auto update_stack_frame = [&](Function &func) -> void {
       //block other event trigger while processing current event function
       bool inside_initializer_calling = frame->initializer_calling;
       frame->initializer_calling = false;
@@ -3068,7 +3068,7 @@ namespace sapphire {
       frame->jump_offset = jump_offset;
     };
     //Convert current environment to next calling
-    auto tail_call = [&](FunctionImpl &func) -> void {
+    auto tail_call = [&](Function &func) -> void {
       code_stack_.pop_back();
       code_stack_.push_back(&func.GetCode());
       obj_map.Naturalize(obj_stack_.GetCurrent());

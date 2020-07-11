@@ -7,7 +7,7 @@ namespace sapphire::components {
     return base;
   }
 
-  void CreateFunctionObject(FunctionImpl impl) {
+  void CreateFunctionObject(Function impl) {
     auto &base = GetBuiltinComponentsObjBase();
     base.try_emplace(impl.GetId(), Object(std::move(impl), kTypeIdFunction));
   }
@@ -26,7 +26,7 @@ namespace sapphire::components {
     struct_base.Add(kStrStructId, Object(id));
   }
 
-  bool StructMethodGenerator::Create(initializer_list<FunctionImpl> &&impls) {
+  bool StructMethodGenerator::Create(initializer_list<Function> &&impls) {
     auto &base = GetBuiltinComponentsObjBase();
     auto it = base.find(id_);
 
@@ -35,7 +35,7 @@ namespace sapphire::components {
     auto &struct_base = it->second.Cast<ObjectStruct>();
     
     for (auto &unit : impls) {
-      struct_base.Add(unit.GetId(), Object(make_shared<FunctionImpl>(unit), kTypeIdFunction));
+      struct_base.Add(unit.GetId(), Object(make_shared<Function>(unit), kTypeIdFunction));
     }
 
     return true;
@@ -75,9 +75,7 @@ namespace sapphire::components {
   }
 }
 
-
-
-namespace sapphire::management {
+namespace sapphire::constant {
   auto &GetConstantBase() {
     static ObjectContainer base;
     return base;
@@ -114,7 +112,7 @@ namespace sapphire::management {
   }
 }
 
-namespace sapphire::management::script {
+namespace sapphire::script {
   mutex script_storage_gate;
 
   auto &GetScriptStorage() {
@@ -167,7 +165,7 @@ namespace sapphire::management::script {
   }
 }
 
-namespace sapphire::management::extension {
+namespace sapphire::extension {
   template <ObjectType _TypeCode>
   struct _Deleter {
     _Deleter(void *ptr) {
@@ -322,7 +320,7 @@ namespace sapphire::management::extension {
   }
 }
 
-namespace sapphire::management::runtime {
+namespace sapphire::runtime {
   static string binary_name;
   static string binary_path;
   static string script_work_dir;

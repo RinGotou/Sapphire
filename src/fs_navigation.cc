@@ -90,26 +90,26 @@ namespace sapphire {
     string dest_dir;
 
     if (dir_obj.Null()) {
-      dest_dir = mgmt::runtime::GetScriptAbsolutePath();
+      dest_dir = runtime::GetScriptAbsolutePath();
     }
     else {
       dest_dir = dir_obj.Cast<string>();
     }
 
-    bool result = mgmt::runtime::SetWorkingDirectory(dest_dir);
+    bool result = runtime::SetWorkingDirectory(dest_dir);
     return Message().SetObject(result);
   }
 
   Message GetWorkingDir(ObjectMap &p) {
-    return Message().SetObject(mgmt::runtime::GetWorkingDirectory());
+    return Message().SetObject(runtime::GetWorkingDirectory());
   }
 
   Message GetScriptAbsolutePath(ObjectMap &p) {
-    return Message().SetObject(mgmt::runtime::GetScriptAbsolutePath());
+    return Message().SetObject(runtime::GetScriptAbsolutePath());
   }
 
   Message GetCoreAbsolutePath(ObjectMap &p) {
-    return Message().SetObject(mgmt::runtime::GetBinaryPath());
+    return Message().SetObject(runtime::GetBinaryPath());
   }
 
   Message GetDirectoryContent(ObjectMap &p) {
@@ -136,17 +136,17 @@ namespace sapphire {
   void InitConsoleComponents() {
     using namespace components;
 
-    CreateFunctionObject(FunctionImpl(SetWorkingDir, "dir", "chdir", kParamAutoFill).SetLimit(0));
-    CreateFunctionObject(FunctionImpl(GetWorkingDir, "", "current_directory"));
-    CreateFunctionObject(FunctionImpl(GetScriptAbsolutePath, "", "boot_directory"));
-    CreateFunctionObject(FunctionImpl(GetCoreAbsolutePath, "", "core_directory"));
-    CreateFunctionObject(FunctionImpl(ExistFSObject, "path", "exist_fsobj"));
-    CreateFunctionObject(FunctionImpl(CreateNewDirectory, "path", "create_dir"));
-    CreateFunctionObject(FunctionImpl(RemoveFSObject, "path", "remove_fsobj"));
-    CreateFunctionObject(FunctionImpl(RemoveFSObject_Recursive, "path", "remove_all_fsobj"));
-    CreateFunctionObject(FunctionImpl(CopyFSObject, "from|to", "copy_fsobj"));
-    CreateFunctionObject(FunctionImpl(CopyFSFile, "from|to", "copy_file"));
-    CreateFunctionObject(FunctionImpl(GetDirectoryContent, "path", "dir_content"));
-    CreateFunctionObject(FunctionImpl(GetFilenameExtension, "path", "filename_ext"));
+    CreateFunctionObject(Function(SetWorkingDir, "dir", "chdir", kParamAutoFill).SetLimit(0));
+    CreateFunctionObject(Function(GetWorkingDir, "", "current_directory"));
+    CreateFunctionObject(Function(GetScriptAbsolutePath, "", "boot_directory"));
+    CreateFunctionObject(Function(GetCoreAbsolutePath, "", "core_directory"));
+    CreateFunctionObject(Function(ExistFSObject, "path", "exist_fsobj"));
+    CreateFunctionObject(Function(CreateNewDirectory, "path", "create_dir"));
+    CreateFunctionObject(Function(RemoveFSObject, "path", "remove_fsobj"));
+    CreateFunctionObject(Function(RemoveFSObject_Recursive, "path", "remove_all_fsobj"));
+    CreateFunctionObject(Function(CopyFSObject, "from|to", "copy_fsobj"));
+    CreateFunctionObject(Function(CopyFSFile, "from|to", "copy_file"));
+    CreateFunctionObject(Function(GetDirectoryContent, "path", "dir_content"));
+    CreateFunctionObject(Function(GetFilenameExtension, "path", "filename_ext"));
   }
 }

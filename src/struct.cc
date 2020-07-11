@@ -12,22 +12,20 @@ namespace sapphire {
     return Message().SetObject(Object(managed_array, kTypeIdArray));
   }
 
-  //TODO:Comparator
-
   void InitStructComponents() {
     using namespace components;
 
     CreateStruct(kTypeIdStruct);
     StructMethodGenerator(kTypeIdStruct).Create(
       {
-        FunctionImpl(StructGetMembers, "", "members")
+        Function(StructGetMembers, "", "members")
       }
     );
 
     CreateStruct(kTypeIdModule);
     StructMethodGenerator(kTypeIdModule).Create(
       {
-        FunctionImpl(StructGetMembers, "", "members")
+        Function(StructGetMembers, "", "members")
       }
     );
 

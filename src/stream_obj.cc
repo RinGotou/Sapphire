@@ -77,29 +77,29 @@ namespace sapphire {
 
   void InitStreamComponents() {
     using namespace components;
-    using namespace management;
+    using namespace constant;
     
     CreateStruct(kTypeIdInStream);
     StructMethodGenerator(kTypeIdInStream).Create(
       {
-        FunctionImpl(NewInStream, "path", kStrInitializer),
-        FunctionImpl(InStreamGet, "", "get"),
-        FunctionImpl(InStreamEOF, "", "eof"),
-        FunctionImpl(StreamFamilyState<InStream>, "", "good")
+        Function(NewInStream, "path", kStrInitializer),
+        Function(InStreamGet, "", "get"),
+        Function(InStreamEOF, "", "eof"),
+        Function(StreamFamilyState<InStream>, "", "good")
       }
     );
 
     CreateStruct(kTypeIdOutStream);
     StructMethodGenerator(kTypeIdOutStream).Create(
       {
-        FunctionImpl(NewOutStream, "path|binary|append", kStrInitializer),
-        FunctionImpl(OutStreamWrite, "str", "write"),
-        FunctionImpl(StreamFamilyState<OutStream>, "", "good")
+        Function(NewOutStream, "path|binary|append", kStrInitializer),
+        Function(OutStreamWrite, "str", "write"),
+        Function(StreamFamilyState<OutStream>, "", "good")
       }
     );
 
-    management::CreateConstantObject("kOutstreamModeAppend", Object("append"));
-    management::CreateConstantObject("kOutstreamModeTruncate", Object("truncate"));
+    CreateConstantObject("kOutstreamModeAppend", Object("append"));
+    CreateConstantObject("kOutstreamModeTruncate", Object("truncate"));
 
     EXPORT_CONSTANT(kTypeIdInStream);
     EXPORT_CONSTANT(kTypeIdOutStream);

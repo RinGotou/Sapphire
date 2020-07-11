@@ -2,12 +2,12 @@
 
 namespace sapphire {
   Message FunctionGetId(ObjectMap &p) {
-    auto &impl = p.Cast<FunctionImpl>(kStrMe);
+    auto &impl = p.Cast<Function>(kStrMe);
     return Message(impl.GetId());
   }
 
   Message FunctionGetParameters(ObjectMap &p) {
-    auto &impl = p.Cast<FunctionImpl>(kStrMe);
+    auto &impl = p.Cast<Function>(kStrMe);
     shared_ptr<ObjectArray> dest_base = make_shared<ObjectArray>();
     auto origin_vector = impl.GetParameters();
 
@@ -20,13 +20,13 @@ namespace sapphire {
 
   Message FunctionCompare(ObjectMap &p) {
     auto &rhs = p[kStrRightHandSide];
-    auto &lhs = p[kStrMe].Cast<FunctionImpl>();
+    auto &lhs = p[kStrMe].Cast<Function>();
 
     string type_id = rhs.GetTypeId();
     bool result = false;
 
     if (type_id == kTypeIdFunction) {
-      auto &rhs_interface = rhs.Cast<FunctionImpl>();
+      auto &rhs_interface = rhs.Cast<Function>();
 
       result = (lhs == rhs_interface);
     }
@@ -40,9 +40,9 @@ namespace sapphire {
     CreateStruct(kTypeIdFunction);
     StructMethodGenerator(kTypeIdFunction).Create(
       {
-        FunctionImpl(FunctionGetId, "", "id"),
-        FunctionImpl(FunctionGetParameters, "", "params"),
-        FunctionImpl(FunctionCompare, kStrRightHandSide, kStrCompare)
+        Function(FunctionGetId, "", "id"),
+        Function(FunctionGetParameters, "", "params"),
+        Function(FunctionCompare, kStrRightHandSide, kStrCompare)
       }
     );
 

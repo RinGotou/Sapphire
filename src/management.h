@@ -6,7 +6,7 @@
 namespace sapphire::components {
   unordered_map<string, Object> &GetBuiltinComponentsObjBase();
 
-  void CreateFunctionObject(FunctionImpl impl);
+  void CreateFunctionObject(Function impl);
   void CreateStruct(string id);
   void DumpObject(ObjectView source, ObjectView dest);
   Object DumpObject(Object &source);
@@ -19,7 +19,7 @@ namespace sapphire::components {
     StructMethodGenerator(StructMethodGenerator &) = delete;
     StructMethodGenerator(StructMethodGenerator &&) = delete;
     StructMethodGenerator(string id) : id_(id) {}
-    bool Create(initializer_list<FunctionImpl> &&impls);
+    bool Create(initializer_list<Function> &&impls);
   };
 
   //lexical::IsPlainType() is existed inside lexical.h
@@ -63,13 +63,13 @@ namespace sapphire::components {
   };
 }
 
-namespace sapphire::management {
+namespace sapphire::constant {
   Object *CreateConstantObject(string id, Object &object);
   Object *CreateConstantObject(string id, Object &&object);
   Object *GetConstantObject(string &id);
 }
 
-namespace sapphire::management::script {
+namespace sapphire::script {
   using ProcessedScript = pair<string, VMCode>;
   using ScriptStorage = unordered_map<string, VMCode>;
 
@@ -78,7 +78,7 @@ namespace sapphire::management::script {
   VMCode &AppendBlankScript(string path);
 }
 
-namespace sapphire::management::extension {
+namespace sapphire::extension {
   void DisposeMemoryUnit(void *ptr, int type);
   int FetchDescriptor(Descriptor *descriptor, void *obj_map, const char *id);
   int FetchArrayElementDescriptor(Descriptor *arr_desc, Descriptor *dest, size_t index);
@@ -87,7 +87,7 @@ namespace sapphire::management::extension {
   int FetchObjectType(void *obj_map, const char *id);
 }
 
-namespace sapphire::management::runtime {
+namespace sapphire::runtime {
   void InformBinaryPathAndName(string info);
   string GetBinaryPath();
   string GetBinaryName();
@@ -103,10 +103,6 @@ namespace sapphire {
   using ManagedTable = shared_ptr<ObjectTable>;
 }
 
-namespace mgmt = sapphire::management;
-namespace ext = sapphire::management::extension;
-namespace rt = sapphire::management::runtime;
-
-#define EXPORT_CONSTANT(ID) management::CreateConstantObject(#ID, Object(ID))
+#define EXPORT_CONSTANT(ID) constant::CreateConstantObject(#ID, Object(ID))
 
 

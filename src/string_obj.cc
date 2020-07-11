@@ -144,35 +144,35 @@ namespace sapphire {
     CreateStruct(kTypeIdString);
     StructMethodGenerator(kTypeIdString).Create(
       {
-        FunctionImpl(NewString, "raw_string", kStrInitializer),
-        FunctionImpl(StringFamilyGetElement<string>, "index", "at"),
-        FunctionImpl(StringFamilySubStr<string>, "start|size", "substr"),
-        FunctionImpl(GetStringFamilySize<string>, "", "size"),
-        FunctionImpl(StringFamilyConverting<wstring, string>, "", "to_wide"),
-        FunctionImpl(StringCompare, kStrRightHandSide, kStrCompare),
-        FunctionImpl(StringToArray, "","to_array")
+        Function(NewString, "raw_string", kStrInitializer),
+        Function(StringFamilyGetElement<string>, "index", "at"),
+        Function(StringFamilySubStr<string>, "start|size", "substr"),
+        Function(GetStringFamilySize<string>, "", "size"),
+        Function(StringFamilyConverting<wstring, string>, "", "to_wide"),
+        Function(StringCompare, kStrRightHandSide, kStrCompare),
+        Function(StringToArray, "","to_array")
       }
     );
 
     CreateStruct(kTypeIdWideString);
     StructMethodGenerator(kTypeIdWideString).Create(
       {
-        FunctionImpl(NewWideString, "raw_string", kStrInitializer),
-        FunctionImpl(GetStringFamilySize<wstring>,  "", "size"),
-        FunctionImpl(StringFamilyGetElement<wstring>, "index", kStrAt),
-        FunctionImpl(WideStringPrint, "", "print"),
-        FunctionImpl(StringFamilySubStr<wstring>, "start|size", "substr"),
-        FunctionImpl(StringFamilyConverting<string, wstring>, "", "to_byte"),
-        FunctionImpl(WideStringCompare, kStrRightHandSide, kStrCompare)
+        Function(NewWideString, "raw_string", kStrInitializer),
+        Function(GetStringFamilySize<wstring>,  "", "size"),
+        Function(StringFamilyGetElement<wstring>, "index", kStrAt),
+        Function(WideStringPrint, "", "print"),
+        Function(StringFamilySubStr<wstring>, "start|size", "substr"),
+        Function(StringFamilyConverting<string, wstring>, "", "to_byte"),
+        Function(WideStringCompare, kStrRightHandSide, kStrCompare)
       }
     );
 
-    CreateFunctionObject(FunctionImpl(DecimalConvert<2>, "str", "bin"));
-    CreateFunctionObject(FunctionImpl(DecimalConvert<8>, "str", "octa"));
-    CreateFunctionObject(FunctionImpl(DecimalConvert<16>, "str", "hex"));
-    CreateFunctionObject(FunctionImpl(CreateStringFromArray, "src", "ar2string"));
-    CreateFunctionObject(FunctionImpl(CharFromInt, "value", "int2str"));
-    CreateFunctionObject(FunctionImpl(IntFromChar, "value", "str2int"));
+    CreateFunctionObject(Function(DecimalConvert<2>, "str", "bin"));
+    CreateFunctionObject(Function(DecimalConvert<8>, "str", "octa"));
+    CreateFunctionObject(Function(DecimalConvert<16>, "str", "hex"));
+    CreateFunctionObject(Function(CreateStringFromArray, "src", "ar2string"));
+    CreateFunctionObject(Function(CharFromInt, "value", "int2str"));
+    CreateFunctionObject(Function(IntFromChar, "value", "str2int"));
 
     EXPORT_CONSTANT(kTypeIdString);
     EXPORT_CONSTANT(kTypeIdWideString);
