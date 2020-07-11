@@ -51,6 +51,11 @@
 #include <unistd.h>
 #endif
 
+#if __cplusplus < 202002L
+#else
+#define CXX20
+#endif
+
 #define PRODUCT     "Sapphire Prototype"
 #define PRODUCT_VER "2.5"
 #define CODENAME    "Oratorio"

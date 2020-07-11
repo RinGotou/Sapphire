@@ -6,35 +6,33 @@ namespace sapphire {
   CommentedResult TypeChecking(ExpectationList &&lst, ObjectMap &obj_map,
     NullableList &&nullable) {
     bool result = true;
+    bool found = false;
     string msg;
+    string type_id;
+
+#define ERROR_REPORT   {                                              \
+      result = false;                                                 \
+      msg = "Unexpected object type: " + obj_iter->second.GetTypeId() \
+        + "(Parameter: " + unit.first + ")";                          \
+      break;                                                          \
+    }
 
     for (auto &unit : lst) {
-#ifdef _MSC_VER
-#pragma warning(disable:4101)
-#endif
-      try {
-        auto &obj = obj_map.at(unit.first);
-        bool founded = (unit.second == obj.GetTypeId());
-        bool null = find_in_list(unit.first, nullable);
+      auto obj_iter = obj_map.find(unit.first);
 
-        if (founded || null) continue;
-        else {
-          result = false;
-          msg = "Expected type is " + unit.second + ", but object type is " + obj.GetTypeId();
-          break;
+      if (obj_iter != obj_map.end()) {
+        type_id = obj_iter->second.GetTypeId();
+        if (unit.second != type_id) {
+          ERROR_REPORT;
+        }
+        //for optional parameter
+        else if (type_id == kTypeIdNull && !find_in_list(unit.first, nullable)) {
+          ERROR_REPORT;
         }
       }
-      catch (std::out_of_range &e) {
-        if (find_in_list(unit.first, nullable)) continue;
-        else {
-          result = false;
-          msg = "Argument missing: " + unit.first;
-          break;
-        }
+      else {
+        ERROR_REPORT;
       }
-#ifdef _MSC_VER
-#pragma warning(default:4101)
-#endif
     }
 
     return { result, msg };

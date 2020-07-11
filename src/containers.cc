@@ -57,10 +57,7 @@ namespace sapphire {
   }
 
   Message ArrayGetElement(ObjectMap &p) {
-    auto tc = TypeChecking(
-      { Expect("index", kTypeIdInt) }, p
-    );
-
+    auto tc = TypeChecking({ Expect("index", kTypeIdInt) }, p);
     if (TC_FAIL(tc)) return TC_ERROR(tc);
 
     ObjectArray &base = p.Cast<ObjectArray>(kStrMe);
