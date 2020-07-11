@@ -57,10 +57,10 @@ namespace sapphire {
     void StepBack() { }
     ObjectTable::iterator &Get() { return it_; }
     Object Unpack() {
-      auto copy_left = it_->first;
+      auto copy_left = it_->first; //constant bypass
       ManagedPair base = make_shared<ObjectPair>(
-        Object(management::type::CreateObjectCopy(copy_left)),
-        Object(management::type::CreateObjectCopy(it_->second)));
+        Object(components::DumpObject(copy_left)),
+        Object(components::DumpObject(it_->second)));
       return Object(base, kTypeIdPair);
     }
     bool operator==(BasicIterator<ObjectTable::iterator> &rhs) const 

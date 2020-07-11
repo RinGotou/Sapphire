@@ -180,7 +180,7 @@ namespace sapphire {
   template <typename Tx, Keyword op>
   using LogicBox = BinaryOpBox<bool, Tx, Tx, op>;
 
-  const string kIteratorBehavior = "obj|step_forward|__compare";
+  const string kIteratorBehavior = "obj|step_forward|compare";
   const string kContainerBehavior = "head|tail|empty";
   const string kForEachExceptions = "!iterator|!containter_keepalive";
 

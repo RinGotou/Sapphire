@@ -6,7 +6,7 @@
 namespace sapphire::components {
   unordered_map<string, Object> &GetBuiltinComponentsObjBase();
 
-  void CreateFunctionObject(string id, FunctionImpl &&impl);
+  void CreateFunctionObject(FunctionImpl impl);
   void CreateStruct(string id);
   void DumpObject(ObjectView source, ObjectView dest);
   Object DumpObject(Object &source);
@@ -16,6 +16,8 @@ namespace sapphire::components {
     string id_;
   public:
     StructMethodGenerator() = delete;
+    StructMethodGenerator(StructMethodGenerator &) = delete;
+    StructMethodGenerator(StructMethodGenerator &&) = delete;
     StructMethodGenerator(string id) : id_(id) {}
     bool Create(initializer_list<FunctionImpl> &&impls);
   };

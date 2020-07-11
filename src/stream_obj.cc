@@ -76,29 +76,26 @@ namespace sapphire {
   ///////////////////////////////////////////////////////////////
 
   void InitStreamComponents() {
-    using namespace management::type;
-
-    ObjectTraitsSetup(kTypeIdInStream, ShallowDelivery)
-      .InitConstructor(
-        FunctionImpl(NewInStream, "path", "instream")
-      )
-      .InitMethods(
-        {
-          FunctionImpl(InStreamGet, "", "get"),
-          FunctionImpl(InStreamEOF, "", "eof"),
-          FunctionImpl(StreamFamilyState<InStream>, "", "good"),
-        }
+    using namespace components;
+    using namespace management;
+    
+    CreateStruct(kTypeIdInStream);
+    StructMethodGenerator(kTypeIdInStream).Create(
+      {
+        FunctionImpl(NewInStream, "path", kStrInitializer),
+        FunctionImpl(InStreamGet, "", "get"),
+        FunctionImpl(InStreamEOF, "", "eof"),
+        FunctionImpl(StreamFamilyState<InStream>, "", "good")
+      }
     );
 
-    ObjectTraitsSetup(kTypeIdOutStream, ShallowDelivery)
-      .InitConstructor(
-        FunctionImpl(NewOutStream, "path|binary|append", "outstream")
-      )
-      .InitMethods(
-        {
-          FunctionImpl(OutStreamWrite, "str", "write"),
-          FunctionImpl(StreamFamilyState<OutStream>, "", "good"),
-        }
+    CreateStruct(kTypeIdOutStream);
+    StructMethodGenerator(kTypeIdOutStream).Create(
+      {
+        FunctionImpl(NewOutStream, "path|binary|append", kStrInitializer),
+        FunctionImpl(OutStreamWrite, "str", "write"),
+        FunctionImpl(StreamFamilyState<OutStream>, "", "good")
+      }
     );
 
     management::CreateConstantObject("kOutstreamModeAppend", Object("append"));

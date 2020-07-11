@@ -134,19 +134,19 @@ namespace sapphire {
   }
 
   void InitConsoleComponents() {
-    using management::CreateImpl;
+    using namespace components;
 
-    CreateImpl(FunctionImpl(SetWorkingDir, "dir", "chdir", kParamAutoFill).SetLimit(0));
-    CreateImpl(FunctionImpl(GetWorkingDir, "", "current_directory"));
-    CreateImpl(FunctionImpl(GetScriptAbsolutePath, "", "boot_directory"));
-    CreateImpl(FunctionImpl(GetCoreAbsolutePath, "", "core_directory"));
-    CreateImpl(FunctionImpl(ExistFSObject, "path", "exist_fsobj"));
-    CreateImpl(FunctionImpl(CreateNewDirectory, "path", "create_dir"));
-    CreateImpl(FunctionImpl(RemoveFSObject, "path", "remove_fsobj"));
-    CreateImpl(FunctionImpl(RemoveFSObject_Recursive, "path", "remove_all_fsobj"));
-    CreateImpl(FunctionImpl(CopyFSObject, "from|to", "copy_fsobj"));
-    CreateImpl(FunctionImpl(CopyFSFile, "from|to", "copy_file"));
-    CreateImpl(FunctionImpl(GetDirectoryContent, "path", "dir_content"));
-    CreateImpl(FunctionImpl(GetFilenameExtension, "path", "filename_ext"));
+    CreateFunctionObject(FunctionImpl(SetWorkingDir, "dir", "chdir", kParamAutoFill).SetLimit(0));
+    CreateFunctionObject(FunctionImpl(GetWorkingDir, "", "current_directory"));
+    CreateFunctionObject(FunctionImpl(GetScriptAbsolutePath, "", "boot_directory"));
+    CreateFunctionObject(FunctionImpl(GetCoreAbsolutePath, "", "core_directory"));
+    CreateFunctionObject(FunctionImpl(ExistFSObject, "path", "exist_fsobj"));
+    CreateFunctionObject(FunctionImpl(CreateNewDirectory, "path", "create_dir"));
+    CreateFunctionObject(FunctionImpl(RemoveFSObject, "path", "remove_fsobj"));
+    CreateFunctionObject(FunctionImpl(RemoveFSObject_Recursive, "path", "remove_all_fsobj"));
+    CreateFunctionObject(FunctionImpl(CopyFSObject, "from|to", "copy_fsobj"));
+    CreateFunctionObject(FunctionImpl(CopyFSFile, "from|to", "copy_file"));
+    CreateFunctionObject(FunctionImpl(GetDirectoryContent, "path", "dir_content"));
+    CreateFunctionObject(FunctionImpl(GetFilenameExtension, "path", "filename_ext"));
   }
 }

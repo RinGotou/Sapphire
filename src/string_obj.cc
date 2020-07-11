@@ -138,47 +138,41 @@ namespace sapphire {
   }
 
   void InitBaseTypes() {
-    using management::CreateImpl;
-    using namespace management::type;
+    using namespace components;
+    using components::CreateFunctionObject;
 
-    ObjectTraitsSetup(kTypeIdString, PlainDeliveryImpl<string>, PlainHasher<string>)
-      .InitComparator(PlainComparator<string>)
-      .InitConstructor(
-        FunctionImpl(NewString, "raw_string", "string")
-      )
-      .InitMethods(
-        {
-          FunctionImpl(StringFamilyGetElement<string>, "index", kStrAt),
-          FunctionImpl(StringFamilySubStr<string>, "start|size", "substr"),
-          FunctionImpl(GetStringFamilySize<string>, "", "size"),
-          FunctionImpl(StringFamilyConverting<wstring, string>, "", "to_wide"),
-          FunctionImpl(StringCompare, kStrRightHandSide, kStrCompare),
-          FunctionImpl(StringToArray, "","to_array")
-        }
+    CreateStruct(kTypeIdString);
+    StructMethodGenerator(kTypeIdString).Create(
+      {
+        FunctionImpl(NewString, "raw_string", kStrInitializer),
+        FunctionImpl(StringFamilyGetElement<string>, "index", "at"),
+        FunctionImpl(StringFamilySubStr<string>, "start|size", "substr"),
+        FunctionImpl(GetStringFamilySize<string>, "", "size"),
+        FunctionImpl(StringFamilyConverting<wstring, string>, "", "to_wide"),
+        FunctionImpl(StringCompare, kStrRightHandSide, kStrCompare),
+        FunctionImpl(StringToArray, "","to_array")
+      }
     );
 
-    ObjectTraitsSetup(kTypeIdWideString, PlainDeliveryImpl<wstring>, PlainHasher<wstring>)
-      .InitComparator(PlainComparator<wstring>)
-      .InitConstructor(
-        FunctionImpl(NewWideString, "raw_string", "wstring")
-      )
-      .InitMethods(
-        {
-          FunctionImpl(GetStringFamilySize<wstring>,  "", "size"),
-          FunctionImpl(StringFamilyGetElement<wstring>, "index", kStrAt),
-          FunctionImpl(WideStringPrint, "", "print"),
-          FunctionImpl(StringFamilySubStr<wstring>, "start|size", "substr"),
-          FunctionImpl(StringFamilyConverting<string, wstring>, "", "to_byte"),
-          FunctionImpl(WideStringCompare, kStrRightHandSide, kStrCompare)
-        }
+    CreateStruct(kTypeIdWideString);
+    StructMethodGenerator(kTypeIdWideString).Create(
+      {
+        FunctionImpl(NewWideString, "raw_string", kStrInitializer),
+        FunctionImpl(GetStringFamilySize<wstring>,  "", "size"),
+        FunctionImpl(StringFamilyGetElement<wstring>, "index", kStrAt),
+        FunctionImpl(WideStringPrint, "", "print"),
+        FunctionImpl(StringFamilySubStr<wstring>, "start|size", "substr"),
+        FunctionImpl(StringFamilyConverting<string, wstring>, "", "to_byte"),
+        FunctionImpl(WideStringCompare, kStrRightHandSide, kStrCompare)
+      }
     );
 
-    CreateImpl(FunctionImpl(DecimalConvert<2>, "str", "bin"));
-    CreateImpl(FunctionImpl(DecimalConvert<8>, "str", "octa"));
-    CreateImpl(FunctionImpl(DecimalConvert<16>, "str", "hex"));
-    CreateImpl(FunctionImpl(CreateStringFromArray, "src", "ar2string"));
-    CreateImpl(FunctionImpl(CharFromInt, "value", "int2str"));
-    CreateImpl(FunctionImpl(IntFromChar, "value", "str2int"));
+    CreateFunctionObject(FunctionImpl(DecimalConvert<2>, "str", "bin"));
+    CreateFunctionObject(FunctionImpl(DecimalConvert<8>, "str", "octa"));
+    CreateFunctionObject(FunctionImpl(DecimalConvert<16>, "str", "hex"));
+    CreateFunctionObject(FunctionImpl(CreateStringFromArray, "src", "ar2string"));
+    CreateFunctionObject(FunctionImpl(CharFromInt, "value", "int2str"));
+    CreateFunctionObject(FunctionImpl(IntFromChar, "value", "str2int"));
 
     EXPORT_CONSTANT(kTypeIdString);
     EXPORT_CONSTANT(kTypeIdWideString);

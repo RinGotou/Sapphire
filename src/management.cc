@@ -7,9 +7,9 @@ namespace sapphire::components {
     return base;
   }
 
-  void CreateFunctionObject(string id, FunctionImpl &&impl) {
+  void CreateFunctionObject(FunctionImpl impl) {
     auto &base = GetBuiltinComponentsObjBase();
-    base.try_emplace(id, Object(std::move(impl), kTypeIdFunction));
+    base.try_emplace(impl.GetId(), Object(std::move(impl), kTypeIdFunction));
   }
 
   //We don't need FindFunction() in new implementation.
@@ -35,7 +35,7 @@ namespace sapphire::components {
     auto &struct_base = it->second.Cast<ObjectStruct>();
     
     for (auto &unit : impls) {
-      struct_base.Add(unit.GetId(), Object(unit, kTypeIdFunction));
+      struct_base.Add(unit.GetId(), Object(make_shared<FunctionImpl>(unit), kTypeIdFunction));
     }
 
     return true;

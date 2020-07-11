@@ -95,19 +95,17 @@ namespace sapphire {
   }
 
   void InitExtensionComponents() {
-    using namespace mgmt::type;
+    using namespace components;
 
-    mgmt::CreateImpl(FunctionImpl(GetFunctionPointer, "library|id", "get_function_ptr"));
+    CreateFunctionObject(FunctionImpl(GetFunctionPointer, "library|id", "get_function_ptr"));
 
-    ObjectTraitsSetup(kTypeIdExtension, ShallowDelivery)
-      .InitConstructor(
-        FunctionImpl(NewExtension, "path", kTypeIdExtension)
-      )
-      .InitMethods(
-        {
-          FunctionImpl(ExtensionGood, "", "good"),
-          FunctionImpl(ExtensionFetchFunction, "id", "fetch")
-        }
+    CreateStruct(kTypeIdExtension);
+    StructMethodGenerator(kTypeIdExtension).Create(
+      {
+        FunctionImpl(NewExtension, "path", kStrInitializer),
+        FunctionImpl(ExtensionGood, "", "good"),
+        FunctionImpl(ExtensionFetchFunction, "id", "fetch")
+      }
     );
 
     EXPORT_CONSTANT(kTypeIdExtension);

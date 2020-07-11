@@ -35,15 +35,15 @@ namespace sapphire {
   }
 
   void InitFunctionType() {
-    using namespace management::type;
+    using namespace components;
 
-    ObjectTraitsSetup(kTypeIdFunction, ShallowDelivery)
-      .InitMethods(
-        {
-          FunctionImpl(FunctionGetId, "", "id"),
-          FunctionImpl(FunctionGetParameters, "", "params"),
-          FunctionImpl(FunctionCompare, kStrRightHandSide, kStrCompare)
-        }
+    CreateStruct(kTypeIdFunction);
+    StructMethodGenerator(kTypeIdFunction).Create(
+      {
+        FunctionImpl(FunctionGetId, "", "id"),
+        FunctionImpl(FunctionGetParameters, "", "params"),
+        FunctionImpl(FunctionCompare, kStrRightHandSide, kStrCompare)
+      }
     );
 
     EXPORT_CONSTANT(kTypeIdFunction);

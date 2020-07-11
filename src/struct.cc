@@ -15,18 +15,21 @@ namespace sapphire {
   //TODO:Comparator
 
   void InitStructComponents() {
-    using namespace mgmt;
-    using namespace mgmt::type;
+    using namespace components;
 
-    ObjectTraitsSetup(kTypeIdStruct, ShallowDelivery)
-      .InitMethods({
+    CreateStruct(kTypeIdStruct);
+    StructMethodGenerator(kTypeIdStruct).Create(
+      {
         FunctionImpl(StructGetMembers, "", "members")
-      });
-    ObjectTraitsSetup(kTypeIdModule, ShallowDelivery)
-      .InitMethods({
-      FunctionImpl(StructGetMembers, "", "members")
-      });
+      }
+    );
 
+    CreateStruct(kTypeIdModule);
+    StructMethodGenerator(kTypeIdModule).Create(
+      {
+        FunctionImpl(StructGetMembers, "", "members")
+      }
+    );
 
     EXPORT_CONSTANT(kTypeIdStruct);
     EXPORT_CONSTANT(kTypeIdModule);

@@ -49,7 +49,7 @@ namespace sapphire {
       auto type_id = obj.GetTypeId();
 
       for (size_t count = 0; count < size; ++count) {
-        base->emplace_back(management::type::CreateObjectCopy(obj));
+        base->emplace_back(components::DumpObject(obj));
       }
     }
 
@@ -84,7 +84,7 @@ namespace sapphire {
 
   Message ArrayPush(ObjectMap &p) {
     ObjectArray &base = p.Cast<ObjectArray>(kStrMe);
-    Object obj = management::type::CreateObjectCopy(p["object"]);
+    Object obj = components::DumpObject(p["object"]);
     base.emplace_back(obj);
 
     return Message();
@@ -122,8 +122,8 @@ namespace sapphire {
     auto &left = p["left"];
     auto &right = p["right"];
     ManagedPair pair = make_shared<ObjectPair>(
-      management::type::CreateObjectCopy(left),
-      management::type::CreateObjectCopy(right));
+      components::DumpObject(left),
+      components::DumpObject(right));
     return Message().SetObject(Object(pair, kTypeIdPair));
   }
 
@@ -143,7 +143,7 @@ namespace sapphire {
   }
 
   Message TableInsert(ObjectMap &p) {
-    using namespace management::type;
+    using namespace components;
     auto &table = p.Cast<ObjectTable>(kStrMe);
     auto &key = p["key"];
     auto &value = p["value"];
@@ -153,7 +153,7 @@ namespace sapphire {
     }
 
     auto result = table.insert(
-      make_pair(CreateObjectCopy(key), CreateObjectCopy(value))
+      make_pair(DumpObject(key), DumpObject(value))
     );
     return Message();
   }
@@ -217,64 +217,57 @@ namespace sapphire {
   }
 
   void InitContainerComponents() {
-    using management::type::ObjectTraitsSetup;
+    using namespace components;
 
-    //TODO:insert()
-    ObjectTraitsSetup(kTypeIdArray, ShallowDelivery)
-      .InitConstructor(
-        FunctionImpl(NewArray, "size|init_value", "array", kParamAutoFill).SetLimit(0)
-      )
-      .InitMethods(
-        {
-          FunctionImpl(ArrayGetElement, "index", kStrAt),
-          FunctionImpl(ArrayGetSize, "", "size"),
-          FunctionImpl(ArrayPush, "object", "push"),
-          FunctionImpl(ArrayPop, "", "pop"),
-          FunctionImpl(ArrayEmpty, "", "empty"),
-          FunctionImpl(ArrayHead, "", "head"),
-          FunctionImpl(ArrayTail, "", "tail"),
-          FunctionImpl(ArrayClear, "", "clear")
-        }
+    CreateStruct(kTypeIdArray);
+    StructMethodGenerator(kTypeIdArray).Create(
+      {
+        FunctionImpl(NewArray, "size|init_value", kStrInitializer, kParamAutoFill).SetLimit(0),
+        FunctionImpl(ArrayGetElement, "index", "at"),
+        FunctionImpl(ArrayGetSize, "", "size"),
+        FunctionImpl(ArrayPush, "object", "push"),
+        FunctionImpl(ArrayPop, "", "pop"),
+        FunctionImpl(ArrayEmpty, "", "empty"),
+        FunctionImpl(ArrayHead, "", "head"),
+        FunctionImpl(ArrayTail, "", "tail"),
+        FunctionImpl(ArrayClear, "", "clear")
+      }
+    );
+    
+    //todo:remove iterator type
+    CreateStruct(kTypeIdIterator);
+    StructMethodGenerator(kTypeIdIterator).Create(
+      {
+        FunctionImpl(IteratorGet, "", "obj"),
+        FunctionImpl(IteratorStepForward, "", "step_forward"),
+        FunctionImpl(IteratorStepBack, "", "step_back"),
+        FunctionImpl(IteratorOperatorCompare, kStrRightHandSide, kStrCompare)
+      }
     );
 
-    //TODO: Remove iterator type
-    ObjectTraitsSetup(kTypeIdIterator, ShallowDelivery)
-      .InitMethods(
-        {
-          FunctionImpl(IteratorGet, "", "obj"),
-          FunctionImpl(IteratorStepForward, "", "step_forward"),
-          FunctionImpl(IteratorStepBack, "", "step_back"),
-          FunctionImpl(IteratorOperatorCompare, kStrRightHandSide, kStrCompare)
-        }
+    CreateStruct(kTypeIdPair);
+    StructMethodGenerator(kTypeIdPair).Create(
+      {
+        //FunctionImpl(NewPair, "left|right", kStrInitializer),
+        FunctionImpl(PairLeft, "", "left"),
+        FunctionImpl(PairRight, "", "right")
+      }
     );
 
-    ObjectTraitsSetup(kTypeIdPair, ShallowDelivery)
-      .InitConstructor(
-        FunctionImpl(NewPair, "left|right", "pair")
-      )
-      .InitMethods(
-        {
-          FunctionImpl(PairLeft, "", "left"),
-          FunctionImpl(PairRight, "", "right")
-        }
-    );
-
-    ObjectTraitsSetup(kTypeIdTable, ShallowDelivery)
-      .InitConstructor(
-        FunctionImpl(NewTable, "", "table")
-      )
-      .InitMethods(
-        {
-          FunctionImpl(TableInsert, "key|value", "insert"),
-          FunctionImpl(TableGetElement, "key", kStrAt),
-          FunctionImpl(TableFindElement, "key", "find"),
-          FunctionImpl(TableEraseElement, "key", "erase"),
-          FunctionImpl(TableEmpty, "", "empty"),
-          FunctionImpl(TableSize, "", "size"),
-          FunctionImpl(TableClear, "", "clear"),
-          FunctionImpl(TableHead, "", "head"),
-          FunctionImpl(TableTail, "", "tail")
-        }
+    CreateStruct(kTypeIdTable);
+    StructMethodGenerator(kTypeIdTable).Create(
+      {
+        FunctionImpl(NewTable, "", kStrInitializer),
+        FunctionImpl(TableInsert, "key|value", "insert"),
+        FunctionImpl(TableGetElement, "key", kStrAt),
+        FunctionImpl(TableFindElement, "key", "find"),
+        FunctionImpl(TableEraseElement, "key", "erase"),
+        FunctionImpl(TableEmpty, "", "empty"),
+        FunctionImpl(TableSize, "", "size"),
+        FunctionImpl(TableClear, "", "clear"),
+        FunctionImpl(TableHead, "", "head"),
+        FunctionImpl(TableTail, "", "tail")
+      }
     );
 
     EXPORT_CONSTANT(kTypeIdArray);
