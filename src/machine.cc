@@ -1731,12 +1731,6 @@ namespace sapphire {
 
     if (frame.error) return;
 
-    if (rhs.Seek().GetMode() == kObjectDelegator || 
-      lhs.Seek().GetMode() == kObjectDelegator) {
-      frame.MakeError("Trying to assign a language key constant");
-      return;
-    }
-
     if (lhs.source == ObjectViewSource::kSourceReference) {
       auto &real_lhs = lhs.Seek().Unpack();
       real_lhs = components::DumpObject(rhs.Seek());
@@ -1792,12 +1786,6 @@ namespace sapphire {
     auto lhs = FetchObjectView(args[0]);
 
     if (frame.error) return;
-
-    if (rhs.Seek().GetMode() == kObjectDelegator ||
-      lhs.Seek().GetMode() == kObjectDelegator) {
-      frame.MakeError("Trying to assign a language key constant");
-      return;
-    }
 
     if (lhs.source == ObjectViewSource::kSourceReference) {
       auto &real_lhs = lhs.Seek().Unpack();

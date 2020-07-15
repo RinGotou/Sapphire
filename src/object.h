@@ -26,9 +26,7 @@ namespace sapphire {
   using ObjectPointer = Object *;
   using ObjectCommonSlot = _ObjectCommonBase *;
   using ObjectRef = Object &;
-  using Comparator = bool(*)(Object &, Object &);
   using NamedObject = pair<string, Object>;
-  using DeliveryImpl = shared_ptr<void>(*)(shared_ptr<void>);
   using ContainerPool = list<ObjectContainer>;
   using ExternalMemoryDisposer = void(*)(void *, const char *);
   using MemoryDisposer = void(*)(void *, int);
@@ -40,54 +38,7 @@ namespace sapphire {
     kObjectInvalid   = 0,
     kObjectNormal    = 1,
     kObjectRef       = 2,
-    kObjectExternal  = 3,
-    kObjectDelegator = 4    //for language key features
-  };
-
-  using HasherFunction = size_t(*)(shared_ptr<void>);
-
-  template <typename T>
-  size_t PlainHasher(shared_ptr<void> ptr) {
-    auto hasher = std::hash<T>();
-    return hasher(*static_pointer_cast<T>(ptr));
-  }
-
-  size_t PointerHasher(shared_ptr<void> ptr);
-
-  template <typename T>
-  shared_ptr<void> PlainDeliveryImpl(shared_ptr<void> target) {
-    T temp(*static_pointer_cast<T>(target));
-    return make_shared<T>(temp);
-  }
-
-  shared_ptr<void> ShallowDelivery(shared_ptr<void> target);
-
-  class ObjectTraits {
-  private:
-    DeliveryImpl delivering_impl_;
-    //For ObjectTable. Typical object type cannot be used 
-    // as table key without comparator
-    Comparator comparator_;
-    HasherFunction hasher_;
-    vector<string> methods_;
-
-  public:
-    ObjectTraits() = delete;
-
-    ObjectTraits(
-      DeliveryImpl dlvy,
-      string methods,
-      HasherFunction hasher = nullptr,
-      Comparator comparator = nullptr) :
-      delivering_impl_(dlvy),
-      comparator_(comparator),
-      methods_(BuildStringVector(methods)),
-      hasher_(hasher) {}
-
-    vector<string> &GetMethods() { return methods_; }
-    HasherFunction GetHasher() { return hasher_; }
-    Comparator GetComparator() { return comparator_; }
-    DeliveryImpl GetDeliveringImpl() { return delivering_impl_; }
+    kObjectExternal  = 3
   };
 
   class ExternalRCContainer {
@@ -190,11 +141,6 @@ namespace sapphire {
       links_(),
       shared_ptr<void>(make_shared<T>(std::forward<T>(t))) {}
 
-    template <typename T>
-    Object(T *ptr, string type_id) :
-      info_{(void *)ptr, kObjectDelegator, false, type_id == kTypeIdStruct, true, type_id},
-      links_(), shared_ptr<void>(nullptr) {}
-
     Object(void *ext_ptr, ExternalMemoryDisposer disposer, string type_id) :
       info_{ext_ptr, kObjectExternal, false, false, true, type_id}, links_(std::nullopt),
       shared_ptr<void>(make_shared<ExternalRCContainer>(ext_ptr, disposer, type_id)) {}
@@ -239,10 +185,6 @@ namespace sapphire {
     Tx &Cast() {
       if (info_.mode == kObjectRef) { 
         return static_cast<ObjectPointer>(info_.real_dest)->Cast<Tx>(); 
-      }
-
-      if (info_.mode == kObjectDelegator) {
-        return *static_cast<Tx *>(info_.real_dest);
       }
 
       return *static_cast<Tx *>(get());
