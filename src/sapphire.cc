@@ -44,7 +44,7 @@ void HelpFile() {
 }
 
 void Motto() {
-  puts("\"Praying for next morning.\"");
+  puts("I go on the road of illusion, looking for your voice.");
   puts(PRODUCT "\nVersion " PRODUCT_VER " '"  CODENAME "'");
 }
 

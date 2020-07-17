@@ -19,6 +19,7 @@ namespace sapphire {
   enum Keyword {
     kKeywordAssert,
     kKeywordLocal,
+    kKeywordLoad,
     kKeywordExt,
     kKeywordHash,
     kKeywordFor,

@@ -333,6 +333,7 @@ namespace sapphire {
       const initializer_list<NamedObject> &&args = {});
     Message CallVMCFunction(Function &impl, ObjectMap &obj_map);
 
+    void CommandLoad(ArgumentList &args);
     void CommandIfOrWhile(Keyword token, ArgumentList &args, size_t nest_end);
     void CommandForEach(ArgumentList &args, size_t nest_end);
     void ForEachChecking(ArgumentList &args, size_t nest_end);

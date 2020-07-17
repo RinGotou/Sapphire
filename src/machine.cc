@@ -942,6 +942,13 @@ namespace sapphire {
     return result;
   }
 
+  void Machine::CommandLoad(ArgumentList &args) {
+    auto &frame = frame_stack_.top();
+    auto view = FetchObjectView(args[0]);
+    if (frame.error) return;
+    frame.RefreshReturnStack(std::move(view));
+  }
+
   void Machine::CommandIfOrWhile(Keyword token, ArgumentList &args, size_t nest_end) {
     auto &frame = frame_stack_.top();
     auto &code = code_stack_.front();
@@ -1720,9 +1727,6 @@ namespace sapphire {
       return;
     }
 
-    //TODO: Append token id
-    //NOTICE: processing for sub container(struct)
-
     //Do not change the order!
     auto rhs = FetchObjectView(args[1]);
     auto lhs = FetchObjectView(args[0]);
@@ -1994,7 +1998,7 @@ namespace sapphire {
       return;
     }
 
-    //TODO:Smarter directory strategy
+    //Smarter directory strategy?
 
     string path = path_obj.Cast<string>();
     fs::path wrapped_path(path);
@@ -2366,6 +2370,7 @@ namespace sapphire {
     value -= rhs.Seek().Cast<int64_t>();
   }
 
+  //TODO: Replace with multiple new commands
   void Machine::ExpList(ArgumentList &args) {
     auto &frame = frame_stack_.top();
     if (frame.is_there_a_cond) {
@@ -2611,6 +2616,9 @@ namespace sapphire {
     auto &frame = frame_stack_.top();
 
     switch (token) {
+    case kKeywordLoad:
+      CommandLoad(args);
+      break;
     case kKeywordPlus:
       BinaryMathOperatorImpl<kKeywordPlus>(args);
       break;
