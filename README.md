@@ -20,7 +20,7 @@ MacOS is NOT OFFICIAL SUPPORTED for now and I don't have Apple device for testin
 sudo pacman -S cmake make gcc
 
 # clone & build
-git clone https://github.com/kagami-project/sapphire-adhoc.git
+git clone https://github.com/RinGotou/Sapphire-Adhoc.git sapphire-adhoc
 cd sapphire-adhoc
 git submodule init && git submodule update
 cmake .
