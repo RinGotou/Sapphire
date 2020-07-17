@@ -21,7 +21,7 @@ namespace sapphire {
     bool variable_param;
     bool use_last_assert;
     bool assert_chain_tail;
-    bool is_constraint; //for fnexpr
+    bool is_constraint; //for fn expr
     size_t token_id;
     string domain;
     ArgumentType domain_type;
@@ -70,19 +70,9 @@ namespace sapphire {
 
   public:
     Argument() :
-      data_(),
-      type_(kArgumentNull),
-      token_type_(kStringTypeNull),
-      option() {}
-
-    Argument(
-      string data,
-      ArgumentType type,
-      StringType token_type) :
-      data_(data),
-      type_(type),
-      token_type_(token_type),
-      option() {}
+      data_(), type_(kArgumentNull), token_type_(kStringTypeNull), option() {}
+    Argument(string data, ArgumentType type, StringType token_type) :
+      data_(data), type_(type), token_type_(token_type), option() {}
 
     void SetDomain(string id, ArgumentType type) {
       option.domain = id;
@@ -99,10 +89,7 @@ namespace sapphire {
     bool IsPlaceholder() const { return type_ == kArgumentNull; }
   };
 
-  struct FunctionInfo {
-    string id;
-    Argument domain;
-  };
+  struct FunctionInfo { string id; Argument domain; };
 
   class Request {
   private:
@@ -113,37 +100,20 @@ namespace sapphire {
     RequestType type;
     RequestOption option;
 
-    Request(Keyword token) :
-      data_(token),
-      idx(0),
-      type(kRequestCommand),
-      option() {}
-
-    Request(string token, Argument domain = Argument()) :
-      data_(FunctionInfo{ token, domain }),
-      idx(0),
-      type(kRequestFunction),
-      option() {}
-
     Request() :
-      data_(),
-      idx(0),
-      type(kRequestNull),
-      option() {}
+      data_(), idx(0), type(kRequestNull), option() {}
+    Request(Keyword token) :
+      data_(token), idx(0), type(kRequestCommand), option() {} 
+    Request(string token, Argument domain = Argument()) :
+      data_(FunctionInfo{ token, domain }), idx(0), type(kRequestFunction), option() {}
 
     string GetInterfaceId() {
-      if (type == kRequestFunction) {
-        return std::get<FunctionInfo>(data_).id;
-      }
-
+      if (type == kRequestFunction) return std::get<FunctionInfo>(data_).id;
       return string();
     }
 
     Argument GetInterfaceDomain() {
-      if (type == kRequestFunction) {
-        return std::get<FunctionInfo>(data_).domain;
-      }
-
+      if (type == kRequestFunction) return std::get<FunctionInfo>(data_).domain;
       return Argument();
     }
 
@@ -160,16 +130,11 @@ namespace sapphire {
     }
 
     Keyword GetKeywordValue() {
-      if (type == kRequestCommand) {
-        return std::get<Keyword>(data_);
-      }
-
+      if (type == kRequestCommand) return std::get<Keyword>(data_);
       return kKeywordNull;
     }
 
-    bool IsPlaceholder() const {
-      return type == kRequestNull;
-    }
+    bool IsPlaceholder() const { return type == kRequestNull; }
    };
 
   using ArgumentList = deque<Argument>;
