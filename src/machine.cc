@@ -3224,15 +3224,6 @@ namespace sapphire {
         if (frame->error) break;
         if (next_tick) continue;
 
-        //TODO:Return value issue
-        if (msg.IsInvokingRequest()) {
-          if (!unpack_invoking_request()) break;
-
-          next_tick = load_function_impl(true);
-          if (frame->error) break;
-          if (next_tick) continue;
-        }
-
         //Pushing returning value to returning stack.
         if (msg.HasObject()) frame->RefreshReturnStack(msg.GetObjectInfo(), msg.GetPtr());
         else frame->RefreshReturnStack(Object());

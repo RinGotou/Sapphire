@@ -16,7 +16,6 @@ namespace sapphire {
 
   class Message {
   private:
-    bool invoking_msg_;
     StateLevel level_;
     string detail_;
     optional<ObjectPrototype> slot_;
@@ -24,34 +23,16 @@ namespace sapphire {
 
   public:
     Message() :
-      invoking_msg_(false),
-      level_(kStateNormal), 
-      detail_(""), 
-      slot_(std::nullopt),
-      idx_(0) {}
-
+      level_(kStateNormal), detail_(""), slot_(std::nullopt), idx_(0) {}
     Message(Message &msg) :
-      invoking_msg_(msg.invoking_msg_),
-      level_(msg.level_),
-      detail_(msg.detail_),
-      slot_(msg.slot_),
-      idx_(msg.idx_) {}
-
+      level_(msg.level_), detail_(msg.detail_), slot_(msg.slot_), idx_(msg.idx_) {}
     Message(Message &&msg) :
-      invoking_msg_(msg.invoking_msg_),
-      level_(msg.level_),
-      detail_(std::forward<string>(msg.detail_)),
-      slot_(std::forward<optional<ObjectPrototype>>(msg.slot_)),
-      idx_(msg.idx_) {}
-
+      level_(msg.level_), detail_(std::forward<string>(msg.detail_)),
+      slot_(std::forward<optional<ObjectPrototype>>(msg.slot_)), idx_(msg.idx_) {}
     Message(string detail, StateLevel level = kStateNormal) :
-      invoking_msg_(false),
-      level_(level), 
-      detail_(detail), 
-      idx_(0) {}
+      level_(level), detail_(detail), idx_(0) {}
 
     Message &operator=(Message &msg) {
-      invoking_msg_ = msg.invoking_msg_;
       level_ = msg.level_;
       detail_ = msg.detail_;
       slot_ = msg.slot_;
@@ -67,7 +48,8 @@ namespace sapphire {
     string GetDetail() const { return detail_; }
     size_t GetIndex() const { return idx_; }
     bool HasObject() const { return slot_.has_value(); }
-    bool IsInvokingRequest() const { return invoking_msg_; }
+    const ObjectInfo &GetObjectInfo() const { return slot_.value().info; }
+    const shared_ptr<void> &GetPtr() const { return slot_.value().ptr; }
 
     Object GetObj() const {
       if (slot_.has_value()) {
@@ -76,14 +58,6 @@ namespace sapphire {
       }
 
       return Object();
-    }
-
-    const ObjectInfo &GetObjectInfo() const {
-      return slot_.value().info;
-    }
-
-    const shared_ptr<void> &GetPtr() const {
-      return slot_.value().ptr;
     }
 
     Message &SetObject(Object &object) {
@@ -143,16 +117,6 @@ namespace sapphire {
     Message &SetIndex(const size_t index) {
       idx_ = index;
       return *this;
-    }
-
-    Message &SetInvokingSign(Object &obj) {
-      SetObject(obj);
-      invoking_msg_ = true;
-      return *this;
-    }
-
-    Message &SetInvokingSign(Object &&obj) {
-      return this->SetInvokingSign(obj);
     }
 
     void Clear() {
