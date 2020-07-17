@@ -22,7 +22,7 @@ namespace sapphire::components {
     bool Create(initializer_list<Function> &&impls);
   };
 
-  //lexical::IsPlainType() is existed inside lexical.h
+  //lexical::IsPlainType() is implemented inside lexical.h
 
   //Dump plain object
   void DumpObject(ObjectView source, ObjectView dest);

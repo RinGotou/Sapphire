@@ -74,100 +74,40 @@ namespace sapphire {
 
   public:
     Function() :
-      impl_(nullptr),
-      record_(),
-      mode_(),
-      type_(kFunctionCXX),
-      limit_(0),
-      offset_(0),
-      id_(),
-      params_() {}
+      impl_(nullptr), record_(), mode_(), type_(kFunctionCXX), 
+      limit_(0), offset_(0), id_(), params_() {}
 
-    Function(
-      Activity activity,
-      string params,
-      string id,
-      ParameterPattern argument_mode = kParamFixed
-    ) :
-      impl_(new CXXFunction(activity)),
-      record_(),
-      mode_(argument_mode),
-      type_(kFunctionCXX),
-      limit_(0),
-      offset_(0),
-      id_(id),
-      params_(BuildStringVector(params)) {}
+    Function(Activity activity, string params, string id,
+      ParameterPattern argument_mode = kParamFixed) :
+      impl_(new CXXFunction(activity)), record_(),
+      mode_(argument_mode), type_(kFunctionCXX), limit_(0),
+      offset_(0), id_(id), params_(BuildStringVector(params)) {}
 
-    Function(
-      size_t offset,
-      VMCode ir,
-      string id,
-      vector<string> params,
-      ParameterPattern argument_mode = kParamFixed
-    ) :
-      impl_(new VMCodeFunction(ir)),
-      record_(),
-      mode_(argument_mode),
-      type_(kFunctionVMCode),
-      limit_(0),
-      offset_(offset),
-      id_(id),
-      params_(params) {}
+    Function(size_t offset, VMCode ir, string id, vector<string> params,
+      ParameterPattern argument_mode = kParamFixed) :
+      impl_(new VMCodeFunction(ir)), record_(),
+      mode_(argument_mode), type_(kFunctionVMCode), limit_(0),
+      offset_(offset), id_(id), params_(params) {}
 
-    Function(
-      ExtensionActivity activity,
-      string id,
-      string params_pattern,
-      ParameterPattern argument_mode = kParamFixed
-    ) :
-      impl_(new ExternalFunction(activity)),
-      record_(),
-      mode_(argument_mode),
-      type_(kFunctionExternal),
-      limit_(0),
-      offset_(0),
-      id_(id),
-      params_(BuildStringVector(params_pattern)) {}
+    Function(ExtensionActivity activity, string id, string params_pattern,
+      ParameterPattern argument_mode = kParamFixed) :
+      impl_(new ExternalFunction(activity)), record_(),
+      mode_(argument_mode), type_(kFunctionExternal), limit_(0),
+      offset_(0), id_(id), params_(BuildStringVector(params_pattern)) {}
 
-    VMCode &GetCode() {
-      return dynamic_pointer_cast<VMCodeFunction>(impl_)->GetCode();
-    }
-
-    Activity GetActivity() {
-      return dynamic_pointer_cast<CXXFunction>(impl_)->GetActivity();
-    }
-
-    ExtensionActivity GetExtActivity() {
-      return dynamic_pointer_cast<ExternalFunction>(impl_)->GetExtActivity();
-    }
+    VMCode &GetCode() { return dynamic_pointer_cast<VMCodeFunction>(impl_)->GetCode(); }
+    Activity GetActivity() { return dynamic_pointer_cast<CXXFunction>(impl_)->GetActivity(); }
+    ExtensionActivity GetExtActivity() { return dynamic_pointer_cast<ExternalFunction>(impl_)->GetExtActivity(); }
+    string GetId() const { return id_; }
+    ParameterPattern GetPattern() const { return mode_; }
+    vector<string> &GetParameters() { return params_; }
+    FunctionImplType GetType() const { return type_; }
+    size_t GetParamSize() const { return params_.size(); }
+    bool Good() const { return (impl_ != nullptr); }
 
     bool operator==(Function &rhs) const {
       if (&rhs == this) return true;
       return impl_ == rhs.impl_;
-    }
-
-    string GetId() const {
-      return id_;
-    }
-
-    ParameterPattern GetPattern() const {
-      return mode_;
-    }
-
-    vector<string> &GetParameters() {
-      return params_;
-    }
-
-    FunctionImplType GetType() const {
-      return type_;
-    }
-
-    size_t GetParamSize() const {
-      return params_.size();
-    }
-
-    bool Good() const {
-      return (impl_ != nullptr);
     }
 
     Function &SetClosureRecord(ObjectMap record) {
