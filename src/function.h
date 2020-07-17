@@ -43,49 +43,29 @@ namespace sapphire {
     _Function<_NullFunctionType>
   >;
 
+  using CXXFunction = _Function<Activity>;
+  using VMCodeFunction = _Function<VMCode>;
+  using ExtensionFunction = _Function<ExtensionActivity>;
   using InvalidFunction = _Function<_NullFunctionType>;
 
-  class CXXFunction : public _FunctionImpl {
-  private:
-    Activity activity_;
-  public:
-    CXXFunction(Activity activity) :
-      activity_(activity) {}
+  template <typename _ImplType>
+  inline bool CompareFunctionBase(FunctionBase &lhs, FunctionBase &rhs) {
+    auto &lhs_obj = std::get<_Function<_ImplType>>(lhs).Get();
+    auto &rhs_obj = std::get<_Function<_ImplType>>(rhs).Get();
+    return lhs_obj == rhs_obj;
+  }
 
-    Activity GetActivity() const { return activity_; }
-  };
+  inline bool CompareVMCodeInstance(FunctionBase &lhs, FunctionBase &rhs) {
+    auto &lhs_obj = std::get<ExtensionFunction>(lhs).Get();
+    auto &rhs_obj = std::get<ExtensionFunction>(rhs).Get();
+    return &lhs_obj == &rhs_obj;
+  }
 
-
-
-  class VMCodeFunction : public _FunctionImpl {
-  private:
-    VMCode code_;
-    
-  public:
-    VMCodeFunction(VMCode ir) : code_(ir) {}
-
-    VMCode &GetCode() { return code_; }
-  };
-
-  class ExternalFunction : public _FunctionImpl {
-  private:
-    ExtensionActivity activity_;
-
-  public:
-    ExternalFunction(ExtensionActivity activity) :
-      activity_(activity) {}
-
-    ExtensionActivity GetExtActivity() const { return activity_; }
-  };
-
-  enum FunctionImplType {
-    kFunctionCXX, kFunctionVMCode, kFunctionExternal
-  };
+  enum FunctionImplType { kFunctionCXX, kFunctionVMCode, kFunctionExternal, kFunctionInvalid };
 
   class Function {
   private:
     FunctionBase base_;
-    shared_ptr<_FunctionImpl> impl_;
     ObjectMap record_;
 
   private:
@@ -99,48 +79,39 @@ namespace sapphire {
   public:
     Function() :
       base_(InvalidFunction(_NullFunctionType())),
-      impl_(nullptr), record_(), mode_(), type_(kFunctionCXX), 
+      record_(), mode_(), type_(kFunctionInvalid), 
       limit_(0), offset_(0), id_(), params_() {}
 
     Function(Activity activity, string params, string id,
       ParameterPattern argument_mode = kParamFixed) :
-      base_(_Function(activity)),
-      impl_(new CXXFunction(activity)), record_(),
+      base_(_Function(activity)), record_(),
       mode_(argument_mode), type_(kFunctionCXX), limit_(0),
       offset_(0), id_(id), params_(BuildStringVector(params)) {}
 
     Function(size_t offset, VMCode ir, string id, vector<string> params,
       ParameterPattern argument_mode = kParamFixed) :
-      base_(_Function(ir)),
-      impl_(new VMCodeFunction(ir)), record_(),
+      base_(_Function(ir)), record_(),
       mode_(argument_mode), type_(kFunctionVMCode), limit_(0),
       offset_(offset), id_(id), params_(params) {}
 
     Function(ExtensionActivity activity, string id, string params_pattern,
       ParameterPattern argument_mode = kParamFixed) :
-      base_(_Function(activity)),
-      impl_(new ExternalFunction(activity)), record_(),
+      base_(_Function(activity)), record_(),
       mode_(argument_mode), type_(kFunctionExternal), limit_(0),
       offset_(0), id_(id), params_(BuildStringVector(params_pattern)) {}
 
     template <typename _ImplType>
-    _ImplType &Get() { return std::get<_ImplType>(base_).Get(); }
-
-    VMCode &GetCode() { return dynamic_pointer_cast<VMCodeFunction>(impl_)->GetCode(); }
-    Activity GetActivity() { return dynamic_pointer_cast<CXXFunction>(impl_)->GetActivity(); }
-    ExtensionActivity GetExtActivity() { return dynamic_pointer_cast<ExternalFunction>(impl_)->GetExtActivity(); }
+    _ImplType &Get() { return std::get<_Function<_ImplType>>(base_).Get(); }
 
     string GetId() const { return id_; }
     ParameterPattern GetPattern() const { return mode_; }
     vector<string> &GetParameters() { return params_; }
     FunctionImplType GetType() const { return type_; }
     size_t GetParamSize() const { return params_.size(); }
-    bool Good() const { return (impl_ != nullptr); }
-
-    bool operator==(Function &rhs) const {
-      if (&rhs == this) return true;
-      return impl_ == rhs.impl_;
-    }
+    ObjectMap &GetClosureRecord() { return record_; }
+    size_t GetLimit() const { return limit_; }
+    size_t GetOffset() const { return offset_; }
+    bool Good() const { return (type_ != kFunctionInvalid); }
 
     Function &SetClosureRecord(ObjectMap record) {
       record_ = record;
@@ -152,21 +123,23 @@ namespace sapphire {
       return *this;
     }
 
-    ObjectMap &GetClosureRecord() {
-      return record_;
-    }
-
     Function &SetLimit(size_t size) {
       limit_ = size;
       return *this;
     }
 
-    size_t GetLimit() const {
-      return limit_;
-    }
+    bool Compare(Function &rhs) {
+      if (type_ != rhs.type_) return false;
+      bool result = false;
 
-    size_t GetOffset() const {
-      return offset_;
+      switch (type_) {
+      case kFunctionCXX: CompareFunctionBase<Activity>(base_, rhs.base_); break;
+      case kFunctionExternal: CompareFunctionBase<ExtensionActivity>(base_, rhs.base_); break;
+      case kFunctionVMCode: CompareVMCodeInstance(base_, rhs.base_); break;
+      default:break;
+      }
+
+      return result;
     }
   };
 

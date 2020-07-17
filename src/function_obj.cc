@@ -26,9 +26,9 @@ namespace sapphire {
     bool result = false;
 
     if (type_id == kTypeIdFunction) {
-      auto &rhs_interface = rhs.Cast<Function>();
+      auto &rhs_impl = rhs.Cast<Function>();
 
-      result = (lhs == rhs_interface);
+      result = lhs.Compare(rhs_impl);
     }
 
     return Message().SetObject(result);

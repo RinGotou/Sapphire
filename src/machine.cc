@@ -889,7 +889,7 @@ namespace sapphire {
       frame.MakeError("External function isn't supported for now");
     }
     else if (impl->GetType() == kFunctionCXX) {
-      auto activity = impl->GetActivity();
+      auto activity = impl->Get<Activity>();
       result = activity(obj_map);
     }
     else {
@@ -914,7 +914,7 @@ namespace sapphire {
     }
 
     frame.stop_point = true;
-    code_stack_.push_back(&impl.GetCode());
+    code_stack_.push_back(&impl.Get<VMCode>());
     frame_stack_.push(RuntimeFrame(impl.GetId()));
     frame_stack_.top().jump_offset = impl.GetOffset();
     obj_stack_.Push();
@@ -2914,7 +2914,7 @@ namespace sapphire {
   void Machine::CallExtensionFunction(ObjectMap &p, Function &impl) {
     auto &frame = frame_stack_.top();
     Object returning_slot;
-    auto ext_activity = impl.GetExtActivity();
+    auto ext_activity = impl.Get<ExtensionActivity>();
     VMState vm_state{ &p, &returning_slot, this, ReceiveExtReturningValue };
     auto result_code = ext_activity(vm_state);
     if (result_code < 1) {
@@ -3028,7 +3028,7 @@ namespace sapphire {
       //block other event trigger while processing current event function
       bool inside_initializer_calling = frame->initializer_calling;
       frame->initializer_calling = false;
-      code_stack_.push_back(&func.GetCode());
+      code_stack_.push_back(&func.Get<VMCode>());
       frame_stack_.push(RuntimeFrame(func.GetId()));
       obj_stack_.Push();
       obj_stack_.CreateObject(kStrUserFunc, Object(func.GetId()));
@@ -3054,7 +3054,7 @@ namespace sapphire {
     //Convert current environment to next calling
     auto tail_call = [&](Function &func) -> void {
       code_stack_.pop_back();
-      code_stack_.push_back(&func.GetCode());
+      code_stack_.push_back(&func.Get<VMCode>());
       obj_map.Naturalize(obj_stack_.GetCurrent());
       frame_stack_.top() = RuntimeFrame(func.GetId());
       obj_stack_.ClearCurrent();
@@ -3071,7 +3071,7 @@ namespace sapphire {
       case kFunctionVMCode:
         //start new processing in next tick.
         if (invoking_request) goto direct_load_vmcode;
-        if (IsTailRecursion(frame->idx, &impl->GetCode())) tail_recursion();
+        if (IsTailRecursion(frame->idx, &impl->Get<VMCode>())) tail_recursion();
         else if (IsTailCall(frame->idx)) tail_call(*impl);
         else {
         direct_load_vmcode:
@@ -3091,7 +3091,7 @@ namespace sapphire {
         }
         break;
       case kFunctionCXX:
-        msg = impl->GetActivity()(obj_map);
+        msg = impl->Get<Activity>()(obj_map);
         if (msg.GetLevel() == kStateError) {
           frame->MakeError(msg.GetDetail());
         }
