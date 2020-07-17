@@ -7,8 +7,7 @@ namespace sapphire {
     NullableList &&nullable) {
     bool result = true;
     bool found = false;
-    string msg;
-    string type_id;
+    string msg, type_id;
 
 #define ERROR_REPORT   {                                              \
       result = false;                                                 \
@@ -51,9 +50,8 @@ namespace sapphire {
   }
 
   inline bool IsIllegalStringOperator(Keyword keyword) {
-    return keyword != kKeywordPlus && 
-      keyword != kKeywordNotEqual && 
-      keyword != kKeywordEquals;
+    return keyword != kKeywordPlus && keyword != kKeywordNotEqual
+      && keyword != kKeywordEquals;
   }
 
   inline int64_t IntProducer(Object &obj) {

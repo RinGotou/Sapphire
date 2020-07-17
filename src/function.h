@@ -10,7 +10,7 @@ namespace sapphire {
     ReturningTunnel tunnel;
   };
 
-  using Activity = Message(*)(ObjectMap &);  
+  using Activity = Message(*)(ObjectMap &);
   using ExtensionActivity = int(*)(VMState);
 
   enum ParameterPattern {
@@ -24,6 +24,27 @@ namespace sapphire {
     virtual ~_FunctionImpl() {}
   };
 
+  struct _NullFunctionType {};
+
+  template <typename _ImplType>
+  class _Function : _FunctionImpl {
+  protected:
+    _ImplType impl_;
+
+  public:
+    _Function(_ImplType impl) : impl_(impl) {}
+    _ImplType &Get() { return impl_; }
+  };
+
+  using FunctionBase = variant<
+    _Function<Activity>,
+    _Function<VMCode>,
+    _Function<ExtensionActivity>,
+    _Function<_NullFunctionType>
+  >;
+
+  using InvalidFunction = _Function<_NullFunctionType>;
+
   class CXXFunction : public _FunctionImpl {
   private:
     Activity activity_;
@@ -33,6 +54,8 @@ namespace sapphire {
 
     Activity GetActivity() const { return activity_; }
   };
+
+
 
   class VMCodeFunction : public _FunctionImpl {
   private:
@@ -61,6 +84,7 @@ namespace sapphire {
 
   class Function {
   private:
+    FunctionBase base_;
     shared_ptr<_FunctionImpl> impl_;
     ObjectMap record_;
 
@@ -74,30 +98,38 @@ namespace sapphire {
 
   public:
     Function() :
+      base_(InvalidFunction(_NullFunctionType())),
       impl_(nullptr), record_(), mode_(), type_(kFunctionCXX), 
       limit_(0), offset_(0), id_(), params_() {}
 
     Function(Activity activity, string params, string id,
       ParameterPattern argument_mode = kParamFixed) :
+      base_(_Function(activity)),
       impl_(new CXXFunction(activity)), record_(),
       mode_(argument_mode), type_(kFunctionCXX), limit_(0),
       offset_(0), id_(id), params_(BuildStringVector(params)) {}
 
     Function(size_t offset, VMCode ir, string id, vector<string> params,
       ParameterPattern argument_mode = kParamFixed) :
+      base_(_Function(ir)),
       impl_(new VMCodeFunction(ir)), record_(),
       mode_(argument_mode), type_(kFunctionVMCode), limit_(0),
       offset_(offset), id_(id), params_(params) {}
 
     Function(ExtensionActivity activity, string id, string params_pattern,
       ParameterPattern argument_mode = kParamFixed) :
+      base_(_Function(activity)),
       impl_(new ExternalFunction(activity)), record_(),
       mode_(argument_mode), type_(kFunctionExternal), limit_(0),
       offset_(0), id_(id), params_(BuildStringVector(params_pattern)) {}
 
+    template <typename _ImplType>
+    _ImplType &Get() { return std::get<_ImplType>(base_).Get(); }
+
     VMCode &GetCode() { return dynamic_pointer_cast<VMCodeFunction>(impl_)->GetCode(); }
     Activity GetActivity() { return dynamic_pointer_cast<CXXFunction>(impl_)->GetActivity(); }
     ExtensionActivity GetExtActivity() { return dynamic_pointer_cast<ExternalFunction>(impl_)->GetExtActivity(); }
+
     string GetId() const { return id_; }
     ParameterPattern GetPattern() const { return mode_; }
     vector<string> &GetParameters() { return params_; }
