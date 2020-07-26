@@ -121,10 +121,7 @@ namespace sapphire {
 
   const size_t kMaxShortNameCacheSize = 5;
 
-  //TODO:Port some object type to extension
-  //int, float, bool, string, wstring, instream, outstream
-
-  /* Embedded type identifier strings */
+  const string kTypeIdAnyStorage      = "!any_storage", // for internal implementation
   const string kTypeIdNull            = "null";
   const string kTypeIdInt             = "int";
   const string kTypeIdFloat           = "float";
@@ -143,7 +140,6 @@ namespace sapphire {
   const string kTypeIdStruct          = "struct";
   const string kTypeIdModule          = "module";  
   const string kTypeIdExtension       = "extension";
-  //const string kTypeIdTOML            = "TOML";
 
   template <typename _Lhs, typename... _Rhs>
   inline bool compare(_Lhs lhs, _Rhs... rhs) {

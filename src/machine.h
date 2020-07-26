@@ -384,7 +384,6 @@ namespace sapphire {
 
     void OperatorIncreasing(ArgumentList &args);
     void OperatorDecreasing(ArgumentList &args);
-
     void OperatorLogicNot(ArgumentList &args);
 
     void ExpList(ArgumentList &args);
@@ -453,6 +452,8 @@ namespace sapphire {
 
     bool PushObject(string id, Object object);
     void PushError(string msg);
+    void CopyComponents();
+    void Run(bool invoke = false);
 
     void SetPreviousStack(ObjectStack &prev) {
       obj_stack_.SetPreviousStack(prev);
@@ -462,9 +463,6 @@ namespace sapphire {
       obj_stack_.SetDelegatedRoot(root);
       delegated_base_scope_ = true;
     }
-
-    void CopyComponents();
-    void Run(bool invoke = false);
 
     bool ErrorOccurred() const {
       return error_;

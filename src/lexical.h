@@ -145,6 +145,7 @@ namespace sapphire {
     kStrCase           = "case",
     kStrWhen           = "when",
     kStrReturn         = "return",
+    kStrWith           = "with",
     kStrOptional       = "optional",
     kStrVariable       = "variable",
     kStrHead           = "head",
@@ -190,8 +191,6 @@ namespace sapphire {
     kStrInitializer    = "initializer",
     kStrStructId       = "__struct_id",
     kStrSuperStruct    = "!super_struct",
-    kStrSuperStructId  = "!super_struct_id", //deprecated?
-    kStrSuperStructInitializer = "!super_initializer", //deprecated?
     kStrModuleList     = "!module_list",
     kStrSuper          = "super",
     kStrIsBaseOf       = "is_base_of",

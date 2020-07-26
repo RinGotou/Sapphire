@@ -2619,6 +2619,11 @@ namespace sapphire {
     case kKeywordLoad:
       CommandLoad(args);
       break;
+    case kKeywordIf:
+    case kKeywordElif:
+    case kKeywordWhile:
+      CommandIfOrWhile(token, args, request.option.nest_end);
+      break;
     case kKeywordPlus:
       BinaryMathOperatorImpl<kKeywordPlus>(args);
       break;
@@ -2753,11 +2758,6 @@ namespace sapphire {
       break;
     case kKeywordElse:
       CommandElse();
-      break;
-    case kKeywordIf:
-    case kKeywordElif:
-    case kKeywordWhile:
-      CommandIfOrWhile(token, args, request.option.nest_end);
       break;
     case kKeywordUsing:
       CommandUsing(args);
