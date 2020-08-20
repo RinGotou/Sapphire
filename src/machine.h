@@ -290,7 +290,7 @@ namespace sapphire {
     }
   };
 
-  using FrameStack = stack<RuntimeFrame, vector<RuntimeFrame>>;
+  using FrameStack = stack<RuntimeFrame, deque<RuntimeFrame>>;
 
   struct _IgnoredException : std::exception {};
   struct _CustomError : std::exception {
@@ -307,7 +307,7 @@ namespace sapphire {
     bool is_logger_host_;
 
   private:
-    void RecoverLastState();
+    void RecoverLastState(bool call_by_return);
     void FinishInitalizerCalling();
     bool IsTailRecursion(size_t idx, VMCode *code);
     bool IsTailCall(size_t idx);
@@ -318,7 +318,7 @@ namespace sapphire {
     bool CheckObjectMethod(Object &obj, string id);
     void GetObjectMethods(Object &obj, vector<string> &dest);
 
-    bool FetchFunctionImplEx(FunctionImplPointer &dest, string id, string type_id = kTypeIdNull, 
+    bool FetchFunctionImplEx(FunctionImplPointer &dest, string func_id, string type_id = kTypeIdNull, 
       Object *obj_ptr = nullptr);
 
     bool FetchFunctionImpl(FunctionImplPointer &impl, CommandPointer &command,

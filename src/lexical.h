@@ -124,7 +124,6 @@ namespace sapphire {
     kStrFn             = "fn",
     kStrNullObj        = "null_obj",
     kStrToString       = "to_string",
-    kStrGetStr         = "get_str", //deprecated
     kStrTime           = "time", //deprecated
     kStrVersion        = "version",
     kStrCodeNameCmd    = "codename",
@@ -140,12 +139,12 @@ namespace sapphire {
     kStrElse           = "else",
     kStrElif           = "elif",
     kStrWhile          = "while",
+    kStrWith           = "with",
     kStrContinue       = "continue",
     kStrBreak          = "break",
     kStrCase           = "case",
     kStrWhen           = "when",
     kStrReturn         = "return",
-    kStrWith           = "with",
     kStrOptional       = "optional",
     kStrVariable       = "variable",
     kStrHead           = "head",

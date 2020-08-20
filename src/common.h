@@ -119,9 +119,7 @@ namespace sapphire {
     kNotPlainType = -1
   };
 
-  const size_t kMaxShortNameCacheSize = 5;
-
-  const string kTypeIdAnyStorage      = "!any_storage", // for internal implementation
+  const string kTypeIdAnyStorage      = "!any_storage"; // for internal implementation
   const string kTypeIdNull            = "null";
   const string kTypeIdInt             = "int";
   const string kTypeIdFloat           = "float";

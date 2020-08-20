@@ -245,36 +245,31 @@ namespace sapphire {
     msg_string = str;
   }
 
+  //complete wrong. rewrite it
   void RuntimeFrame::RefreshReturnStack(Object &obj) {
     if (!void_call) {
       return_stack.push_back(new Object(obj));
+      has_return_value_from_invoking = stop_point;
     }
-    if (stop_point) {
-      return_stack.push_back(new Object(obj));
-      has_return_value_from_invoking = true;
-    }
+
     if (is_command) rstk_operated = true;
   }
 
   void RuntimeFrame::RefreshReturnStack(Object &&obj) {
     if (!void_call) {
       return_stack.push_back(new Object(std::move(obj)));
+      has_return_value_from_invoking = stop_point;
     }
-    if (stop_point) {
-      return_stack.push_back(new Object(std::move(obj)));
-      has_return_value_from_invoking = true;
-    }
+
     if (is_command) rstk_operated = true;
   }
 
   void RuntimeFrame::RefreshReturnStack(const ObjectInfo &info, const shared_ptr<void> &ptr) {
     if (!void_call) {
       return_stack.push_back(new Object(info, ptr));
+      has_return_value_from_invoking = stop_point;
     }
-    if (stop_point) {
-      return_stack.push_back(new Object(info, ptr));
-      has_return_value_from_invoking = true;
-    }
+
     if (is_command) rstk_operated = true;
   }
   
@@ -286,10 +281,7 @@ namespace sapphire {
     else {
       if (!void_call) {
         return_stack.push_back(new Object(value, kTypeIdBool));
-      }
-      if (stop_point) {
-        return_stack.push_back(new Object(value, kTypeIdBool));
-        has_return_value_from_invoking = true;
+        has_return_value_from_invoking = stop_point;
       }
     }
     if (is_command) rstk_operated = true;
@@ -298,18 +290,16 @@ namespace sapphire {
   void RuntimeFrame::RefreshReturnStack(ObjectView &&view) {
     if (!void_call) {
       return_stack.push_back(new ObjectView(view));
+      has_return_value_from_invoking = stop_point;
     }
-    if (stop_point) {
-      return_stack.push_back(new ObjectView(view));
-      has_return_value_from_invoking = true;
-    }
+
     if (is_command) rstk_operated = true;
   }
 
-  void Machine::RecoverLastState() {
+  void Machine::RecoverLastState(bool call_by_return) {
     ObjectView view(obj_stack_.GetCurrent().Find(kStrReturnValueConstrantObj));
 
-    if (view.IsValid()) { // no need to check alive state
+    if (view.IsValid() && !call_by_return) { // no need to check alive state
       string_view constraint_type(view.Seek().Cast<string>());
       if (constraint_type != kTypeIdNull) {
         frame_stack_.top().MakeError("Mismatched return value type: null");
@@ -321,13 +311,13 @@ namespace sapphire {
     code_stack_.pop_back();
     obj_stack_.Pop();
     
-    frame_stack_.top().RefreshReturnStack(Object());
+    if (!call_by_return) frame_stack_.top().RefreshReturnStack(Object());
   }
 
   void Machine::FinishInitalizerCalling() {
     auto instance_obj = *obj_stack_.GetCurrent().Find(kStrMe);
     instance_obj.SetDeliveringFlag();
-    RecoverLastState();
+    RecoverLastState(false);
     frame_stack_.top().RefreshReturnStack(instance_obj);
   }
 
@@ -590,36 +580,33 @@ namespace sapphire {
     }
   }
 
-  bool Machine::FetchFunctionImplEx(FunctionImplPointer &dest, string id, string type_id,
+  bool Machine::FetchFunctionImplEx(FunctionImplPointer &dest, string func_id, string type_id,
     Object *obj_ptr) {
     auto &frame = frame_stack_.top();
 
     //TODO:struct support is missing
 
 #define METHOD_NOT_FOUND_MSG {                                           \
-      frame.MakeError("Method of " + type_id + " is not found: " + id);  \
+      frame.MakeError("Method of " + type_id + " is not found: " + func_id);  \
       return false;                                                      \
     }
 #define TYPE_ERROR_MSG {                                                 \
-      frame.MakeError(id + " is not a function object");                 \
+      frame.MakeError(func_id + " is not a function object");                 \
       return false;                                                      \
     }
 
-    //with domain
     if (type_id != kTypeIdNull) {
-      if (Object *obj = obj_stack_.Find(type_id); obj != nullptr) {
-        if (!obj->IsSubContainer()) METHOD_NOT_FOUND_MSG;
-        //auto &base = obj->Cast<ObjectStruct>();
-        auto struct_obj_ptr = obj_stack_.Find(obj->GetTypeId());
-        
-        if (struct_obj_ptr == nullptr || !struct_obj_ptr->IsSubContainer()) {
-          frame.MakeError("Invalid base type of object: " + obj->GetTypeId());
-          return false;
-        }
+      auto struct_obj_ptr = obj_stack_.Find(type_id);
 
-        auto *base_result = obj->IsSubContainer() ?
-          obj->Cast<ObjectStruct>().Find(id) : nullptr;
-        auto *struct_result = struct_obj_ptr->Cast<ObjectStruct>().Find(id);
+      if (struct_obj_ptr == nullptr) {
+        frame.MakeError("Invalid struct: " + type_id);
+        return false;
+      }
+
+      if (obj_ptr->IsSubContainer()) {
+        auto *base_result = obj_ptr->Cast<ObjectStruct>().Find(func_id);
+        auto *struct_result = struct_obj_ptr->Cast<ObjectStruct>().Find(func_id);
+
         auto *result = [&base_result, &struct_result]() -> auto {
           if (base_result != nullptr) return base_result;
           if (struct_result != nullptr) return struct_result;
@@ -631,25 +618,21 @@ namespace sapphire {
 
         dest = &result->Cast<Function>();
       }
-      else if (obj_ptr != nullptr && type_id == kTypeIdStruct) {
-        auto &base = obj_ptr->Cast<ObjectStruct>();
-        auto *ptr = base.Find(id);
+      else {
+        auto *result = struct_obj_ptr->Cast<ObjectStruct>().Find(func_id);
+        if (result == nullptr) METHOD_NOT_FOUND_MSG;
+        if (result->GetTypeId() != kTypeIdFunction) TYPE_ERROR_MSG;
 
-        if (ptr == nullptr) METHOD_NOT_FOUND_MSG;
-        if (ptr->GetTypeId() != kTypeIdFunction) TYPE_ERROR_MSG;
-
-        dest = &ptr->Cast<Function>();
+        dest = &result->Cast<Function>();
       }
-      else METHOD_NOT_FOUND_MSG;
     }
-    //without domain
-    //Hint: No need to implement the behavior of initializer,
-    //just making error instead.
     else {
-      if (auto *ptr = obj_stack_.Find(id); ptr != nullptr) {
+      if (auto *ptr = obj_stack_.Find(func_id); ptr != nullptr) {
         if (ptr->GetTypeId() != kTypeIdFunction) TYPE_ERROR_MSG;
         dest = &ptr->Cast<Function>();
       }
+      //Hint: behavior of initializer?
+      //just making error instead for now.
       else METHOD_NOT_FOUND_MSG;
     }
 
@@ -818,6 +801,8 @@ namespace sapphire {
     vector<string> params;
     VMCode code(&origin_code);
     string return_value_constraint;
+    auto &container = obj_stack_.GetCurrent();
+    auto func_id = args[0].GetData();
 
     for (size_t idx = nest + 1; idx < nest_end - frame.jump_offset; ++idx) {
       code.push_back(origin_code[idx]);
@@ -863,11 +848,15 @@ namespace sapphire {
       impl.AppendClosureRecord(kStrReturnValueConstrantObj, Object(return_value_constraint));
     }
 
-    obj_stack_.CreateObject(
-      args[0].GetData(),
-      Object(make_shared<Function>(impl), kTypeIdFunction),
-      TryAppendTokenId(args[0].GetData())
-    );
+    
+    if (container.Find(args[0].GetData(), false)) {
+      frame.MakeError("Function definition confliction");
+      return;
+    }
+    else {
+      container.Add(func_id, Object(make_shared<Function>(impl), kTypeIdFunction),
+        TryAppendTokenId(func_id));
+    }
 
     frame.Goto(nest_end + 1);
   }
@@ -929,7 +918,6 @@ namespace sapphire {
     }
 
     if (frame.has_return_value_from_invoking) {
-
       frame.return_stack.back()->IsObjectView() ?
         result.SetObjectRef(dynamic_cast<ObjectView *>(frame.return_stack.back())->Seek()) :
         //not checked. SetObjectRef?
@@ -1045,6 +1033,7 @@ namespace sapphire {
   }
 
   void Machine::CommandForEach(ArgumentList &args, size_t nest_end) {
+    // TODO: Remove iterator type and using duck type system for other types.
     auto &frame = frame_stack_.top();
     ObjectMap obj_map;
 
@@ -1969,12 +1958,12 @@ namespace sapphire {
         }
       }
       else {
-        if (!CheckObjectMethod(obj, kStrGetStr)) {
+        if (!CheckObjectMethod(obj, kStrToString)) {
           frame.MakeError("Invalid argument for convert()");
           return;
         }
 
-        auto ret_obj = CallMethod(obj, kStrGetStr).GetObj();
+        ret_obj = CallMethod(obj, kStrToString).GetObj();
         if (frame.error) return;
       }
 
@@ -2259,7 +2248,7 @@ namespace sapphire {
         if (frame.error) return;
 
         if (obj.GetTypeId() != kTypeIdBool) {
-          frame.MakeError("Invalid behavior of __compare()");
+          frame.MakeError("Invalid behavior of compare()");
           return;
         }
 
@@ -2432,7 +2421,7 @@ namespace sapphire {
         container = &obj_stack_.GetCurrent();
       }
 
-      RecoverLastState();
+      RecoverLastState(true);
       frame_stack_.top().RefreshReturnStack(ret_obj);
      
     }
@@ -2449,7 +2438,7 @@ namespace sapphire {
         container = &obj_stack_.GetCurrent();
       }
 
-      RecoverLastState();
+      RecoverLastState(true);
       frame_stack_.top().RefreshReturnStack(Object());
     }
     else {
@@ -2475,7 +2464,7 @@ namespace sapphire {
         container = &obj_stack_.GetCurrent();
       }
 
-      RecoverLastState();
+      RecoverLastState(true);
       frame_stack_.top().RefreshReturnStack(ret_obj);
     }
   }
@@ -3178,7 +3167,7 @@ namespace sapphire {
       if (frame->idx == size && frame_stack_.size() > 1) {
         //Bring saved environment back
         if (frame->inside_initializer_calling) FinishInitalizerCalling();
-        else RecoverLastState();
+        else RecoverLastState(false);
 
         if (frame->error) break;
         //Update register data
