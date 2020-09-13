@@ -9,10 +9,7 @@ namespace sapphire {
     kStateWarning
   };
 
-  struct ObjectPrototype {
-    ObjectInfo info;
-    shared_ptr<void> ptr;
-  };
+  struct ObjectPrototype { ObjectInfo info; shared_ptr<void> ptr; };
 
   class Message {
   private:

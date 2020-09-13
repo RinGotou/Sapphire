@@ -9,7 +9,7 @@ namespace sapphire::components {
 
   void CreateFunctionObject(Function impl) {
     auto &base = GetBuiltinComponentsObjBase();
-    base.try_emplace(impl.GetId(), Object(std::move(impl), kTypeIdFunction));
+    base.try_emplace(impl.GetId(), Object(impl, kTypeIdFunction));
   }
 
   //We don't need FindFunction() in new implementation.

@@ -18,15 +18,17 @@ namespace sapphire {
 
     for (auto &unit : lst) {
       auto obj_iter = obj_map.find(unit.first);
+      bool is_nullable = find_in_list(unit.first, nullable);
 
       if (obj_iter != obj_map.end()) {
         type_id = obj_iter->second.GetTypeId();
-        if (unit.second != type_id) {
-          ERROR_REPORT;
+
+        if (type_id == kTypeIdNull) {
+          if (!is_nullable) ERROR_REPORT;
+          continue;
         }
-        //for optional parameter
-        else if (type_id == kTypeIdNull && !find_in_list(unit.first, nullable)) {
-          ERROR_REPORT;
+        else {
+          if (type_id != unit.second) ERROR_REPORT;
         }
       }
       else {
@@ -114,20 +116,14 @@ namespace sapphire {
     auto type = FindTypeCode(obj.GetTypeId());
     bool result = false;
 
-    if (type == kPlainInt) {
-      int64_t value = obj.Cast<int64_t>();
-      if (value > 0) result = true;
-    }
-    else if (type == kPlainFloat) {
-      double value = obj.Cast<double>();
-      if (value > 0.0) result = true;
-    }
-    else if (type == kPlainBool) {
-      result = obj.Cast<bool>();
-    }
-    else if (type == kPlainString) {
-      string &value = obj.Cast<string>();
-      result = !value.empty();
+
+    switch (type) {
+    case kPlainInt: result = obj.Cast<int64_t>() > 0; break;
+    case kPlainFloat: result = obj.Cast<double>() > 0.0; break;
+    case kPlainBool: result = obj.Cast<bool>(); break;
+    case kPlainString: result = !obj.Cast<string>().empty(); break;
+    default:
+      break;
     }
 
     return result;
@@ -245,7 +241,6 @@ namespace sapphire {
     msg_string = str;
   }
 
-  //complete wrong. rewrite it
   void RuntimeFrame::RefreshReturnStack(Object &obj) {
     if (!void_call) {
       return_stack.push_back(new Object(obj));

@@ -117,7 +117,7 @@ namespace sapphire {
   }
 
   bool ObjectContainer::Add(string id, Object &source, size_t token_id) {
-    if (IsDelegated()) return delegator_->Add(id, source);
+    if (IsDelegated()) return delegator_->Add(id, source, token_id);
     auto result = container_.try_emplace(id, source);
     if (result.second && token_id != 0) {
       token_cache_[token_id] = &result.first->second;
@@ -128,7 +128,7 @@ namespace sapphire {
   }
 
   bool ObjectContainer::Add(string id, Object &&source, size_t token_id) {
-    if (IsDelegated()) return delegator_->Add(id, std::move(source));
+    if (IsDelegated()) return delegator_->Add(id, std::move(source), token_id);
     auto result = container_.try_emplace(id, source);
     if (result.second && token_id != 0) {
       token_cache_[token_id] = &result.first->second;
@@ -138,7 +138,7 @@ namespace sapphire {
   }
 
   void ObjectContainer::Replace(string id, Object &source, size_t token_id) {
-    if (IsDelegated()) delegator_->Replace(id, source);
+    if (IsDelegated()) delegator_->Replace(id, source, token_id);
 
     container_[id] = source;
     if (token_id != 0) {
@@ -147,7 +147,7 @@ namespace sapphire {
   }
 
   void ObjectContainer::Replace(string id, Object &&source, size_t token_id) {
-    if (IsDelegated()) delegator_->Replace(id, std::move(source));
+    if (IsDelegated()) delegator_->Replace(id, std::move(source), token_id);
 
     container_[id] = source;
     if (token_id != 0) {

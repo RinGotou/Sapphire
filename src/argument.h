@@ -4,7 +4,6 @@
 #include <map>
 #include <initializer_list>
 #include <vector>
-#include <iostream>
 
 namespace sapphire {
   struct Option {
