@@ -52,3 +52,6 @@ vc140.pdb
 .vs
 vsproject
 
+# Jetbrains Misc
+.idea
+
