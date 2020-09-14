@@ -1091,8 +1091,15 @@ namespace sapphire {
           cycle_escaper_.pop();
 
         (*dest_)[nest_end_.top()].first.option.nest_end = dest_->size();
-        anchorage.back().first.option.nest_root = nest_type_.top();
-        anchorage.back().first.option.nest = nest_.top();
+        auto &writing_dest = anchorage.back();
+        writing_dest.first.option.nest_root = nest_type_.top();
+        writing_dest.first.option.nest = nest_.top();
+        //anchorage.back().first.option.nest_root = nest_type_.top();
+        //anchorage.back().first.option.nest = nest_.top();
+        //ad hoc patch
+        if (writing_dest.first.GetKeywordValue() == kKeywordFor) {
+          writing_dest.first.option.nest -= 1; // warning: negative overflow?????
+        }
 
         if (compare(nest_type_.top(), kKeywordIf, kKeywordCase) && !jump_stack_.empty()){
           if (!jump_stack_.top().jump_record.empty()) {

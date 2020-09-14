@@ -1029,6 +1029,7 @@ namespace sapphire {
 
   void Machine::CommandForEach(ArgumentList &args, size_t nest_end) {
     // TODO: Remove iterator type and using duck type system for other types.
+    // TODO: Remove redundant container fetching
     auto &frame = frame_stack_.top();
     ObjectMap obj_map;
 
