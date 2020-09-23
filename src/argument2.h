@@ -46,7 +46,8 @@ namespace sapphire::commandline {
     ArgumentError(ErrorCode code, std::int64_t elem_idx) : 
       code_(code), elem_idx_(elem_idx) {}
 
-    char const *what() const override {
+    //noexcept is required by standard library from gnu gcc
+    char const *what() const noexcept {
       char const *result = nullptr;
       switch (code_) {
       case ErrorCode::InvalidHeader:

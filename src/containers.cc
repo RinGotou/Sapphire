@@ -41,14 +41,16 @@ namespace sapphire {
     ManagedArray base = make_shared<ObjectArray>();
 
     if (!p["size"].Null()) {
-      size_t size = p.Cast<int64_t>("size");
+      auto size = p.Cast<int64_t>("size");
       if (size < 0) return Message("Invalid array size.", kStateError);
+      auto size_value = static_cast<size_t>(size);
+
 
       Object obj = p["init_value"];
 
       auto type_id = obj.GetTypeId();
 
-      for (size_t count = 0; count < size; ++count) {
+      for (size_t count = 0; count < size_value; ++count) {
         base->emplace_back(components::DumpObject(obj));
       }
     }
@@ -64,9 +66,10 @@ namespace sapphire {
     auto &idx = p.Cast<int64_t>("index");
     size_t size = base.size();
 
-    if (size_t(idx) >= size) return Message("Subscript is out of range", kStateError);
+    if (size_t(idx) >= size) return Message("Index is out of range", kStateError);
+    if (size_t(idx) < 0) return Message("Index is out of range");
 
-    return Message().SetObjectRef(base[idx]);
+    return Message().SetObjectRef(base[size_t(idx)]);
   }
 
   Message ArrayGetSize(ObjectMap &p) {

@@ -33,6 +33,7 @@ namespace sapphire {
     string type_id = p[kStrMe].GetTypeId();
 
     size_t size = str.size();
+    //TODO: resolve warning
     size_t idx = p.Cast<int64_t>("index");
 
     if (idx >= size || idx < 0) return Message("Index is out of range", kStateError);

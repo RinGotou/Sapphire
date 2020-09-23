@@ -954,6 +954,7 @@ namespace sapphire {
     return true;
   }
 
+  //TODO: for-each processing still works not correctly. check it out again
   bool VMCodeFactory::Start() {
     bool good = true;
     LexicalFactory lexer(tokens_, logger_);
@@ -1091,14 +1092,14 @@ namespace sapphire {
           cycle_escaper_.pop();
 
         (*dest_)[nest_end_.top()].first.option.nest_end = dest_->size();
+        // Writing nest header info into 'end' command (anchorage.back())
         auto &writing_dest = anchorage.back();
         writing_dest.first.option.nest_root = nest_type_.top();
         writing_dest.first.option.nest = nest_.top();
-        //anchorage.back().first.option.nest_root = nest_type_.top();
-        //anchorage.back().first.option.nest = nest_.top();
         //ad hoc patch
-        if (writing_dest.first.GetKeywordValue() == kKeywordFor) {
-          writing_dest.first.option.nest -= 1; // warning: negative overflow?????
+        //TODO: Checking container source and judging
+        if (writing_dest.first.option.nest_root == kKeywordFor) {
+          writing_dest.first.option.nest += 1;
         }
 
         if (compare(nest_type_.top(), kKeywordIf, kKeywordCase) && !jump_stack_.empty()){
@@ -1121,6 +1122,7 @@ namespace sapphire {
         nest_type_.pop();
       }
 
+      //Insert processed vmcode into destination and dispose.
       dest_->insert(dest_->end(), anchorage.begin(), anchorage.end());
       anchorage.clear();
     }
