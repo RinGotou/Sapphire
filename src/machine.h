@@ -182,9 +182,13 @@ namespace sapphire {
 
   const string kIteratorBehavior = "obj|step_forward|compare";
   const string kContainerBehavior = "head|tail|empty";
-  const string kForEachExceptions = "!iterator|!containter_keepalive";
+  const string kForEachExceptions = "!iterator|!container_keepalive";
 
   using CommandPointer = Command * ;
+
+  struct RuntimeInfo {
+    //TODO: put some boolean values into heres
+  };
 
   class RuntimeFrame {
   public:

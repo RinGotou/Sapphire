@@ -1098,6 +1098,7 @@ namespace sapphire {
         writing_dest.first.option.nest = nest_.top();
         //ad hoc patch
         //TODO: Checking container source and judging
+        //FIXME: Not working! 
         if (writing_dest.first.option.nest_root == kKeywordFor) {
           writing_dest.first.option.nest += 1;
         }

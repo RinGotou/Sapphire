@@ -272,7 +272,7 @@ namespace sapphire {
 
     bool IsObjectView() const override { return true; }
     void operator=(const ObjectView &&rhs) { operator=(rhs); }
-    constexpr Object &Seek() { return *value_; }
+    Object &Seek() { return *value_; }
     bool IsAlive() const override { return value_->IsAlive(); }
     bool IsValid() const { return value_ != nullptr; }
     Object Dump() { return Seek(); }

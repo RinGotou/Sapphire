@@ -131,7 +131,7 @@ namespace sapphire {
     kStrSwitchLine     = "!switch_line",
     kStrCaseObj        = "!case",
     kStrIteratorObj    = "!iterator",
-    kStrContainerKeepAliveSlot = "!containter_keepalive",
+    kStrContainerKeepAliveSlot = "!container_keepalive",
     kStrCommentBegin   = "=begin",
     kStrCommentEnd     = "=end",
     kStrFor            = "for",
