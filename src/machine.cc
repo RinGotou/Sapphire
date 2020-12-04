@@ -1444,6 +1444,8 @@ namespace sapphire {
         auto &module = it->Cast<ObjectStruct>().GetContent();
         for (auto &unit : module) {
           if (unit.first == kStrStructId) continue;
+          //simple patch
+          if (unit.first == kStrInitializer) continue;
 
           if (unit.second.GetTypeId() != kTypeIdFunction) {
             managed_struct->Add(unit.first, components::DumpObject(unit.second));
@@ -3185,10 +3187,12 @@ namespace sapphire {
         MachineCommands(command->first.GetKeywordValue(), 
           command->second, command->first);
         
-        if (command->first.GetKeywordValue() == kKeywordReturn) refresh_tick();
+        auto is_return = command->first.GetKeywordValue() == kKeywordReturn;
+
+        if (is_return) refresh_tick();
         if (frame->error) break;
         if (!frame->stop_point) frame->Stepping();
-        if (!frame->rstk_operated) {
+        if (!frame->rstk_operated && !is_return) {
           frame->RefreshReturnStack(Object());
         }
         frame->rstk_operated = false;
