@@ -3170,7 +3170,10 @@ namespace sapphire {
         if (frame->error) break;
         //Update register data
         refresh_tick();
-        frame->Stepping();
+        if (!(frame->inside_initializer_calling && frame->stop_point)) {
+          frame->Stepping();
+        }
+        //frame->Stepping();
         continue;
       }
 
