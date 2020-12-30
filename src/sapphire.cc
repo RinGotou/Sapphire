@@ -21,7 +21,7 @@ void BootMainVMObject(string path, string log_path, bool real_time_log) {
 }
 
 void ApplicationInfo() {
-  printf(PRODUCT " " PRODUCT_VER "\n");
+  printf(PRODUCT " " PRODUCT_VER "(" BUILD ")\n");
   printf("Codename:" CODENAME "\n");
   printf("Build date:" __DATE__ "\n");
   printf(COPYRIGHT ", " AUTHOR "\n");
@@ -46,7 +46,7 @@ void HelpFile() {
 
 void Motto() {
   puts("I go on the road of illusion, looking for your voice.");
-  puts(PRODUCT "\nVersion " PRODUCT_VER " '"  CODENAME "'");
+  //puts(PRODUCT "\nVersion " PRODUCT_VER " '"  CODENAME "'");
 }
 
 void Processing(Processor &processor) {
@@ -110,7 +110,7 @@ void InitFromConfigFile() {
     auto log = [&startup]() -> string {
       auto temp = toml::expect<string>(startup, "log");
       if (temp.is_ok()) return temp.unwrap();
-      return "project-sapphire.log";
+      return "sapphire-project.log";
     }();
     auto real_time_log = toml::expect<bool>(startup, "real_time_log");
     auto locale = toml::expect<string>(startup, "locale");
@@ -119,7 +119,7 @@ void InitFromConfigFile() {
 
     if (vm_stdout.is_ok()) {
       if (log == vm_stdout.unwrap()) {
-        puts("VM stdout/log output confliction");
+        puts("Can't use same file for vm_stdin/vm_stdout");
         return;
       }
 
@@ -128,7 +128,7 @@ void InitFromConfigFile() {
 
     if (vm_stdin.is_ok()) {
       if (log == vm_stdin.unwrap()) {
-        puts("VM stdin/log output confliction");
+        puts("Can't use same file for vm_stdin/vm_stdout");
       }
 
       GetVMStdin(fopen(vm_stdin.unwrap().data(), "r"));
