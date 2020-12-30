@@ -1,4 +1,4 @@
-project(sapphire_adhoc)
+project(sapphire-adhoc)
 
 cmake_minimum_required(VERSION 3.5)
 add_subdirectory(src)

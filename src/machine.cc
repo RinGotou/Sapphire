@@ -2797,6 +2797,7 @@ namespace sapphire {
       break;
     case kKeywordGetChar:
       CommandGetChar(args);
+      break;
     default:
       break;
     }
