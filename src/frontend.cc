@@ -598,6 +598,7 @@ namespace sapphire {
   }
 
   bool LineParser::StructExpr(Terminator terminator) {
+    //TODO: allow access with type identifier(struct/module)
     if (frame_->last.second != kStringTypeNull) {
       error_string_ = "Invalid struct/module definition";
       return false;
@@ -1031,8 +1032,10 @@ namespace sapphire {
         if (ast_root == kKeywordModule) {
           inside_module_ = true;
         }
-
-        nest_.push(dest_->size());
+        
+        nest_.push(ast_root == kKeywordFor ? 
+          dest_->size() + anchorage.size() - 1 : dest_->size());
+        //nest_.push(dest_->size());
         nest_end_.push(dest_->size() + anchorage.size() - 1);
         nest_origin_.push(it->first);
         nest_type_.push(ast_root);
@@ -1096,12 +1099,6 @@ namespace sapphire {
         auto &writing_dest = anchorage.back();
         writing_dest.first.option.nest_root = nest_type_.top();
         writing_dest.first.option.nest = nest_.top();
-        //ad hoc patch
-        //TODO: Checking container source and judging
-        //FIXME: Not working! 
-        if (writing_dest.first.option.nest_root == kKeywordFor) {
-          writing_dest.first.option.nest += 1;
-        }
 
         if (compare(nest_type_.top(), kKeywordIf, kKeywordCase) && !jump_stack_.empty()){
           if (!jump_stack_.top().jump_record.empty()) {

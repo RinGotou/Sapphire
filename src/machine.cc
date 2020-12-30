@@ -3150,7 +3150,6 @@ namespace sapphire {
     };
 
     // Main loop of virtual machine.
-    // TODO:dispose return value in event function
     while (frame->idx < size || frame_stack_.size() > 1) {
       cleanup_cache();
 
@@ -3174,14 +3173,14 @@ namespace sapphire {
         if (!(frame->inside_initializer_calling && frame->stop_point)) {
           frame->Stepping();
         }
-        //frame->Stepping();
         continue;
       }
 
       //load current command and refreshing indicators
       command          = &(*code)[frame->idx];
       script_idx       = command->first.idx;
-      frame->void_call = command->first.option.void_call; // dispose returning value
+      // dispose returning value
+      frame->void_call = command->first.option.void_call; 
       frame->required_by_next_cond = is_required_by_cond();
       frame->current_code = code;
       frame->is_command = command->first.type == kRequestCommand;
@@ -3203,7 +3202,6 @@ namespace sapphire {
         continue;
       }
       else {
-        // TODO: method predictions
         //cleaning object map for user-defined function and C++ function
         obj_map.clear();
 
