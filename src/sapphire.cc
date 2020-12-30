@@ -1,9 +1,10 @@
 #include "machine.h"
 #include "argument.h"
 
+namespace fs = std::filesystem;
+
 using namespace std;
 using namespace sapphire;
-
 using Processor = ArgumentProcessor<kHeadDoubleHorizon, kJoinerEqual>;
 
 void BootMainVMObject(string path, string log_path, bool real_time_log) {
@@ -54,6 +55,12 @@ void Processing(Processor &processor) {
     string log = processor.Exist("log") ?
       processor.ValueOf("log") :
       "project-sapphire.log";
+
+    if (auto absolute_path = fs::absolute(fs::path(path)); 
+      !fs::exists(absolute_path)) {
+      printf("Script is not found: %s\n", absolute_path.string().data());
+      return;
+    }
 
     if (processor.Exist("vm_stdout")) {
       string vm_stdout = processor.ValueOf("vm_stdout");
@@ -146,7 +153,6 @@ void InitFromConfigFile() {
 }
 
 int main(int argc, char **argv) {
-  namespace fs = std::filesystem;
   runtime::InformBinaryPathAndName(argv[0]);
   ActivateComponents();
 
