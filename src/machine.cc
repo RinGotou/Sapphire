@@ -2154,7 +2154,7 @@ namespace sapphire {
 
   void Machine::CommandVersion() {
     auto &frame = frame_stack_.top();
-    frame.RefreshReturnStack(Object(PRODUCT_VER));
+    frame.RefreshReturnStack(Object(BUILD));
   }
 
   void Machine::CommandMachineCodeName() {

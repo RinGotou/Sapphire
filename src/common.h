@@ -57,8 +57,9 @@
 #endif
 
 #define PRODUCT     "Sapphire Prototype"
-#define PRODUCT_VER "2.6"
-#define CODENAME    "Prism"
+#define PRODUCT_VER "2.61"
+#define BUILD       "2610"
+#define CODENAME    "Lavender"
 #define COPYRIGHT   "Licensed under BSD2. Copyright(c) 2020"
 #define AUTHOR      "Rin and Sapphire Language Contributor(s)"
 
