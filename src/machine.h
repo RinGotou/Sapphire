@@ -205,9 +205,6 @@ namespace sapphire {
     bool stop_point;
     bool has_return_value_from_invoking;
     bool cancel_cleanup;
-    bool required_by_next_cond;
-    bool is_there_a_cond;
-    bool reserved_cond;
     bool direct_delivering;
     bool is_command;
     bool rstk_operated;
@@ -240,9 +237,6 @@ namespace sapphire {
       stop_point(false),
       has_return_value_from_invoking(false),
       cancel_cleanup(false),
-      required_by_next_cond(false),
-      is_there_a_cond(false),
-      reserved_cond(false),
       direct_delivering(false),
       is_command(false),
       rstk_operated(false),

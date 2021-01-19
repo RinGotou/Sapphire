@@ -269,16 +269,11 @@ namespace sapphire {
   }
   
   void RuntimeFrame::RefreshReturnStack(bool value) {
-    if (required_by_next_cond) {
-      is_there_a_cond = true;
-      reserved_cond = value;
+    if (!void_call) {
+      return_stack.push_back(new Object(value, kTypeIdBool));
+      has_return_value_from_invoking = stop_point;
     }
-    else {
-      if (!void_call) {
-        return_stack.push_back(new Object(value, kTypeIdBool));
-        has_return_value_from_invoking = stop_point;
-      }
-    }
+    
     if (is_command) rstk_operated = true;
   }
 
@@ -948,22 +943,17 @@ namespace sapphire {
       has_jump_record = code->FindJumpRecord(frame.idx + frame.jump_offset, frame.branch_jump_stack);
     }
     
-    if (frame.is_there_a_cond) {
-      state = frame.reserved_cond;
-      frame.is_there_a_cond = false;
+
+    ObjectView view = FetchObjectView(args[0]);
+
+    if (frame.error) return;
+
+    if (view.Seek().GetTypeId() != kTypeIdBool) {
+      frame.MakeError("Invalid state value type.");
+      return;
     }
-    else {
-      ObjectView view = FetchObjectView(args[0]);
 
-      if (frame.error) return;
-
-      if (view.Seek().GetTypeId() != kTypeIdBool) {
-        frame.MakeError("Invalid state value type.");
-        return;
-      }
-
-      state = view.Seek().Cast<bool>();
-    }
+    state = view.Seek().Cast<bool>();
 
     if (token == kKeywordIf) {
       auto create_env = [&]()->void {
@@ -1688,21 +1678,13 @@ namespace sapphire {
 
     if (frame.error) return;
 
-    if (frame.is_there_a_cond) {
-      if (frame.reserved_cond) {
-        left.swap(right);
-      }
-      frame.is_there_a_cond = false;
+    auto &cond = FetchObjectView(args[2]).Seek();
+    if (cond.GetTypeId() != kTypeIdBool) {
+      frame.MakeError("Invalid condition value");
+      return;
     }
-    else {
-      auto &cond = FetchObjectView(args[2]).Seek();
-      if (cond.GetTypeId() != kTypeIdBool) {
-        frame.MakeError("Invalid condition value");
-        return;
-      }
 
-      if (cond.Cast<bool>()) left.swap(right);
-    }
+    if (cond.Cast<bool>()) left.swap(right);
   }
 
   void Machine::CommandBind(ArgumentList &args, bool local_value, bool ext_value) {
@@ -2304,13 +2286,8 @@ namespace sapphire {
 
     bool result = !rhs.Cast<bool>();
 
-    if (frame.required_by_next_cond) {
-      frame.reserved_cond = result;
-      frame.is_there_a_cond = true;
-    }
-    else {
-      frame.RefreshReturnStack(result);
-    }
+
+    frame.RefreshReturnStack(result);
   }
 
   void Machine::OperatorIncreasing(ArgumentList &args) {
@@ -2360,19 +2337,9 @@ namespace sapphire {
   //TODO: Replace with multiple new commands
   void Machine::ExpList(ArgumentList &args) {
     auto &frame = frame_stack_.top();
-    if (frame.is_there_a_cond) {
-      //DO NOTHING
-    }
-    else if (!args.empty()) {
+    if (!args.empty()) {
       auto result_view = FetchObjectView(args.back());
-
-      if (result_view.Seek().GetTypeId() == kTypeIdBool) {
-        frame.is_there_a_cond = true;
-        frame.reserved_cond = result_view.Seek().Cast<bool>();
-      }
-      else {
-        frame.RefreshReturnStack(result_view.Seek());
-      }
+     frame.RefreshReturnStack(result_view.Seek());
     }
   }
 
@@ -2475,22 +2442,16 @@ namespace sapphire {
       return;
     }
 
-    if (frame.is_there_a_cond) {
-      if (frame.reserved_cond) frame.MakeError("User assertion failed.");
-      frame.is_there_a_cond = false;
+    auto &result_obj = FetchObjectView(args[0]).Seek();
+    if (frame.error) return;
+
+    if (result_obj.GetTypeId() != kTypeIdBool) {
+      frame.MakeError("Invalid object type for assertion.");
+      return;
     }
-    else {
-      auto &result_obj = FetchObjectView(args[0]).Seek();
-      if (frame.error) return;
 
-      if (result_obj.GetTypeId() != kTypeIdBool) {
-        frame.MakeError("Invalid object type for assertion.");
-        return;
-      }
-
-      if (!result_obj.Cast<bool>()) {
-        frame.MakeError("User assertion failed.");
-      }
+    if (!result_obj.Cast<bool>()) {
+      frame.MakeError("User assertion failed.");
     }
   }
 
@@ -3113,37 +3074,6 @@ namespace sapphire {
       return failed;
     };
 
-    auto is_required_by_cond = [&]() -> bool {
-      bool main_trigger = lexical::IsOperator(command->first.GetKeywordValue());
-      if (frame->idx >= size - 1) return false;
-      auto &next_cmd = (*code)[frame->idx + 1];
-      auto keyword_value = next_cmd.first.GetKeywordValue();
-      auto arg_type = next_cmd.second.size() > 0 ?
-        next_cmd.second.back().GetType() :
-        kArgumentNull;
-      bool explist_optimization = false;
-
-      if (frame->idx < size - 2) {
-        auto &next2_cmd = (*code)[frame->idx + 2];
-        auto keyword_value2 = next2_cmd.first.GetKeywordValue();
-        auto arg_type2 = next2_cmd.second.size() > 0 ?
-          next2_cmd.second.back().GetType() :
-          kArgumentNull;
-        explist_optimization = (keyword_value == kKeywordExpList)
-          && (keyword_value2 == kKeywordWhile
-            || keyword_value2 == kKeywordIf);
-      }
-
-      return ((keyword_value == kKeywordIf 
-        || keyword_value == kKeywordWhile
-        || keyword_value == kKeywordCSwapIf
-        || keyword_value == kKeywordSwapIf
-        || keyword_value == kKeywordAssert) 
-         || explist_optimization)
-        && arg_type == kArgumentReturnStack
-        && main_trigger;
-    };
-
     auto cleanup_cache = [&]() -> void {
       for (auto &unit : view_delegator_) delete unit;
       view_delegator_.clear();
@@ -3181,7 +3111,6 @@ namespace sapphire {
       script_idx       = command->first.idx;
       // dispose returning value
       frame->void_call = command->first.option.void_call; 
-      frame->required_by_next_cond = is_required_by_cond();
       frame->current_code = code;
       frame->is_command = command->first.type == kRequestCommand;
 
