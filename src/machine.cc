@@ -2529,9 +2529,10 @@ namespace sapphire {
 
     if (args.size() == 1) {
       //keep alive
-      Object ret_obj = FetchObjectView(args[0]).Seek().Unpack();
+      auto ret_objview = FetchObjectView(args[0]);
+      if (frame_stack_.top().error) return;
 
-      if (!constraint_type.empty() && ret_obj.GetTypeId() != constraint_type) {
+      if (!constraint_type.empty() && ret_objview.Seek().GetTypeId() != constraint_type) {
         frame_stack_.top().MakeError("Mismatched return value type: " + constraint_type);
         return;
       }
@@ -2546,7 +2547,7 @@ namespace sapphire {
       }
 
       RecoverLastState(true);
-      frame_stack_.top().RefreshReturnStack(ret_obj);
+      frame_stack_.top().RefreshReturnStack(ret_objview.Seek());
      
     }
     else if (args.size() == 0) {
@@ -3148,7 +3149,6 @@ namespace sapphire {
     };
     //Protect current runtime environment and load another function
     auto update_stack_frame = [&](Function &func) -> void {
-      //block other event trigger while processing current event function
       bool inside_initializer_calling = frame->initializer_calling;
       frame->initializer_calling = false;
       code_stack_.push_back(&func.Get<VMCode>());
@@ -3179,7 +3179,9 @@ namespace sapphire {
       code_stack_.pop_back();
       code_stack_.push_back(&func.Get<VMCode>());
       obj_map.Naturalize(obj_stack_.GetCurrent());
+      //auto inside_initiailizer_calling = frame_stack_.top().initializer_calling;
       frame_stack_.top() = RuntimeFrame(func.GetId());
+      //frame_stack_.top().inside_initializer_calling = inside_initiailizer_calling;
       obj_stack_.ClearCurrent();
       obj_stack_.CreateObject(kStrUserFunc, Object(func.GetId()));
       obj_stack_.MergeMap(obj_map);
@@ -3195,7 +3197,7 @@ namespace sapphire {
         //start new processing in next tick.
         if (invoking_request) goto direct_load_vmcode;
         if (IsTailRecursion(frame->idx, &impl->Get<VMCode>())) tail_recursion();
-        else if (IsTailCall(frame->idx)) tail_call(*impl);
+        else if (IsTailCall(frame->idx) && !frame->initializer_calling) tail_call(*impl);
         else {
         direct_load_vmcode:
           update_stack_frame(*impl);
@@ -3230,15 +3232,15 @@ namespace sapphire {
       return switch_to_next_tick;
     };
 
-    auto unpack_invoking_request = [&]() -> bool {
-      bool failed = false;
+    //auto unpack_invoking_request = [&]() -> bool {
+    //  bool failed = false;
 
-      auto invoking_req = BuildStringVector(msg.GetDetail());
-      auto obj = msg.GetObj();
-      failed = FetchFunctionImplEx(impl, invoking_req[0], invoking_req[1], &obj);
+    //  auto invoking_req = BuildStringVector(msg.GetDetail());
+    //  auto obj = msg.GetObj();
+    //  failed = FetchFunctionImplEx(impl, invoking_req[0], invoking_req[1], &obj);
 
-      return failed;
-    };
+    //  return failed;
+    //};
 
     auto cleanup_cache = [&]() -> void {
       for (auto &unit : view_delegator_) delete unit;
