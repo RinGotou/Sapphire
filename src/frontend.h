@@ -70,17 +70,17 @@ namespace sapphire {
     void ProduceVMCode();
     bool CleanupStack();
 
-    void BindExpr();
-    void DeliveringExpr();
-    void DotExpr();
+    void BindStmt();
+    void DeliveringStmt();
+    void ScopeMemberStmt();
     void UnaryExpr();
-    void FuncInvokingExpr();
-    bool IndexExpr();
-    bool ArrayExpr();
+    void Calling();
+    bool GetElementStmt();
+    bool ArrayGeneratorStmt();
     void BinaryExpr();
-    bool FnExpr();
-    bool StructExpr(Terminator terminator);
-    bool ForEachExpr();
+    bool FunctionHeaderStmt();
+    bool StructHeaderStmt(Terminator terminator);
+    bool ForEachStmt();
 
     bool OtherExpressions();
     void LiteralValue();

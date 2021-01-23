@@ -46,6 +46,12 @@ namespace sapphire {
       keyword == kKeywordBreak;
   }
 
+  //temporary patch
+  inline bool IgnoreVoidCall(Keyword keyword) {
+    return keyword == kKeywordReturn || keyword == kKeywordFor ||
+      keyword == kKeywordIf || keyword == kKeywordWhile;
+  }
+
   string GetLeftBracket(string rhs) {
     if (rhs == ")") return "(";
     if (rhs == "]") return "[";
@@ -334,7 +340,8 @@ namespace sapphire {
     action_base_.emplace_back(Command(frame_->symbol.back(), arguments));
     frame_->symbol.pop_back();
     frame_->args.emplace_back(Argument("", kArgumentReturnStack, kStringTypeNull));
-    if (frame_->symbol.empty() && (frame_->next.first == "," || frame_->next.second == kStringTypeNull)) {
+    if (frame_->symbol.empty() && !IgnoreVoidCall(action_base_.back().first.GetKeywordValue()) &&
+      (frame_->next.first == "," || frame_->next.second == kStringTypeNull)) {
       action_base_.back().first.option.void_call = true;
     }
   }
@@ -349,7 +356,7 @@ namespace sapphire {
     return result;
   }
 
-  void LineParser::BindExpr() {
+  void LineParser::BindStmt() {
     if (!frame_->args.empty()) {
       Request request(kKeywordBind);
       request.option.local_object = frame_->local_object;
@@ -358,7 +365,7 @@ namespace sapphire {
     }
   }
 
-  void LineParser::DeliveringExpr() {
+  void LineParser::DeliveringStmt() {
     if (!frame_->args.empty()) {
       Request request(kKeywordDelivering);
       request.option.local_object = frame_->local_object;
@@ -367,7 +374,7 @@ namespace sapphire {
     }
   }
 
-  void LineParser::DotExpr() {
+  void LineParser::ScopeMemberStmt() {
     if (!frame_->seek_last_assert) {
       frame_->domain = frame_->args.back();
       frame_->args.pop_back();
@@ -379,7 +386,7 @@ namespace sapphire {
     frame_->symbol.emplace_back(Request(token));
   }
 
-  void LineParser::FuncInvokingExpr() {
+  void LineParser::Calling() {
     if (frame_->last.second != kStringTypeIdentifier) {
       frame_->symbol.emplace_back(Request(kKeywordExpList));
     }
@@ -394,7 +401,7 @@ namespace sapphire {
     frame_->args.emplace_back(Argument());
   }
 
-  bool LineParser::IndexExpr() {
+  bool LineParser::GetElementStmt() {
     Request request(kStrAt, frame_->args.back());
     frame_->symbol.emplace_back(request);
     frame_->symbol.emplace_back(Request());
@@ -404,7 +411,7 @@ namespace sapphire {
     return true;
   }
 
-  bool LineParser::ArrayExpr() {
+  bool LineParser::ArrayGeneratorStmt() {
     bool result = true;
     if (frame_->last.second == StringType::kStringTypeSymbol) {
       frame_->symbol.emplace_back(Request(kKeywordInitialArray));
@@ -447,7 +454,7 @@ namespace sapphire {
     frame_->symbol.emplace_back(request);
   }
 
-  bool LineParser::FnExpr() {
+  bool LineParser::FunctionHeaderStmt() {
     //TODO:Preprecessing-time argument type checking
     if (frame_->last.second != kStringTypeNull) {
       error_string_ = "Invalid function definition";
@@ -596,7 +603,7 @@ namespace sapphire {
     return good;
   }
 
-  bool LineParser::StructExpr(Terminator terminator) {
+  bool LineParser::StructHeaderStmt(Terminator terminator) {
     //TODO: allow access with type identifier(struct/module)
     if (frame_->last.second != kStringTypeNull) {
       error_string_ = "Invalid struct/module definition";
@@ -646,7 +653,7 @@ namespace sapphire {
     return true;
   }
 
-  bool LineParser::ForEachExpr() {
+  bool LineParser::ForEachStmt() {
     if (frame_->last.second != kStringTypeNull) {
       error_string_ = "Invalid for-each expression";
       return false;
@@ -822,25 +829,25 @@ namespace sapphire {
         value != kTerminatorNull) {
         switch (value) {
         case kTerminatorAssign:
-          BindExpr();
+          BindStmt();
           break;
         case kTerminatorArrow:
-          DeliveringExpr();
+          DeliveringStmt();
           break;
         case kTerminatorComma:
           state = CleanupStack();
           break;
         case kTerminatorDot:
-          DotExpr();
+          ScopeMemberStmt();
           break;
         case kTerminatorLeftParen:
-          FuncInvokingExpr();
+          Calling();
           break;
         case kTerminatorLeftBracket:
-          state = IndexExpr();
+          state = GetElementStmt();
           break;
         case kTerminatorLeftBrace:
-          state = ArrayExpr();
+          state = ArrayGeneratorStmt();
           break;
         case kTerminatorMonoOperator:
           UnaryExpr();
@@ -849,14 +856,14 @@ namespace sapphire {
           BinaryExpr();
           break;
         case kTerminatorFn:
-          state = FnExpr();
+          state = FunctionHeaderStmt();
           break;
         case kTerminatorStruct:
         case kTerminatorModule:
-          state = StructExpr(value);
+          state = StructHeaderStmt(value);
           break;
         case kTerminatorFor:
-          state = ForEachExpr();
+          state = ForEachStmt();
           break;
         case kTerminatorRightSqrBracket:
         case kTerminatorRightBracket:
