@@ -133,7 +133,7 @@ namespace sapphire {
   const string kTypeIdFunction        = "function";
   const string kTypeIdFunctionPointer = "function_pointer";
   const string kTypeIdObjectPointer   = "object_pointer";
-  const string kTypeIdIterator        = "iterator";
+  //const string kTypeIdIterator        = "iterator";
   const string kTypeIdPair            = "pair";
   const string kTypeIdTable           = "table";
   const string kTypeIdStruct          = "struct";

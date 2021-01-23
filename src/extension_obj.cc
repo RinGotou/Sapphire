@@ -2,12 +2,12 @@
 
 namespace sapphire {
   Message GetFunctionPointer(ObjectMap &p) {
-    auto tc = TypeChecking(
-      {
-        Expect("library", kTypeIdString),
-        Expect("id", kTypeIdString)
-      }, p);
-    if (TC_FAIL(tc)) return TC_ERROR(tc);
+    //auto tc = TypeChecking(
+    //  {
+    //    Expect("library", kTypeIdString),
+    //    Expect("id", kTypeIdString)
+    //  }, p);
+    //if (TC_FAIL(tc)) return TC_ERROR(tc);
 
 #ifdef _WIN32
     wstring path = s2ws(p.Cast<string>("library"));
@@ -31,8 +31,8 @@ namespace sapphire {
 
   Message NewExtension(ObjectMap &p) { 
     using namespace extension;
-    auto tc = TypeChecking({ Expect("path",kTypeIdString) }, p);
-    if (TC_FAIL(tc)) return TC_ERROR(tc);
+    //auto tc = TypeChecking({ Expect("path",kTypeIdString) }, p);
+    //if (TC_FAIL(tc)) return TC_ERROR(tc);
     auto &path = p.Cast<string>("path");
     ManagedExtension extension = make_shared<Extension>(path);
     auto loader = extension->GetExtensionLoader();
@@ -67,8 +67,8 @@ namespace sapphire {
 
   Message ExtensionFetchFunction(ObjectMap &p) {
     //TODO:Variable arugment
-    auto tc = TypeChecking({ Expect("id",kTypeIdString) }, p);
-    if (TC_FAIL(tc)) return TC_ERROR(tc);
+    //auto tc = TypeChecking({ Expect("id",kTypeIdString) }, p);
+    //if (TC_FAIL(tc)) return TC_ERROR(tc);
     auto &extension = p.Cast<Extension>(kStrMe);
     auto &id = p.Cast<string>("id");
     auto activity = extension.FetchFunction(id);

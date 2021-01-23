@@ -3,41 +3,41 @@
 #define EXPECTED_COUNT(_Count) (args.size() == _Count)
 
 namespace sapphire {
-  CommentedResult TypeChecking(ExpectationList &&lst, ObjectMap &obj_map,
-    NullableList &&nullable) {
-    bool result = true;
-    bool found = false;
-    string msg, type_id;
-
-#define ERROR_REPORT   {                                              \
-      result = false;                                                 \
-      msg = "Unexpected object type: " + obj_iter->second.GetTypeId() \
-        + "(Parameter: " + unit.first + ")";                          \
-      break;                                                          \
-    }
-
-    for (auto &unit : lst) {
-      auto obj_iter = obj_map.find(unit.first);
-      bool is_nullable = find_in_list(unit.first, nullable);
-
-      if (obj_iter != obj_map.end()) {
-        type_id = obj_iter->second.GetTypeId();
-
-        if (type_id == kTypeIdNull) {
-          if (!is_nullable) ERROR_REPORT;
-          continue;
-        }
-        else {
-          if (type_id != unit.second) ERROR_REPORT;
-        }
-      }
-      else {
-        ERROR_REPORT;
-      }
-    }
-
-    return { result, msg };
-  }
+//  CommentedResult TypeChecking(ExpectationList &&lst, ObjectMap &obj_map,
+//    NullableList &&nullable) {
+//    bool result = true;
+//    bool found = false;
+//    string msg, type_id;
+//
+//#define ERROR_REPORT   {                                              \
+//      result = false;                                                 \
+//      msg = "Unexpected object type: " + obj_iter->second.GetTypeId() \
+//        + "(Parameter: " + unit.first + ")";                          \
+//      break;                                                          \
+//    }
+//
+//    for (auto &unit : lst) {
+//      auto obj_iter = obj_map.find(unit.first);
+//      bool is_nullable = find_in_list(unit.first, nullable);
+//
+//      if (obj_iter != obj_map.end()) {
+//        type_id = obj_iter->second.GetTypeId();
+//
+//        if (type_id == kTypeIdNull) {
+//          if (!is_nullable) ERROR_REPORT;
+//          continue;
+//        }
+//        else {
+//          if (type_id != unit.second) ERROR_REPORT;
+//        }
+//      }
+//      else {
+//        ERROR_REPORT;
+//      }
+//    }
+//
+//    return { result, msg };
+//  }
 
 
   inline PlainType FindTypeCode(string type_id) {
@@ -678,7 +678,7 @@ namespace sapphire {
       
 
       obj_map.emplace(NamedObject(kStrMe, view.Seek()));
-      if (!frame.assert_rc_copy.Null()) frame.assert_rc_copy = Object();
+      if (!frame.assert_rc_copy.NullPtr()) frame.assert_rc_copy = Object();
     }
     //Plain bulit-in function and user-defined function
     else {
@@ -865,14 +865,17 @@ namespace sapphire {
       result = CallVMCFunction(*impl, obj_map);
     }
     else if (impl->GetType() == kFunctionExternal) {
-      frame.MakeError("External function isn't supported for now");
+      frame.MakeError("Unsupported feature(Invoke external function)");
     }
     else if (impl->GetType() == kFunctionCXX) {
       auto activity = impl->Get<Activity>();
       result = activity(obj_map);
+      //if (!result.HasObject()) {
+      //  result.SetObject(Object());
+      //}
     }
     else {
-      frame.MakeError("Unknown function implementation (Internal error)");
+      frame.MakeError("Internal Error(Unknown function type)");
     }
 
     return result;
@@ -957,7 +960,7 @@ namespace sapphire {
 
     if (token == kKeywordIf) {
       auto create_env = [&]()->void {
-        frame.scope_stack.push(true);
+        frame.scope_indicator.push(true);
         frame.condition_stack.push(state);
         obj_stack_.Push(true, true);
       };
@@ -1003,7 +1006,7 @@ namespace sapphire {
     }
     else if (token == kKeywordWhile) {
       if (!frame.jump_from_end) {
-        frame.scope_stack.push(true);
+        frame.scope_indicator.push(true);
         obj_stack_.Push(true, true);
       }
       else {
@@ -1017,106 +1020,262 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandForEach(ArgumentList &args, size_t nest_end) {
-    // TODO: Remove iterator type and using duck type system for other types.
-    // TODO: Remove redundant container fetching
+  void Machine::InitForEach(ArgumentList &args, size_t nest_end) {
     auto &frame = frame_stack_.top();
-    ObjectMap obj_map;
+
+    auto container_obj = FetchObjectView(args[1]).Seek();
+    auto unit_id = FetchObjectView(args[0]).Seek().Cast<string>();
+    auto container_type = container_obj.GetTypeId();
+
+    if (frame.error) return;
 
     frame.AddJumpRecord(nest_end);
 
-    if (frame.jump_from_end) {
-      ForEachChecking(args, nest_end);
-      frame.jump_from_end = false;
-      return;
+    if (container_type == kTypeIdArray) {
+      if (container_obj.Cast<ObjectArray>().empty()) {
+        frame.Goto(nest_end);
+        frame.final_cycle = true;
+        obj_stack_.Push(true);
+        frame.scope_indicator.push(false);
+        return;
+      }
+
+      frame.scope_indicator.push(true);
+      obj_stack_.Push(true);
+      obj_stack_.CreateObject(kStrContainerKeepAliveSlot, container_obj);
+      obj_stack_.CreateObject(kStrIteratorObj, Object(int64_t(0), kTypeIdInt));
+
+      auto container_unit = container_obj.Cast<ObjectArray>().at(0);
+      obj_stack_.CreateObject(unit_id, container_unit, TryAppendTokenId(unit_id));
     }
+    else if (container_type == kTypeIdTable) {
+      if (container_obj.Cast<ObjectTable>().empty()) {
+        frame.Goto(nest_end);
+        frame.final_cycle = true;
+        obj_stack_.Push(true);
+        frame.scope_indicator.push(false);
+        return;
+      }
 
-    auto unit_id = FetchObjectView(args[0]).Seek().Cast<string>();
-    //keep alive
-    auto container_obj = FetchObjectView(args[1]).Seek();
+      frame.scope_indicator.push(true);
+      obj_stack_.Push(true);
+      obj_stack_.CreateObject(kStrContainerKeepAliveSlot, container_obj);
+      
+      auto it = container_obj.Cast<ObjectTable>().begin();
+      Object iterator_obj(it, kTypeIdAnyStorage);
+      obj_stack_.CreateObject(kStrIteratorObj, iterator_obj);
 
-    if (frame.error) return;
-
-    if (!CheckObjectBehavior(container_obj, kContainerBehavior)) {
-      frame.MakeError("Invalid container object");
-      return;
-    }
-
-    auto msg = CallMethod(container_obj, kStrHead);
-    if (frame.error) return;
-    if (!msg.HasObject()) {
-      frame.MakeError("Invalid returning value from iterator");
-      return;
-    }
-
-    auto empty = CallMethod(container_obj, "empty");
-    if (frame.error) return;
-    if (!empty.HasObject() || empty.GetObj().GetTypeId() != kTypeIdBool) {
-      frame.MakeError("Invalid empty() implementation");
-      return;
-    }
-    else if (empty.GetObj().Cast<bool>()) {
-      frame.Goto(nest_end);
-      frame.final_cycle = true;
-      obj_stack_.Push(true); //avoid error
-      frame.scope_stack.push(false);
-      return;
-    }
-
-    auto iterator_obj = msg.GetObj();
-    if (!CheckObjectBehavior(iterator_obj, kIteratorBehavior)) {
-      frame.MakeError("Invalid iterator object");
-      return;
-    }
-
-    auto unit = CallMethod(iterator_obj, "obj").GetObj();
-    if (frame.error) return;
-
-    frame.scope_stack.push(true);
-    obj_stack_.Push(true);
-    obj_stack_.CreateObject(kStrIteratorObj, iterator_obj);
-    obj_stack_.CreateObject(kStrContainerKeepAliveSlot, container_obj);
-    obj_stack_.CreateObject(unit_id, unit, TryAppendTokenId(unit_id));
-  }
-
-  void Machine::ForEachChecking(ArgumentList &args, size_t nest_end) {
-    auto &frame = frame_stack_.top();
-    auto unit_id = FetchObjectView(args[0]).Seek().Cast<string>();
-    if (frame.error) return;
-
-    auto *iterator = obj_stack_.GetCurrent().Find(kStrIteratorObj);
-    auto *container = obj_stack_.GetCurrent().Find(kStrContainerKeepAliveSlot);
-    ObjectMap obj_map;
-
-    auto tail = CallMethod(*container, kStrTail).GetObj();
-    if (frame.error) return;
-    if (!CheckObjectBehavior(tail, kIteratorBehavior)) {
-      frame.MakeError("Invalid container object");
-      return;
-    }
-
-    CallMethod(*iterator, "step_forward");
-    if (frame.error) return;
-
-    auto result = CallMethod(*iterator, kStrCompare,
-      { NamedObject(kStrRightHandSide,tail) }).GetObj();
-    if (frame.error) return;
-
-    if (result.GetTypeId() != kTypeIdBool) {
-      frame.MakeError("Invalid iterator object");
-      return;
-    }
-
-    if (result.Cast<bool>()) {
-      frame.Goto(nest_end);
-      frame.final_cycle = true;
+      auto key_ref = it->first;
+      auto key_copy = components::DumpObject(key_ref);
+      auto container_unit = make_shared<ObjectPair>(key_copy, it->second);
+      obj_stack_.CreateObject(unit_id, Object(container_unit, kTypeIdPair), TryAppendTokenId(unit_id));
     }
     else {
-      auto unit = CallMethod(*iterator, "obj").GetObj();
+      if (!CheckObjectBehavior(container_obj, "head|tail|empty")) {
+        frame.MakeError("Container doesn't have necessary methods for enumeration");
+        return;
+      }
+
+      auto empty_result = CallMethod(container_obj, kStrEmpty).GetObj();
       if (frame.error) return;
-      obj_stack_.CreateObject(unit_id, unit, TryAppendTokenId(unit_id));
+      if (empty_result.GetTypeId() != kTypeIdBool) {
+        frame.MakeError("Invalid type of return value from empty()");
+        return;
+      }
+      if (empty_result.Cast<bool>()) {
+        frame.Goto(nest_end);
+        frame.final_cycle = true;
+        obj_stack_.Push(true); //avoid error
+        frame.scope_indicator.push(false); //????
+        return;
+      }
+
+      auto iterator_obj = CallMethod(container_obj, kStrHead).GetObj();
+      if (frame.error) return;
+      if (!CheckObjectBehavior(iterator_obj, "get|step|compare")) {
+        frame.MakeError("Head iterator doesn't have necessary methods");
+        return;
+      }
+
+      auto container_unit = CallMethod(iterator_obj, "get");
+      if (frame.error) return;
+
+      frame.scope_indicator.push(true);
+      obj_stack_.Push(true);
+      obj_stack_.CreateObject(kStrIteratorObj, iterator_obj);
+      obj_stack_.CreateObject(kStrContainerKeepAliveSlot, container_obj);
+      obj_stack_.CreateObject(unit_id, container_obj, TryAppendTokenId(unit_id));
     }
   }
+
+  void Machine::CheckForEach(ArgumentList &args, size_t nest_end) {
+    auto &frame = frame_stack_.top();
+    auto unit_id = FetchObjectView(args[0]).Seek().Cast<string>();
+
+    if (frame.error) return;
+
+    auto *iterator_obj = obj_stack_.GetCurrent().Find(kStrIteratorObj);
+    auto *container_obj = obj_stack_.GetCurrent().Find(kStrContainerKeepAliveSlot);
+    //don't use PackObject() here. It will reset pointed object by mistake!
+    //auto *container_unit = obj_stack_.GetCurrent().Find(unit_id);
+    auto container_type = container_obj->GetTypeId();
+    
+    if (container_type == kTypeIdArray) {
+      auto &index = iterator_obj->Cast<int64_t>() ;
+      index += 1;
+      if (index == container_obj->Cast<ObjectArray>().size()) {
+        frame.Goto(nest_end);
+        frame.final_cycle = true;
+      }
+      else {
+        auto &dest = container_obj->Cast<ObjectArray>().at(index);
+        obj_stack_.GetCurrent().Replace(unit_id, dest, TryAppendTokenId(unit_id));
+      }
+    }
+    else if (container_type == kTypeIdTable) {
+      auto &it = iterator_obj->Cast<ObjectTable::iterator>();
+      it.operator++();
+      if (it == container_obj->Cast<ObjectTable>().end()) {
+        frame.Goto(nest_end);
+        frame.final_cycle = true;
+      }
+      else {
+        auto key_ref = it->first;
+        auto key_copy = components::DumpObject(key_ref);
+        auto unit = make_shared<ObjectPair>(key_copy, it->second);
+        obj_stack_.GetCurrent().Replace(unit_id, Object(unit, kTypeIdPair), TryAppendTokenId(unit_id));
+      }
+    }
+    else {
+      CallMethod(*iterator_obj, "step");
+      if (frame.error) return;
+
+      auto tail_iterator = CallMethod(*container_obj, kStrTail).GetObj();
+      if (frame.error) return;
+      if (!CheckObjectBehavior(tail_iterator, "get|step|compare")) {
+        frame.MakeError("Tail iterator doesn't have necessary methods");
+        return;
+      }
+
+      auto comp_result = CallMethod(*iterator_obj, "compare",
+        { NamedObject(kStrRightHandSide, tail_iterator) }).GetObj();
+      if (frame.error) return;
+      if (comp_result.GetTypeId() != kTypeIdBool) {
+        frame.MakeError("Invalid type of return value from compare()");
+        return;
+      }
+
+      if (comp_result.Cast<bool>()) {
+        frame.Goto(nest_end);
+        frame.final_cycle = true;
+      }
+      else {
+        auto unit = CallMethod(*iterator_obj, "get").GetObj();
+        if (frame.error) return;
+        obj_stack_.GetCurrent().Replace(unit_id, unit, TryAppendTokenId(unit_id));
+      }
+    }
+  }
+
+  //void Machine::CommandForEach(ArgumentList &args, size_t nest_end) {
+  //  // TODO: Remove iterator type and using duck type system for other types.
+  //  auto &frame = frame_stack_.top();
+  //  //ObjectMap obj_map;
+
+  //  frame.AddJumpRecord(nest_end);
+
+  //  if (frame.jump_from_end) {
+  //    ForEachChecking(args, nest_end);
+  //    frame.jump_from_end = false;
+  //    return;
+  //  }
+
+  //  auto unit_id = FetchObjectView(args[0]).Seek().Cast<string>();
+  //  //keep alive
+  //  auto container_obj = FetchObjectView(args[1]).Seek();
+
+  //  if (frame.error) return;
+
+  //  if (!CheckObjectBehavior(container_obj, kContainerBehavior)) {
+  //    frame.MakeError("Invalid container object");
+  //    return;
+  //  }
+
+  //  auto msg = CallMethod(container_obj, kStrHead);
+  //  if (frame.error) return;
+  //  if (!msg.HasObject()) {
+  //    frame.MakeError("Invalid returning value from iterator");
+  //    return;
+  //  }
+
+  //  auto empty = CallMethod(container_obj, "empty");
+  //  if (frame.error) return;
+  //  if (!empty.HasObject() || empty.GetObj().GetTypeId() != kTypeIdBool) {
+  //    frame.MakeError("Invalid empty() implementation");
+  //    return;
+  //  }
+  //  else if (empty.GetObj().Cast<bool>()) {
+  //    frame.Goto(nest_end);
+  //    frame.final_cycle = true;
+  //    obj_stack_.Push(true); //avoid error
+  //    frame.scope_indicator.push(false);
+  //    return;
+  //  }
+
+  //  auto iterator_obj = msg.GetObj();
+  //  if (!CheckObjectBehavior(iterator_obj, kIteratorBehavior)) {
+  //    frame.MakeError("Invalid iterator object");
+  //    return;
+  //  }
+
+  //  auto unit = CallMethod(iterator_obj, "obj").GetObj();
+  //  if (frame.error) return;
+
+  //  frame.scope_indicator.push(true);
+  //  obj_stack_.Push(true);
+  //  obj_stack_.CreateObject(kStrIteratorObj, iterator_obj);
+  //  obj_stack_.CreateObject(kStrContainerKeepAliveSlot, container_obj);
+  //  obj_stack_.CreateObject(unit_id, unit, TryAppendTokenId(unit_id));
+  //}
+
+  //void Machine::ForEachChecking(ArgumentList &args, size_t nest_end) {
+  //  auto &frame = frame_stack_.top();
+  //  auto unit_id = FetchObjectView(args[0]).Seek().Cast<string>();
+  //  if (frame.error) return;
+
+  //  auto *iterator = obj_stack_.GetCurrent().Find(kStrIteratorObj);
+  //  auto *container = obj_stack_.GetCurrent().Find(kStrContainerKeepAliveSlot);
+  //  //ObjectMap obj_map;
+
+  //  auto tail = CallMethod(*container, kStrTail).GetObj();
+  //  if (frame.error) return;
+  //  if (!CheckObjectBehavior(tail, kIteratorBehavior)) {
+  //    frame.MakeError("Invalid container object");
+  //    return;
+  //  }
+
+  //  CallMethod(*iterator, "step_forward");
+  //  if (frame.error) return;
+
+  //  auto result = CallMethod(*iterator, kStrCompare,
+  //    { NamedObject(kStrRightHandSide,tail) }).GetObj();
+  //  if (frame.error) return;
+
+  //  if (result.GetTypeId() != kTypeIdBool) {
+  //    frame.MakeError("Invalid iterator object");
+  //    return;
+  //  }
+
+  //  if (result.Cast<bool>()) {
+  //    frame.Goto(nest_end);
+  //    frame.final_cycle = true;
+  //  }
+  //  else {
+  //    auto unit = CallMethod(*iterator, "obj").GetObj();
+  //    if (frame.error) return;
+  //    obj_stack_.CreateObject(unit_id, unit, TryAppendTokenId(unit_id));
+  //  }
+  //}
 
   void Machine::CommandCase(ArgumentList &args, size_t nest_end) {
     auto &frame = frame_stack_.top();
@@ -1142,7 +1301,7 @@ namespace sapphire {
       return;
     }
 
-    frame.scope_stack.push(true);
+    frame.scope_indicator.push(true);
     obj_stack_.Push(true);
     obj_stack_.CreateObject(kStrCaseObj, view.Seek());
     frame.condition_stack.push(false);
@@ -1244,16 +1403,16 @@ namespace sapphire {
 
   void Machine::CommandContinueOrBreak(Keyword token, size_t escape_depth) {
     auto &frame = frame_stack_.top();
-    auto &scope_stack = frame.scope_stack;
+    auto &scope_indicator = frame.scope_indicator;
 
     while (escape_depth != 0) {
       frame.condition_stack.pop();
       frame.jump_stack.pop();
-      if (!scope_stack.empty() && scope_stack.top()) {
+      if (!scope_indicator.empty() && scope_indicator.top()) {
         obj_stack_.Pop();
         
       }
-      scope_stack.pop();
+      scope_indicator.pop();
       escape_depth -= 1;
     }
 
@@ -1293,7 +1452,7 @@ namespace sapphire {
 
     frame.struct_id = id_obj.Cast<string>();
 
-    if (!super_struct_obj.Null()) {
+    if (!super_struct_obj.NullPtr()) {
       frame.super_struct_id = super_struct_obj.Cast<string>();
     }
 
@@ -1321,7 +1480,7 @@ namespace sapphire {
     auto &frame = frame_stack_.top();
     if (!frame.cancel_cleanup) {
       frame.condition_stack.pop();
-      frame.scope_stack.pop();
+      frame.scope_indicator.pop();
       obj_stack_.Pop();
       
       while (!frame.branch_jump_stack.empty()) frame.branch_jump_stack.pop();
@@ -1352,7 +1511,7 @@ namespace sapphire {
         obj_stack_.Pop();
         
       }
-      frame.scope_stack.pop();
+      frame.scope_indicator.pop();
       frame.final_cycle = false;
     }
     else {
@@ -1383,7 +1542,7 @@ namespace sapphire {
         obj_stack_.Pop();
         
       }
-      if(!frame.scope_stack.empty()) frame.scope_stack.pop();
+      if(!frame.scope_indicator.empty()) frame.scope_indicator.pop();
       frame.final_cycle = false;
     }
     else {
@@ -2618,7 +2777,14 @@ namespace sapphire {
       OperatorLogicNot(args);
       break;
     case kKeywordFor:
-      CommandForEach(args, request.option.nest_end);
+      if (frame.jump_from_end) {
+        CheckForEach(args, request.option.nest_end);
+        frame.jump_from_end = false;
+      }
+      else {
+        InitForEach(args, request.option.nest_end);
+      }
+      //CommandForEach(args, request.option.nest_end);
       break;
     case kKeywordNullObj:
       CommandNullObj(args);
@@ -2901,7 +3067,7 @@ namespace sapphire {
       managed_instance->Add(unit.first, components::DumpObject(unit.second));
     }
 
-    if (!super_struct.Null()) {
+    if (!super_struct.NullPtr()) {
       p.insert(NamedObject(kStrSuperStruct, super_struct));
     }
 
@@ -2955,12 +3121,12 @@ namespace sapphire {
   void Machine::Run(bool invoke) {
     if (code_stack_.empty()) return;
 
-    bool                next_tick;
-    size_t              script_idx = 0;
-    Message             msg;
-    VMCode              *code = code_stack_.back();
-    Command             *command = nullptr;
-    ObjectMap           obj_map;
+    bool next_tick;
+    size_t script_idx = 0;
+    Message msg;
+    VMCode *code = code_stack_.back();
+    Command *command = nullptr;
+    ObjectMap obj_map;
     FunctionImplPointer impl;
 
     if (!invoke) {

@@ -237,7 +237,7 @@ namespace sapphire {
     Object &swap(Object &&obj) { return swap(obj); }
     string GetTypeId() const { return info_.type_id; }
     bool IsRef() const { return info_.mode == kObjectRef; }
-    bool Null() const { return !this->operator bool() && info_.real_dest == nullptr; }
+    bool NullPtr() const { return !this->operator bool() && info_.real_dest == nullptr; }
     ObjectMode GetMode() const { return info_.mode; }
     void SetContainerFlag() { info_.sub_container = true; }
     bool IsAlive() const override { return info_.alive; }
@@ -267,6 +267,7 @@ namespace sapphire {
     ObjectView(const ObjectView &rhs) = default;
     ObjectView(const ObjectView &&rhs) : ObjectView(rhs) {}
     ObjectView(ObjectPointer ptr) : value_(ptr) {}
+    //ObjectView(const ObjectPointer ptr) : value_(ptr) {}
 
     void operator=(const ObjectView &rhs) { value_ = rhs.value_; }
 

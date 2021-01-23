@@ -5,7 +5,8 @@ namespace sapphire {
   using ComponentLoader = void(*)();
 
   void InitConsoleComponents();
-  void InitBaseTypes();
+  void InitStringTypes();
+  void InitStringComponents();
   void InitContainerComponents();
   void InitFunctionType();
   void InitStreamComponents();
@@ -14,7 +15,8 @@ namespace sapphire {
 
   const ComponentLoader kEmbeddedComponents[] = {
     InitConsoleComponents,
-    InitBaseTypes,
+    InitStringTypes,
+    InitStringComponents,
     InitContainerComponents,
     InitFunctionType,
     InitStreamComponents,

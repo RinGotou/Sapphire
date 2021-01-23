@@ -2,9 +2,9 @@
 
 namespace sapphire {
   Message ExistFSObject(ObjectMap &p) {
-    auto tc = TypeChecking(
-      { Expect("path", kTypeIdString) }, p);
-    if (TC_FAIL(tc)) return TC_ERROR(tc);
+    //auto tc = TypeChecking(
+    //  { Expect("path", kTypeIdString) }, p);
+    //if (TC_FAIL(tc)) return TC_ERROR(tc);
 
     auto &path = p.Cast<string>("path");
     auto exists = fs::exists(fs::path(path));
@@ -13,9 +13,9 @@ namespace sapphire {
   }
 
   Message CreateNewDirectory(ObjectMap &p) {
-    auto tc = TypeChecking(
-      { Expect("path", kTypeIdString) }, p);
-    if (TC_FAIL(tc)) return TC_ERROR(tc);
+    //auto tc = TypeChecking(
+    //  { Expect("path", kTypeIdString) }, p);
+    //if (TC_FAIL(tc)) return TC_ERROR(tc);
 
     auto &path = p.Cast<string>("path");
     auto result = fs::create_directories(path);
@@ -23,9 +23,9 @@ namespace sapphire {
   }
 
   Message RemoveFSObject(ObjectMap &p) {
-    auto tc = TypeChecking(
-      { Expect("path", kTypeIdString) }, p);
-    if (TC_FAIL(tc)) return TC_ERROR(tc);
+    //auto tc = TypeChecking(
+    //  { Expect("path", kTypeIdString) }, p);
+    //if (TC_FAIL(tc)) return TC_ERROR(tc);
 
     auto &path = p.Cast<string>("path");
     auto result = fs::remove(fs::path(path));
@@ -34,9 +34,9 @@ namespace sapphire {
   }
 
   Message RemoveFSObject_Recursive(ObjectMap &p) {
-    auto tc = TypeChecking(
-      { Expect("path", kTypeIdString) }, p);
-    if (TC_FAIL(tc)) return TC_ERROR(tc);
+    //auto tc = TypeChecking(
+    //  { Expect("path", kTypeIdString) }, p);
+    //if (TC_FAIL(tc)) return TC_ERROR(tc);
 
     auto &path = p.Cast<string>("path");
     auto result = fs::remove_all(fs::path(path));
@@ -45,12 +45,12 @@ namespace sapphire {
   }
 
   Message CopyFSObject(ObjectMap &p) {
-    auto tc = TypeChecking(
-      { 
-        Expect("from", kTypeIdString), 
-        Expect("to", kTypeIdString)
-      }, p);
-    if (TC_FAIL(tc)) return TC_ERROR(tc);
+    //auto tc = TypeChecking(
+    //  { 
+    //    Expect("from", kTypeIdString), 
+    //    Expect("to", kTypeIdString)
+    //  }, p);
+    //if (TC_FAIL(tc)) return TC_ERROR(tc);
 
     auto from = p.Cast<string>("from");
     auto to = p.Cast<string>("to");
@@ -67,12 +67,12 @@ namespace sapphire {
   }
 
   Message CopyFSFile(ObjectMap &p) {
-    auto tc = TypeChecking(
-      {
-        Expect("from", kTypeIdString),
-        Expect("to", kTypeIdString)
-      }, p);
-    if (TC_FAIL(tc)) return TC_ERROR(tc);
+    //auto tc = TypeChecking(
+    //  {
+    //    Expect("from", kTypeIdString),
+    //    Expect("to", kTypeIdString)
+    //  }, p);
+    //if (TC_FAIL(tc)) return TC_ERROR(tc);
 
     auto from = p.Cast<string>("from");
     auto to = p.Cast<string>("to");
@@ -81,15 +81,15 @@ namespace sapphire {
   }
 
   Message SetWorkingDir(ObjectMap &p) {
-    auto tc_result = TypeChecking(
-      { Expect("dir", kTypeIdString) }, p, { "dir" });
+    //auto tc_result = TypeChecking(
+    //  { Expect("dir", kTypeIdString) }, p, { "dir" });
 
-    if (TC_FAIL(tc_result)) return TC_ERROR(tc_result);
+    //if (TC_FAIL(tc_result)) return TC_ERROR(tc_result);
 
     auto &dir_obj = p["dir"];
     string dest_dir;
 
-    if (dir_obj.Null()) {
+    if (dir_obj.NullPtr()) {
       dest_dir = runtime::GetScriptAbsolutePath();
     }
     else {
@@ -113,8 +113,8 @@ namespace sapphire {
   }
 
   Message GetDirectoryContent(ObjectMap &p) {
-    auto tc = TypeChecking({ Expect("path", kTypeIdString) }, p);
-    if (TC_FAIL(tc)) return TC_ERROR(tc);
+    //auto tc = TypeChecking({ Expect("path", kTypeIdString) }, p);
+    //if (TC_FAIL(tc)) return TC_ERROR(tc);
 
     string path_str = p.Cast<string>("path");
     auto managed_array = make_shared<ObjectArray>();
@@ -126,8 +126,8 @@ namespace sapphire {
   }
 
   Message GetFilenameExtension(ObjectMap &p) {
-    auto tc = TypeChecking({ Expect("path", kTypeIdString) }, p);
-    if (TC_FAIL(tc)) return TC_ERROR(tc);
+    //auto tc = TypeChecking({ Expect("path", kTypeIdString) }, p);
+    //if (TC_FAIL(tc)) return TC_ERROR(tc);
 
     fs::path value(p.Cast<string>("path"));
     return Message().SetObject(Object(value.extension().string(), kTypeIdString));

@@ -13,12 +13,12 @@ namespace sapphire {
   using ExpectationList = initializer_list<Expect>;
   using NullableList = initializer_list<string>;
 
-  CommentedResult TypeChecking(ExpectationList &&lst,
-    ObjectMap &obj_map,
-    NullableList &&nullable = {});
-
-#define TC_ERROR(_Obj) Message(std::get<string>(_Obj), kStateError)
-#define TC_FAIL(_Obj) !std::get<bool>(_Obj)
+//  CommentedResult TypeChecking(ExpectationList &&lst,
+//    ObjectMap &obj_map,
+//    NullableList &&nullable = {});
+//
+//#define TC_ERROR(_Obj) Message(std::get<string>(_Obj), kStateError)
+//#define TC_FAIL(_Obj) !std::get<bool>(_Obj)
 
   string ParseRawString(const string &src);
   void InitPlainTypesAndConstants();
@@ -218,7 +218,7 @@ namespace sapphire {
     string struct_id;
     string super_struct_id;
     stack<bool> condition_stack; //preserved
-    stack<bool> scope_stack;
+    stack<bool> scope_indicator;
     stack<size_t> jump_stack;
     stack<size_t> branch_jump_stack;
     vector<ObjectCommonSlot> return_stack;
@@ -290,13 +290,13 @@ namespace sapphire {
 
   using FrameStack = stack<RuntimeFrame, deque<RuntimeFrame>>;
 
-  struct _IgnoredException : std::exception {};
-  struct _CustomError : std::exception {
-  public:
-    //TODO:Memory Management
-    _CustomError(const char *msg) : 
-      std::exception(std::runtime_error(msg)) {}
-  };
+  //struct _IgnoredException : std::exception {};
+  //struct _CustomError : std::exception {
+  //public:
+  //  //TODO:Memory Management
+  //  _CustomError(const char *msg) : 
+  //    std::exception(std::runtime_error(msg)) {}
+  //};
 
   //TODO: new argument generator and storage?
   class Machine {
@@ -333,8 +333,11 @@ namespace sapphire {
 
     void CommandLoad(ArgumentList &args);
     void CommandIfOrWhile(Keyword token, ArgumentList &args, size_t nest_end);
-    void CommandForEach(ArgumentList &args, size_t nest_end);
-    void ForEachChecking(ArgumentList &args, size_t nest_end);
+    void InitForEach(ArgumentList &args, size_t nest_end);
+    void CheckForEach(ArgumentList &args, size_t nest_end);
+    
+    //void CommandForEach(ArgumentList &args, size_t nest_end);
+    //void ForEachChecking(ArgumentList &args, size_t nest_end);
     void CommandCase(ArgumentList &args, size_t nest_end);
     void CommandElse();
     void CommandWhen(ArgumentList &args);

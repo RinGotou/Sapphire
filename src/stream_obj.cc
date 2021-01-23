@@ -10,8 +10,8 @@ namespace sapphire {
   ///////////////////////////////////////////////////////////////
   // InStream implementations
   Message NewInStream(ObjectMap &p) {
-    auto tc = TypeChecking({ Expect("path", kTypeIdString) }, p);
-    if (TC_FAIL(tc)) return TC_ERROR(tc);
+    //auto tc = TypeChecking({ Expect("path", kTypeIdString) }, p);
+    //if (TC_FAIL(tc)) return TC_ERROR(tc);
 
     string path = p.Cast<string>("path");
 
@@ -42,13 +42,13 @@ namespace sapphire {
   ///////////////////////////////////////////////////////////////
   // OutStream implementations
   Message NewOutStream(ObjectMap &p) {
-    auto tc = TypeChecking(
-      { 
-        Expect("path", kTypeIdString),
-        Expect("binary", kTypeIdBool),
-        Expect("append", kTypeIdBool)
-      }, p);
-    if (TC_FAIL(tc)) return TC_ERROR(tc);
+    //auto tc = TypeChecking(
+    //  { 
+    //    Expect("path", kTypeIdString),
+    //    Expect("binary", kTypeIdBool),
+    //    Expect("append", kTypeIdBool)
+    //  }, p);
+    //if (TC_FAIL(tc)) return TC_ERROR(tc);
 
     string path = p.Cast<string>("path");
     bool binary = p.Cast<bool>("binary");

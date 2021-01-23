@@ -334,8 +334,7 @@ namespace sapphire {
     action_base_.emplace_back(Command(frame_->symbol.back(), arguments));
     frame_->symbol.pop_back();
     frame_->args.emplace_back(Argument("", kArgumentReturnStack, kStringTypeNull));
-    if (frame_->symbol.empty() && (frame_->next.first == "," 
-      || frame_->next.second == kStringTypeNull)) {
+    if (frame_->symbol.empty() && (frame_->next.first == "," || frame_->next.second == kStringTypeNull)) {
       action_base_.back().first.option.void_call = true;
     }
   }
