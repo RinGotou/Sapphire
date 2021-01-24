@@ -21,7 +21,7 @@ namespace sapphire {
     return Message().SetObject(Object(ifs, kTypeIdInStream));
   }
 
-  Message InStreamGet(ObjectMap &p) {
+  Message InStream_Get(ObjectMap &p) {
     InStream &ifs = p.Cast<InStream>(kStrMe);
 
     if (!ifs.Good()) {
@@ -33,7 +33,7 @@ namespace sapphire {
     return Message().SetObject(result);
   }
 
-  Message InStreamEOF(ObjectMap &p) {
+  Message InStream_EOF(ObjectMap &p) {
     InStream &ifs = p.Cast<InStream>(kStrMe);
     return Message().SetObject(ifs.eof());
   }
@@ -58,7 +58,7 @@ namespace sapphire {
     return Message().SetObject(Object(ofs, kTypeIdOutStream));
   }
 
-  Message OutStreamWrite(ObjectMap &p) {
+  Message OutStream_Write(ObjectMap &p) {
     OutStream &ofs = p.Cast<OutStream>(kStrMe);
     auto &obj = p["str"];
     bool result = true;
@@ -83,8 +83,8 @@ namespace sapphire {
     StructMethodGenerator(kTypeIdInStream).Create(
       {
         Function(NewInStream, "path", kStrInitializer),
-        Function(InStreamGet, "", "get"),
-        Function(InStreamEOF, "", "eof"),
+        Function(InStream_Get, "", "get"),
+        Function(InStream_EOF, "", "eof"),
         Function(StreamFamilyState<InStream>, "", "good")
       }
     );
@@ -93,7 +93,7 @@ namespace sapphire {
     StructMethodGenerator(kTypeIdOutStream).Create(
       {
         Function(NewOutStream, "path|binary|append", kStrInitializer),
-        Function(OutStreamWrite, "str", "write"),
+        Function(OutStream_Write, "str", "write"),
         Function(StreamFamilyState<OutStream>, "", "good")
       }
     );

@@ -60,12 +60,12 @@ namespace sapphire {
     return Message().SetObject(Object(extension, kTypeIdExtension));
   }
 
-  Message ExtensionGood(ObjectMap &p) {
+  Message Extension_Good(ObjectMap &p) {
     auto &extension = p.Cast<Extension>(kStrMe);
     return Message().SetObject(extension.Good());
   }
 
-  Message ExtensionFetchFunction(ObjectMap &p) {
+  Message Extension_FetchFunction(ObjectMap &p) {
     //TODO:Variable arugment
     //auto tc = TypeChecking({ Expect("id",kTypeIdString) }, p);
     //if (TC_FAIL(tc)) return TC_ERROR(tc);
@@ -103,8 +103,8 @@ namespace sapphire {
     StructMethodGenerator(kTypeIdExtension).Create(
       {
         Function(NewExtension, "path", kStrInitializer),
-        Function(ExtensionGood, "", "good"),
-        Function(ExtensionFetchFunction, "id", "fetch")
+        Function(Extension_Good, "", "good"),
+        Function(Extension_FetchFunction, "id", "fetch")
       }
     );
 

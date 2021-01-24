@@ -1,7 +1,7 @@
 #include "machine.h"
 
 namespace sapphire {
-  Message StructGetMembers(ObjectMap &p) {
+  Message Struct_GetMembers(ObjectMap &p) {
     auto &struct_def = p.Cast<ObjectStruct>(kStrMe);
     auto managed_array = make_shared<ObjectArray>();
 
@@ -18,14 +18,14 @@ namespace sapphire {
     CreateStruct(kTypeIdStruct);
     StructMethodGenerator(kTypeIdStruct).Create(
       {
-        Function(StructGetMembers, "", "members")
+        Function(Struct_GetMembers, "", "members")
       }
     );
 
     CreateStruct(kTypeIdModule);
     StructMethodGenerator(kTypeIdModule).Create(
       {
-        Function(StructGetMembers, "", "members")
+        Function(Struct_GetMembers, "", "members")
       }
     );
 
