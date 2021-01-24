@@ -2,13 +2,15 @@
 #include "trace.h"
 #include "filestream.h"
 
-#define INVALID_TOKEN Token(string(), kStringTypeNull)
+// !!! This module is deprecated and will be destroyed in the future.
+
+#define INVALID_TOKEN Token(string(), kLiteralTypeInvalid)
 
 namespace sapphire {
   using CombinedCodeline = pair<size_t, string>;
   using CombinedToken = pair<size_t, deque<Token>>;
 
-  class LexicalFactory {
+  class LexicalAnalysis {
   private:
     StandardLogger *logger_;
 
@@ -17,8 +19,8 @@ namespace sapphire {
 
     void Scan(deque<string> &output, string target);
   public:
-    LexicalFactory() = delete;
-    LexicalFactory(deque<CombinedToken> &dest, StandardLogger *logger) : 
+    LexicalAnalysis() = delete;
+    LexicalAnalysis(deque<CombinedToken> &dest, StandardLogger *logger) : 
       dest_(&dest), logger_(logger) {}
 
     bool Feed(CombinedCodeline &src);
@@ -28,7 +30,7 @@ namespace sapphire {
 
   struct ParserFrame {
     deque<Argument> args;
-    deque<Request> symbol;
+    deque<ASTNode> nodes;
     bool local_object;
     bool ext_object;
     bool eol;
@@ -43,7 +45,7 @@ namespace sapphire {
 
     ParserFrame(deque<Token> &tokens) :
       args(),
-      symbol(),
+      nodes(),
       local_object(false),
       ext_object(false),
       eol(false),
@@ -59,12 +61,12 @@ namespace sapphire {
     void Eat();
   };
 
-  class LineParser {
+  class FirstStageParsing {
   private:
     ParserFrame *frame_;
     size_t index_;
     deque<Token> tokens_;
-    VMCode action_base_;
+    AnnotatedAST action_base_;
     string error_string_;
 
     void ProduceVMCode();
@@ -87,8 +89,8 @@ namespace sapphire {
     
     Message Parse();
   public:
-    LineParser() : frame_(nullptr), index_(0) {}
-    VMCode &GetOutput() { return action_base_; }
+    FirstStageParsing() : frame_(nullptr), index_(0) {}
+    AnnotatedAST &GetOutput() { return action_base_; }
 
     Keyword GetASTRoot() {
       if (action_base_.empty()) {
@@ -107,9 +109,9 @@ namespace sapphire {
     list<size_t> jump_record;
   };
 
-  class VMCodeFactory {
+  class GrammarAndSemanticAnalysis {
   private:
-    VMCode *dest_;
+    AnnotatedAST *dest_;
     string path_;
     bool inside_struct_;
     bool inside_module_;
@@ -131,9 +133,9 @@ namespace sapphire {
     bool ReadScript(list<CombinedCodeline> &dest);
 
   public:
-    ~VMCodeFactory() { if (is_logger_held_) delete logger_; }
-    VMCodeFactory() = delete;
-    VMCodeFactory(string path, VMCode &dest, 
+    ~GrammarAndSemanticAnalysis() { if (is_logger_held_) delete logger_; }
+    GrammarAndSemanticAnalysis() = delete;
+    GrammarAndSemanticAnalysis(string path, AnnotatedAST &dest, 
       string log, bool rtlog = false) :
       dest_(&dest), path_(path), inside_struct_(false), inside_module_(false),
       struct_member_fn_nest(0),
@@ -142,7 +144,7 @@ namespace sapphire {
         (StandardLogger *)new StandardRTLogger(log.data(), "a") :
         (StandardLogger *)new StandardCachedLogger(log.data(), "a");
     }
-    VMCodeFactory(string path, VMCode &dest,
+    GrammarAndSemanticAnalysis(string path, AnnotatedAST &dest,
       StandardLogger *logger) :
       dest_(&dest), path_(path), inside_struct_(false), inside_module_(false),
       struct_member_fn_nest(0),

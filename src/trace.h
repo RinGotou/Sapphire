@@ -1,5 +1,5 @@
 #pragma once
-#include "vmcode.h"
+#include "annotatedAST.h"
  
 namespace sapphire {
   void AppendMessage(string msg, StateLevel level, 

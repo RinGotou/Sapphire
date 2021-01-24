@@ -5,6 +5,9 @@
 #include <initializer_list>
 #include <vector>
 
+//This module is too complicated and hard to maintain.
+//It will be replaced in the future.
+
 namespace sapphire {
   struct Option {
     bool has_value;
@@ -193,10 +196,8 @@ namespace sapphire {
         if (str[idx] != joiner) continue;
 
         value = idx < str.size() - 1 ?
-          CommandArgument(str.substr(0, idx),
-            str.substr(idx + 1, str.size() - idx + 1)) :
-          CommandArgument(str.substr(0, str.size() - 1),
-            std::string());
+          CommandArgument(str.substr(0, idx), str.substr(idx + 1, str.size() - idx + 1)) :
+          CommandArgument(str.substr(0, str.size() - 1), std::string());
 
         found = true;
         break;
@@ -235,8 +236,7 @@ namespace sapphire {
 
       for (const auto &unit : params_) {
         if (unit.second.group == 0) {
-          ERROR_CHECKING(!unit.second.optional
-            && analyzed_.find(unit.first) == analyzed_.end(),
+          ERROR_CHECKING(!unit.second.optional && analyzed_.find(unit.first) == analyzed_.end(),
             kErrorMisssingRequired);
           continue;
         }
@@ -259,8 +259,7 @@ namespace sapphire {
       }
 
       for (const auto &unit : has_value_checker) {
-        ERROR_CHECKING(!unit.second && !optional_tracker[unit.first],
-          kErrorMisssingRequired);
+        ERROR_CHECKING(!unit.second && !optional_tracker[unit.first], kErrorMisssingRequired);
       }
       return result;
 #undef ERROR_CHECKING

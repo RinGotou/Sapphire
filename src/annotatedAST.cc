@@ -1,7 +1,7 @@
-#include "vmcode.h"
+#include "annotatedAST.h"
 
 namespace sapphire {
-  bool VMCode::FindJumpRecord(size_t index, stack<size_t> &dest) {
+  bool AnnotatedAST::FindJumpRecord(size_t index, stack<size_t> &dest) {
     if (source_ != nullptr) return source_->FindJumpRecord(index, dest);
 
     bool found = false;

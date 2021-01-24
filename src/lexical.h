@@ -2,20 +2,19 @@
 #include "common.h"
 
 namespace sapphire {
-  enum StringType {
-    kStringTypeIdentifier,
-    kStringTypeLiteralStr,
-    kStringTypeInt,
-    kStringTypeFloat,
-    kStringTypeBool,
-    kStringTypeSymbol,
-    kStringTypeBlank,
-    kStringTypeNull
+  enum LiteralType {
+    kLiteralTypeIdentifier,
+    kLiteralTypeString,
+    kLiteralTypeInt,
+    kLiteralTypeFloat,
+    kLiteralTypeBool,
+    kLiteralTypeSymbol,
+    kLiteralTypeWhitespace,
+    kLiteralTypeInvalid
   };
 
-  using Token = pair<string, StringType>;
+  using Token = pair<string, LiteralType>;
 
-  /* Reserved keywords mark / VMCode commands */
   enum Keyword {
     kKeywordAssert,
     kKeywordLocal,
@@ -220,7 +219,7 @@ namespace sapphire::lexical {
   bool IsBlank(string target);
   bool IsSymbol(string target);
   bool IsBoolean(string target);
-  StringType GetStringType(string target, bool ignore_symbol_rule = false);
+  LiteralType GetStringType(string target, bool ignore_symbol_rule = false);
 
   char GetEscapeChar(char target);
   wchar_t GetEscapeCharW(wchar_t target);

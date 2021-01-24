@@ -184,7 +184,7 @@ namespace sapphire {
   const string kContainerBehavior = "head|tail|empty";
   const string kForEachExceptions = "!iterator|!container_keepalive";
 
-  using CommandPointer = Command * ;
+  using CommandPointer = Sentense * ;
 
   struct RuntimeInfo {
     //TODO: put some boolean values into heres
@@ -207,7 +207,7 @@ namespace sapphire {
     bool keep_condition;
     bool is_command;
     bool rstk_operated;
-    VMCode *current_code;
+    AnnotatedAST *current_code;
     Object struct_base;
     Object assert_rc_copy;
     size_t jump_offset;
@@ -296,7 +296,7 @@ namespace sapphire {
   private:
     void RecoverLastState(bool call_by_return);
     void FinishInitalizerCalling();
-    bool IsTailRecursion(size_t idx, VMCode *code);
+    bool IsTailRecursion(size_t idx, AnnotatedAST *code);
     bool IsTailCall(size_t idx);
 
     Object *FetchLiteralObject(Argument &arg);
@@ -311,7 +311,7 @@ namespace sapphire {
     bool FetchFunctionImpl(FunctionImplPointer &impl, CommandPointer &command,
       ObjectMap &obj_map);
 
-    void CheckDomainObject(Function &impl, Request &req, bool first_assert);
+    void CheckDomainObject(Function &impl, ASTNode &req, bool first_assert);
     void CheckArgrumentList(Function &impl, ArgumentList &args);
     void ClosureCatching(ArgumentList &args, size_t nest_end, bool closure);
 
@@ -383,7 +383,7 @@ namespace sapphire {
     void CommandCheckParameterPattern(ArgumentList &args);
     void CommandOptionalParamRange(ArgumentList &args);
 
-    void MachineCommands(Keyword token, ArgumentList &args, Request &request);
+    void MachineCommands(Keyword token, ArgumentList &args, ASTNode &request);
 
     void GenerateArgs(Function &impl, ArgumentList &args, ObjectMap &obj_map);
     void Generate_Fixed(Function &impl, ArgumentList &args, ObjectMap &obj_map);
@@ -393,7 +393,7 @@ namespace sapphire {
     void GenerateStructInstance(ObjectMap &p);
     void GenerateErrorMessages(size_t stop_index);
   private:
-    deque<VMCodePointer> code_stack_;
+    deque<AASTPointer> code_stack_;
     FrameStack frame_stack_;
     ObjectStack obj_stack_;
     vector<ObjectCommonSlot> view_delegator_;
@@ -409,7 +409,7 @@ namespace sapphire {
     void operator=(const Machine &) = delete;
     void operator=(const Machine &&) = delete;
 
-    Machine(VMCode &ir, string log_path, bool rtlog = false) :
+    Machine(AnnotatedAST &ir, string log_path, bool rtlog = false) :
       logger_(nullptr),
       is_logger_host_(true),
       code_stack_(),
@@ -424,7 +424,7 @@ namespace sapphire {
         (StandardLogger *)new StandardCachedLogger(log_path, "a");
     }
 
-    Machine(VMCode &ir, StandardLogger *logger) :
+    Machine(AnnotatedAST &ir, StandardLogger *logger) :
       logger_(logger),
       is_logger_host_(false),
       code_stack_(),

@@ -121,8 +121,8 @@ namespace sapphire::script {
     return storage;
   }
 
-  VMCode *FindScriptByPath(string path) {
-    VMCode result = nullptr;
+  AnnotatedAST *FindScriptByPath(string path) {
+    AnnotatedAST result = nullptr;
     auto &storage = GetScriptStorage();
     auto it = storage.find(path);
     
@@ -131,7 +131,7 @@ namespace sapphire::script {
     return nullptr;
   }
 
-  VMCode &AppendScript(string path, VMCode &code) {
+  AnnotatedAST &AppendScript(string path, AnnotatedAST &code) {
     auto &storage = GetScriptStorage();
     ScriptStorage::iterator it;
     
@@ -139,7 +139,7 @@ namespace sapphire::script {
 
     if (it != storage.end()) return it->second;
 
-    VMCode script;
+    AnnotatedAST script;
     
     storage.insert(make_pair(path, code));
     it = storage.find(path);
@@ -147,7 +147,7 @@ namespace sapphire::script {
     return it->second;
   }
 
-  VMCode &AppendBlankScript(string path) {
+  AnnotatedAST &AppendBlankScript(string path) {
     auto &storage = GetScriptStorage();
     ScriptStorage::iterator it;
 
@@ -155,10 +155,10 @@ namespace sapphire::script {
 
     if (it != storage.end()) return it->second;
 
-    VMCode script;
+    AnnotatedAST script;
 
 
-    storage.insert(make_pair(path, VMCode()));
+    storage.insert(make_pair(path, AnnotatedAST()));
     it = storage.find(path);
 
     return it->second;

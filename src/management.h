@@ -70,12 +70,12 @@ namespace sapphire::constant {
 }
 
 namespace sapphire::script {
-  using ProcessedScript = pair<string, VMCode>;
-  using ScriptStorage = unordered_map<string, VMCode>;
+  using ProcessedScript = pair<string, AnnotatedAST>;
+  using ScriptStorage = unordered_map<string, AnnotatedAST>;
 
-  VMCode *FindScriptByPath(string path);
-  VMCode &AppendScript(string path, VMCode &code);
-  VMCode &AppendBlankScript(string path);
+  AnnotatedAST *FindScriptByPath(string path);
+  AnnotatedAST &AppendScript(string path, AnnotatedAST &code);
+  AnnotatedAST &AppendBlankScript(string path);
 }
 
 namespace sapphire::extension {

@@ -1,5 +1,5 @@
 #pragma once
-#include "vmcode.h"
+#include "annotatedAST.h"
 
 namespace sapphire {
   using GenericFunctionPointer = void(*)();
@@ -38,13 +38,13 @@ namespace sapphire {
 
   using FunctionBase = variant<
     _Function<Activity>,
-    _Function<VMCode>,
+    _Function<AnnotatedAST>,
     _Function<ExtensionActivity>,
     _Function<_NullFunctionType>
   >;
 
   using CXXFunction = _Function<Activity>;
-  using VMCodeFunction = _Function<VMCode>;
+  using VMCodeFunction = _Function<AnnotatedAST>;
   using ExtensionFunction = _Function<ExtensionActivity>;
   using InvalidFunction = _Function<_NullFunctionType>;
 
@@ -88,7 +88,7 @@ namespace sapphire {
       mode_(argument_mode), type_(kFunctionCXX), limit_(0),
       offset_(0), id_(id), params_(BuildStringVector(params)) {}
 
-    Function(size_t offset, VMCode ir, string id, vector<string> params,
+    Function(size_t offset, AnnotatedAST ir, string id, vector<string> params,
       ParameterPattern argument_mode = kParamFixed) :
       base_(_Function(ir)), record_(),
       mode_(argument_mode), type_(kFunctionVMCode), limit_(0),

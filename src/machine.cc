@@ -274,7 +274,7 @@ namespace sapphire {
     frame_stack_.top().RefreshReturnStack(instance_obj);
   }
 
-  bool Machine::IsTailRecursion(size_t idx, VMCode *code) {
+  bool Machine::IsTailRecursion(size_t idx, AnnotatedAST *code) {
     if (code != code_stack_.back()) return false;
 
     auto &vmcode = *code;
@@ -287,9 +287,9 @@ namespace sapphire {
     else if (idx == vmcode.size() - 2) {
       bool needed_by_next_call =
         vmcode[idx + 1].first.GetKeywordValue() == kKeywordReturn &&
-        vmcode[idx + 1].second.back().GetType() == kArgumentReturnStack &&
+        vmcode[idx + 1].second.back().GetType() == kArgumentReturnValue &&
         vmcode[idx + 1].second.size() == 1;
-      if (!current.first.option.void_call && needed_by_next_call) {
+      if (!current.first.annotation.void_call && needed_by_next_call) {
         result = true;
       }
     }
@@ -308,9 +308,9 @@ namespace sapphire {
     else if (idx == vmcode.size() - 2) {
       bool needed_by_next_call = 
         vmcode[idx + 1].first.GetKeywordValue() == kKeywordReturn &&
-        vmcode[idx + 1].second.back().GetType() == kArgumentReturnStack &&
+        vmcode[idx + 1].second.back().GetType() == kArgumentReturnValue &&
         vmcode[idx + 1].second.size() == 1;
-      if (!vmcode[idx].first.option.void_call && needed_by_next_call) {
+      if (!vmcode[idx].first.annotation.void_call && needed_by_next_call) {
         result = true;
       }
     }
@@ -327,12 +327,12 @@ namespace sapphire {
     if (ptr != nullptr) return ptr;
 
     auto type = arg.GetStringType();
-    if (type == kStringTypeInt) {
+    if (type == kLiteralTypeInt) {
       int64_t int_value;
       from_chars(value.data(), value.data() + value.size(), int_value);
       ptr = CreateConstantObject(value, Object(int_value, kTypeIdInt));
     }
-    else if (type == kStringTypeFloat) {
+    else if (type == kLiteralTypeFloat) {
       double float_value;
 #ifndef _MSC_VER
       //dealing with issues of charconv implementation in low-version clang
@@ -344,14 +344,14 @@ namespace sapphire {
     }
     else {
       switch (type) {
-      case kStringTypeBool:
+      case kLiteralTypeBool:
         ptr = CreateConstantObject(value, Object(value == kStrTrue, kTypeIdBool));
         break;
-      case kStringTypeLiteralStr:
+      case kLiteralTypeString:
         ptr = CreateConstantObject(value, Object(ParseRawString(value)));
         break;
         //for binding expression
-      case kStringTypeIdentifier:
+      case kLiteralTypeIdentifier:
         ptr = CreateConstantObject(value, Object(value));
         break;
       default:
@@ -370,9 +370,9 @@ namespace sapphire {
       return ObjectView();                          \
     }
 
-#define MEMBER_NOT_FOUND_MSG {                                                                   \
-      frame.MakeError("Member '" + arg.GetData() + "' is not found inside " + arg.option.domain);\
-      return ObjectView();                                                                       \
+#define MEMBER_NOT_FOUND_MSG {                                                                          \
+      frame.MakeError("Member '" + arg.GetData() + "' is not found inside " + arg.properties.domain.id);\
+      return ObjectView();                                                                              \
     }
 
     auto &frame = frame_stack_.top();
@@ -380,13 +380,13 @@ namespace sapphire {
     ObjectPointer ptr = nullptr;
     ObjectView view;
 
-    if (arg.GetType() == kArgumentLiteral) {
+    if (arg.GetType() == kArgumentLiteralValue) {
       view = FetchLiteralObject(arg);
       view.source = ObjectViewSource::kSourceLiteral;
     }
     else if (arg.GetType() == kArgumentObjectStack) {
-      if (!arg.option.domain.empty() || arg.option.use_last_assert) {
-        if (arg.option.use_last_assert) {
+      if (!arg.properties.domain.id.empty() || arg.properties.member_access.use_last_assert) {
+        if (arg.properties.member_access.use_last_assert) {
           auto &base = frame.assert_rc_copy.Cast<ObjectStruct>();
           ptr = base.Find(arg.GetData());
 
@@ -396,10 +396,10 @@ namespace sapphire {
           }
           else MEMBER_NOT_FOUND_MSG;
 
-          if (arg.option.assert_chain_tail) frame.assert_rc_copy = Object();
+          if (arg.properties.member_access.is_chain_tail) frame.assert_rc_copy = Object();
         }
-        else if (arg.option.domain_type == kArgumentObjectStack) {
-          ptr = obj_stack_.Find(arg.GetData(), arg.option.domain, arg.option.token_id);
+        else if (arg.properties.domain.type == kArgumentObjectStack) {
+          ptr = obj_stack_.Find(arg.GetData(), arg.properties.domain.id, arg.properties.token_id);
 
           if (ptr != nullptr) {
             if (!ptr->IsAlive()) OBJECT_DEAD_MSG;
@@ -407,7 +407,7 @@ namespace sapphire {
           }
           else MEMBER_NOT_FOUND_MSG;
         }
-        else if (arg.option.domain_type == kArgumentReturnStack) {
+        else if (arg.properties.domain.type == kArgumentReturnValue) {
           auto &sub_container = return_stack.back()->IsObjectView() ?
             dynamic_cast<ObjectView *>(return_stack.back())->Seek().Cast<ObjectStruct>() :
             dynamic_cast<ObjectPointer>(return_stack.back())->Cast<ObjectStruct>();
@@ -424,7 +424,7 @@ namespace sapphire {
         }
       }
       else {
-        if (ptr = obj_stack_.Find(arg.GetData(), arg.option.token_id); ptr != nullptr) {
+        if (ptr = obj_stack_.Find(arg.GetData(), arg.properties.token_id); ptr != nullptr) {
           if (!ptr->IsAlive()) OBJECT_DEAD_MSG;
           view = ObjectView(ptr);
         }
@@ -437,7 +437,7 @@ namespace sapphire {
       }
       view.source = ObjectViewSource::kSourceReference;
     }
-    else if (arg.GetType() == kArgumentReturnStack) {
+    else if (arg.GetType() == kArgumentReturnValue) {
       if (!return_stack.empty()) {
         if (!return_stack.back()->IsAlive()) OBJECT_DEAD_MSG;
         view_delegator_.emplace_back(return_stack.back());
@@ -597,14 +597,14 @@ namespace sapphire {
 
   bool Machine::FetchFunctionImpl(FunctionImplPointer &impl, CommandPointer &command, ObjectMap &obj_map) {
     auto &frame = frame_stack_.top();
-    auto id = command->first.GetInterfaceId();
-    auto domain = command->first.GetInterfaceDomain();
+    auto id = command->first.GetFunctionId();
+    auto domain = command->first.GetFunctionDomain();
 
-    auto has_domain = domain.GetType() != kArgumentNull ||
-      command->first.option.use_last_assert;
+    auto has_domain = domain.GetType() != kArgumentInvalid ||
+      command->first.annotation.use_last_assert;
 
     if (has_domain) {
-      auto view = command->first.option.use_last_assert ?
+      auto view = command->first.annotation.use_last_assert ?
         ObjectView(&frame.assert_rc_copy) :
         FetchObjectView(domain);
 
@@ -685,17 +685,17 @@ namespace sapphire {
     return true;
   }
 
-  void Machine::CheckDomainObject(Function &impl, Request &req, bool first_assert) {
+  void Machine::CheckDomainObject(Function &impl, ASTNode &node, bool first_assert) {
     auto &frame = frame_stack_.top();
-    auto domain = req.GetInterfaceDomain();
-    auto keyword = req.GetKeywordValue();
+    auto domain = node.GetFunctionDomain();
+    auto keyword = node.GetKeywordValue();
     auto need_catching = domain.GetType() == kArgumentObjectStack
       && ((keyword != kKeywordDomainAssertCommand)
         || (keyword == kKeywordDomainAssertCommand && first_assert));
 
     if (!need_catching) return;
     
-    auto view = req.option.use_last_assert ?
+    auto view = node.annotation.use_last_assert ?
       ObjectView(&frame.assert_rc_copy) :
       FetchObjectView(domain);
 
@@ -715,23 +715,23 @@ namespace sapphire {
       data = unit.GetData();
       type = unit.GetType();
 
-      if (unit.option.domain_type == kArgumentObjectStack) {
-        view = ObjectView(obj_stack_.Find(unit.option.domain, unit.option.token_id));
+      if (unit.properties.domain.type == kArgumentObjectStack) {
+        view = ObjectView(obj_stack_.Find(unit.properties.domain.id, unit.properties.token_id));
       }
       else if (type == kArgumentObjectStack) {
-        view = ObjectView(obj_stack_.Find(string(data), unit.option.token_id));
+        view = ObjectView(obj_stack_.Find(string(data), unit.properties.token_id));
       }
       else {
         continue;
       }
 
       if (!view.IsValid()) {
-        frame.MakeError("Object is not found: " + unit.option.domain);
+        frame.MakeError("Object is not found: " + unit.properties.domain.id);
         break;
       }
 
       if (!view.IsAlive()) {
-        frame.MakeError("Object is dead: " + unit.option.domain);
+        frame.MakeError("Object is dead: " + unit.properties.domain.id);
         break;
       }
 
@@ -752,7 +752,7 @@ namespace sapphire {
     bool first_assert = false;
     ParameterPattern argument_mode = kParamFixed;
     vector<string> params;
-    VMCode code(&origin_code);
+    AnnotatedAST code(&origin_code);
     string return_value_constraint;
     auto &container = obj_stack_.GetCurrent();
     auto func_id = args[0].GetData();
@@ -764,17 +764,17 @@ namespace sapphire {
     for (size_t idx = 1; idx < size; idx += 1) {
       auto id = args[idx].GetData();
 
-      if (args[idx].option.is_constraint) {
+      if (args[idx].properties.fn.constraint) {
         return_value_constraint = id;
         continue;
       }
 
-      if (args[idx].option.optional_param) {
+      if (args[idx].properties.fn.optional_param) {
         optional = true;
         counter += 1;
       }
 
-      if (args[idx].option.variable_param) variable = true;
+      if (args[idx].properties.fn.variable_param) variable = true;
 
       params.push_back(id);
     }
@@ -859,7 +859,7 @@ namespace sapphire {
     }
 
     frame.stop_point = true;
-    code_stack_.push_back(&impl.Get<VMCode>());
+    code_stack_.push_back(&impl.Get<AnnotatedAST>());
     frame_stack_.push(RuntimeFrame(impl.GetId()));
     frame_stack_.top().jump_offset = impl.GetOffset();
     obj_stack_.Push();
@@ -893,7 +893,7 @@ namespace sapphire {
     frame.RefreshReturnStack(std::move(view));
   }
 
-  void Machine::CommandIfOrWhile(Keyword token, ArgumentList &args, size_t nest_end) {
+  void Machine::CommandIfOrWhile(Keyword keyword, ArgumentList &args, size_t nest_end) {
     auto &frame = frame_stack_.top();
     auto &code = code_stack_.front();
     bool has_jump_record = false;
@@ -904,7 +904,7 @@ namespace sapphire {
       return;
     }
 
-    if (token == kKeywordIf || token == kKeywordWhile) {
+    if (keyword == kKeywordIf || keyword == kKeywordWhile) {
       frame.AddJumpRecord(nest_end);
       has_jump_record = code->FindJumpRecord(frame.idx + frame.jump_offset, frame.branch_jump_stack);
     }
@@ -921,7 +921,7 @@ namespace sapphire {
 
     state = view.Seek().Cast<bool>();
 
-    if (token == kKeywordIf) {
+    if (keyword == kKeywordIf) {
       auto create_env = [&]()->void {
         frame.scope_indicator.push(true);
         frame.condition_stack.push(state);
@@ -943,7 +943,7 @@ namespace sapphire {
         create_env();
       }
     }
-    else if (token == kKeywordElif) {
+    else if (keyword == kKeywordElif) {
       if (frame.condition_stack.empty()) {
         frame.MakeError("Unexpected Elif");
         return;
@@ -967,7 +967,7 @@ namespace sapphire {
         }
       }
     }
-    else if (token == kKeywordWhile) {
+    else if (keyword == kKeywordWhile) {
       if (!frame.jump_from_end) {
         frame.scope_indicator.push(true);
         obj_stack_.Push(true, true);
@@ -1265,7 +1265,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandContinueOrBreak(Keyword token, size_t escape_depth) {
+  void Machine::CommandContinueOrBreak(Keyword keyword, size_t escape_depth) {
     auto &frame = frame_stack_.top();
     auto &scope_indicator = frame.scope_indicator;
 
@@ -1282,7 +1282,7 @@ namespace sapphire {
 
     frame.Goto(frame.jump_stack.top());
 
-    switch (token) {
+    switch (keyword) {
     case kKeywordContinue:
       frame.from_continue = true; 
       break;
@@ -1321,7 +1321,7 @@ namespace sapphire {
     }
 
     //NOTICE: frame.struct_id = id_obj.Cast<string>();
-    if (auto *ptr = obj_stack_.Find(frame.struct_id, args[0].option.token_id); ptr != nullptr) {
+    if (auto *ptr = obj_stack_.Find(frame.struct_id, args[0].properties.token_id); ptr != nullptr) {
       frame.MakeError("Struct is existed: " + frame.struct_id);
     }
   }
@@ -1614,7 +1614,7 @@ namespace sapphire {
         break;
       }
 
-      obj_stack_.CreateObject(unit.GetData(), Object(), unit.option.token_id);
+      obj_stack_.CreateObject(unit.GetData(), Object(), unit.properties.token_id);
     }
 
     if (error) {
@@ -1626,7 +1626,7 @@ namespace sapphire {
     auto &frame = frame_stack_.top();
 
     if (args.size() == 2) {
-      if (args[0].GetType() == kArgumentLiteral || args[1].GetType() == kArgumentLiteral) {
+      if (args[0].GetType() == kArgumentLiteralValue || args[1].GetType() == kArgumentLiteralValue) {
         frame.MakeError("Cannot modify a literal value");
         return;
       }
@@ -1692,7 +1692,7 @@ namespace sapphire {
       return;
     }
 
-    if (args[0].GetType() == kArgumentLiteral || args[1].GetType() == kArgumentLiteral) {
+    if (args[0].GetType() == kArgumentLiteralValue || args[1].GetType() == kArgumentLiteralValue) {
       frame.MakeError("Cannot modify a literal value");
       return;
     }
@@ -1714,8 +1714,8 @@ namespace sapphire {
   void Machine::CommandBind(ArgumentList &args, bool local_value, bool ext_value) {
     auto &frame = frame_stack_.top();
 
-    if (args[0].GetType() == kArgumentLiteral &&
-      lexical::GetStringType(args[0].GetData(), true) != kStringTypeIdentifier) {
+    if (args[0].GetType() == kArgumentLiteralValue &&
+      lexical::GetStringType(args[0].GetData(), true) != kLiteralTypeIdentifier) {
       frame.MakeError("Cannot modify a literal value");
       return;
     }
@@ -1734,7 +1734,7 @@ namespace sapphire {
     else {
       string id = lhs.Seek().Cast<string>();
 
-      if (lexical::GetStringType(id) != kStringTypeIdentifier) {
+      if (lexical::GetStringType(id) != kLiteralTypeIdentifier) {
         frame.MakeError("Invalid object id");
         return;
       }
@@ -1754,8 +1754,7 @@ namespace sapphire {
         }
       }
 
-      if (!obj_stack_.CreateObject(id, components::DumpObject(rhs.Seek()), 
-        args[0].option.token_id)) {
+      if (!obj_stack_.CreateObject(id, components::DumpObject(rhs.Seek()), args[0].properties.token_id)) {
         frame.MakeError("Object binding is failed");
         return;
       }
@@ -1765,13 +1764,13 @@ namespace sapphire {
   void Machine::CommandDelivering(ArgumentList &args, bool local_value, bool ext_value) {
     auto &frame = frame_stack_.top();
 
-    if (args[0].GetType() == kArgumentLiteral &&
-      lexical::GetStringType(args[0].GetData(), true) != kStringTypeIdentifier) {
+    if (args[0].GetType() == kArgumentLiteralValue &&
+      lexical::GetStringType(args[0].GetData(), true) != kLiteralTypeIdentifier) {
       frame.MakeError("Cannot modify a literal value");
       return;
     }
 
-    if (args[1].GetType() == kArgumentLiteral) {
+    if (args[1].GetType() == kArgumentLiteralValue) {
       frame.MakeError("Cannot modify a literal value");
       return;
     }
@@ -1790,7 +1789,7 @@ namespace sapphire {
     else {
       string id = lhs.Seek().Cast<string>();
 
-      if (lexical::GetStringType(id) != kStringTypeIdentifier) {
+      if (lexical::GetStringType(id) != kLiteralTypeIdentifier) {
         frame.MakeError("Invalid object id");
         return;
       }
@@ -1812,7 +1811,7 @@ namespace sapphire {
 
       rhs.Seek().Unpack() = Object();
 
-      if (!obj_stack_.CreateObject(id, rhs.Seek().Unpack(), args[0].option.token_id)) {
+      if (!obj_stack_.CreateObject(id, rhs.Seek().Unpack(), args[0].properties.token_id)) {
         frame.MakeError("Object delivering is failed");
         return;
       }
@@ -1932,7 +1931,7 @@ namespace sapphire {
     }
 
     Argument &arg = args[0];
-    if (arg.GetType() == kArgumentLiteral) {
+    if (arg.GetType() == kArgumentLiteralValue) {
       frame.RefreshReturnStack(*FetchLiteralObject(arg));
     }
     else {
@@ -1947,13 +1946,13 @@ namespace sapphire {
         auto type = lexical::GetStringType(str, true);
 
         switch (type) {
-        case kStringTypeInt:
+        case kLiteralTypeInt:
           ret_obj.PackContent(make_shared<int64_t>(stol(str)), kTypeIdInt);
           break;
-        case kStringTypeFloat:
+        case kLiteralTypeFloat:
           ret_obj.PackContent(make_shared<double>(stod(str)), kTypeIdFloat);
           break;
-        case kStringTypeBool:
+        case kLiteralTypeBool:
           ret_obj.PackContent(make_shared<bool>(str == kStrTrue), kTypeIdBool);
           break;
         default:
@@ -2008,12 +2007,12 @@ namespace sapphire {
         if (extension_name.empty()) absolute_path.append(".sp");
       }
 
-      VMCode &script_file = script::AppendBlankScript(absolute_path);
+      AnnotatedAST &script_file = script::AppendBlankScript(absolute_path);
 
       //already loaded
       if (!script_file.empty()) return;
 
-      VMCodeFactory factory(absolute_path, script_file, logger_);
+      GrammarAndSemanticAnalysis factory(absolute_path, script_file, logger_);
 
       if (factory.Start()) {
         Machine sub_machine(script_file, logger_);
@@ -2586,17 +2585,17 @@ namespace sapphire {
     frame.RefreshReturnStack(result);
   }
 
-  void Machine::MachineCommands(Keyword token, ArgumentList &args, Request &request) {
+  void Machine::MachineCommands(Keyword keyword, ArgumentList &args, ASTNode &node) {
     auto &frame = frame_stack_.top();
 
-    switch (token) {
+    switch (keyword) {
     case kKeywordLoad:
       CommandLoad(args);
       break;
     case kKeywordIf:
     case kKeywordElif:
     case kKeywordWhile:
-      CommandIfOrWhile(token, args, request.option.nest_end);
+      CommandIfOrWhile(keyword, args, node.annotation.nest_end);
       break;
     case kKeywordPlus:
       BinaryMathOperatorImpl<kKeywordPlus>(args);
@@ -2645,13 +2644,13 @@ namespace sapphire {
       break;
     case kKeywordFor:
       if (frame.jump_from_end) {
-        CheckForEach(args, request.option.nest_end);
+        CheckForEach(args, node.annotation.nest_end);
         frame.jump_from_end = false;
       }
       else {
-        InitForEach(args, request.option.nest_end);
+        InitForEach(args, node.annotation.nest_end);
       }
-      //CommandForEach(args, request.option.nest_end);
+      //CommandForEach(args, node.option.nest_end);
       break;
     case kKeywordNullObj:
       CommandNullObj(args);
@@ -2675,12 +2674,10 @@ namespace sapphire {
       CommandSwapIf(args);
       break;
     case kKeywordBind:
-      CommandBind(args, request.option.local_object,
-        request.option.ext_object);
+      CommandBind(args, node.annotation.local_object, node.annotation.ext_object);
       break;
     case kKeywordDelivering:
-      CommandDelivering(args, request.option.local_object,
-        request.option.ext_object);
+      CommandDelivering(args, node.annotation.local_object, node.annotation.ext_object);
       break;
     case kKeywordExpList:
       ExpList(args);
@@ -2704,21 +2701,21 @@ namespace sapphire {
       CommandExist(args);
       break;
     case kKeywordFn:
-      ClosureCatching(args, request.option.nest_end, frame_stack_.size() > 1);
+      ClosureCatching(args, node.annotation.nest_end, frame_stack_.size() > 1);
       break;
     case kKeywordCase:
-      CommandCase(args, request.option.nest_end);
+      CommandCase(args, node.annotation.nest_end);
       break;
     case kKeywordWhen:
       CommandWhen(args);
       break;
     case kKeywordEnd:
-      switch (request.option.nest_root) {
+      switch (node.annotation.nest_root) {
       case kKeywordWhile:
-        CommandLoopEnd(request.option.nest);
+        CommandLoopEnd(node.annotation.nest);
         break;
       case kKeywordFor:
-        CommandForEachEnd(request.option.nest);
+        CommandForEachEnd(node.annotation.nest);
         break;
       case kKeywordIf:
       case kKeywordCase:
@@ -2735,7 +2732,7 @@ namespace sapphire {
       break;
     case kKeywordContinue:
     case kKeywordBreak:
-      CommandContinueOrBreak(token, request.option.escape_depth);
+      CommandContinueOrBreak(keyword, node.annotation.escape_depth);
       break;
     case kKeywordElse:
       CommandElse();
@@ -2991,8 +2988,8 @@ namespace sapphire {
     bool next_tick;
     size_t script_idx = 0;
     Message msg;
-    VMCode *code = code_stack_.back();
-    Command *command = nullptr;
+    AnnotatedAST *code = code_stack_.back();
+    Sentense *sentense = nullptr;
     ObjectMap obj_map;
     FunctionImplPointer impl;
 
@@ -3017,7 +3014,7 @@ namespace sapphire {
     auto update_stack_frame = [&](Function &func) -> void {
       bool inside_initializer_calling = frame->do_initializer_calling;
       frame->do_initializer_calling = false;
-      code_stack_.push_back(&func.Get<VMCode>());
+      code_stack_.push_back(&func.Get<AnnotatedAST>());
       frame_stack_.push(RuntimeFrame(func.GetId()));
       obj_stack_.Push();
       obj_stack_.CreateObject(kStrUserFunc, Object(func.GetId()));
@@ -3043,7 +3040,7 @@ namespace sapphire {
     //Convert current environment to next calling
     auto tail_call = [&](Function &func) -> void {
       code_stack_.pop_back();
-      code_stack_.push_back(&func.Get<VMCode>());
+      code_stack_.push_back(&func.Get<AnnotatedAST>());
       obj_map.Naturalize(obj_stack_.GetCurrent());
       //auto inside_initiailizer_calling = frame_stack_.top().do_initializer_calling;
       frame_stack_.top() = RuntimeFrame(func.GetId());
@@ -3062,7 +3059,7 @@ namespace sapphire {
       case kFunctionVMCode:
         //start new processing in next tick.
         if (invoking_request) goto direct_load_vmcode;
-        if (IsTailRecursion(frame->idx, &impl->Get<VMCode>())) tail_recursion();
+        if (IsTailRecursion(frame->idx, &impl->Get<AnnotatedAST>())) tail_recursion();
         else if (IsTailCall(frame->idx) && !frame->do_initializer_calling) tail_call(*impl);
         else {
         direct_load_vmcode:
@@ -3130,17 +3127,17 @@ namespace sapphire {
         continue;
       }
 
-      command = &(*code)[frame->idx];
-      script_idx = command->first.idx;
+      sentense = &(*code)[frame->idx];
+      script_idx = sentense->first.idx;
       // indicator for disposing returning value or not
-      frame->void_call = command->first.option.void_call; 
+      frame->void_call = sentense->first.annotation.void_call; 
       frame->current_code = code;
-      frame->is_command = command->first.type == kRequestCommand;
+      frame->is_command = sentense->first.type == kNodeMachineCommand;
 
-      if (command->first.type == kRequestCommand) {
-        MachineCommands(command->first.GetKeywordValue(), command->second, command->first);
+      if (sentense->first.type == kNodeMachineCommand) {
+        MachineCommands(sentense->first.GetKeywordValue(), sentense->second, sentense->first);
         
-        auto is_return = command->first.GetKeywordValue() == kKeywordReturn;
+        auto is_return = sentense->first.GetKeywordValue() == kKeywordReturn;
 
         if (is_return) refresh_tick();
         if (frame->error) break;
@@ -3154,13 +3151,13 @@ namespace sapphire {
       else {
         obj_map.clear();
 
-        if (command->first.type == kRequestFunction) {
-          if (!FetchFunctionImpl(impl, command, obj_map)) {
+        if (sentense->first.type == kNodeFunction) {
+          if (!FetchFunctionImpl(impl, sentense, obj_map)) {
             break;
           }
         }
 
-        GenerateArgs(*impl, command->second, obj_map);
+        GenerateArgs(*impl, sentense->second, obj_map);
         if (frame->do_initializer_calling) GenerateStructInstance(obj_map);
         if (frame->error) break;
 

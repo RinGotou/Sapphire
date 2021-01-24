@@ -2,6 +2,8 @@
 
 #define ERROR_MSG(_Msg) Message(_Msg, kStateError)
 
+// !!! This module is deprecated and will be destroyed in the future.
+
 namespace sapphire {
   inline bool IsBranchKeyword(Keyword keyword) {
     return keyword == kKeywordElif || keyword == kKeywordElse || keyword == kKeywordWhen;
@@ -71,7 +73,7 @@ namespace sapphire {
     for (size_t count = 0; count < target.size(); ++count) {
       current = target[count];
       auto type = lexical::GetStringType(toString(current));
-      if (type != StringType::kStringTypeBlank && exempt_blank_char) {
+      if (type != LiteralType::kLiteralTypeWhitespace && exempt_blank_char) {
         head = count;
         exempt_blank_char = false;
       }
@@ -89,13 +91,13 @@ namespace sapphire {
     if (data.front() == '#') return "";
 
     while (!data.empty() &&
-      lexical::GetStringType(toString(data.back())) == kStringTypeBlank) {
+      lexical::GetStringType(toString(data.back())) == kLiteralTypeWhitespace) {
       data.pop_back();
     }
     return data;
   }
 
-  void LexicalFactory::Scan(deque<string> &output, string target) {
+  void LexicalAnalysis::Scan(deque<string> &output, string target) {
     string current_token, temp;
     bool inside_string = false;
     bool leave_string = false;
@@ -121,7 +123,7 @@ namespace sapphire {
       if (not_escape_char) not_escape_char = false;
 
       if (current == '\'' && !escape_flag) {
-        if (!inside_string && lexical::GetStringType(current_token) == kStringTypeBlank) {
+        if (!inside_string && lexical::GetStringType(current_token) == kLiteralTypeWhitespace) {
           current_token.clear();
         }
 
@@ -135,14 +137,14 @@ namespace sapphire {
         temp.append(1, current);
 
         auto type = lexical::GetStringType(temp);
-        if (type == kStringTypeNull) {
+        if (type == kLiteralTypeInvalid) {
           auto type = lexical::GetStringType(current_token);
           switch (type) {
-          case kStringTypeBlank:
+          case kLiteralTypeWhitespace:
             current_token.clear();
             current_token.append(1, current);
             break;
-          case kStringTypeInt:
+          case kLiteralTypeInt:
             if (current == '.' && lexical::IsDigit(next)) {
               current_token.append(1, current);
             }
@@ -160,7 +162,7 @@ namespace sapphire {
           }
         }
         else {
-          if (type == kStringTypeInt && (temp[0] == '+' || temp[0] == '-')) {
+          if (type == kLiteralTypeInt && (temp[0] == '+' || temp[0] == '-')) {
             output.emplace_back(string().append(1, temp[0]));
             current_token = temp.substr(1, temp.size() - 1);
           }
@@ -181,13 +183,13 @@ namespace sapphire {
       last = target[idx];
     }
 
-    if (lexical::GetStringType(current_token) != kStringTypeBlank) {
+    if (lexical::GetStringType(current_token) != kLiteralTypeWhitespace) {
       output.emplace_back(current_token);
     }
 
   }
 
-  bool LexicalFactory::Feed(CombinedCodeline &src) {
+  bool LexicalAnalysis::Feed(CombinedCodeline &src) {
     bool good = true;
     bool negative_flag = false;
     stack<string> bracket_stack;
@@ -228,7 +230,7 @@ namespace sapphire {
         continue;
       }
 
-      if (current.second == kStringTypeNull) {
+      if (current.second == kLiteralTypeInvalid) {
         AppendMessage("Unknown token - " + current.first +
           " at line " + to_string(src.first), kStateError, logger_);
         good = false;
@@ -236,8 +238,8 @@ namespace sapphire {
       }
 
       if (compare(current.first, "+", "-") && !compare(last.first, ")", "]", "}")) {
-        if (compare(last.second, kStringTypeSymbol, kStringTypeNull) &&
-          compare(next.second, kStringTypeInt, kStringTypeFloat)) {
+        if (compare(last.second, kLiteralTypeSymbol, kLiteralTypeInvalid) &&
+          compare(next.second, kLiteralTypeInt, kLiteralTypeFloat)) {
           negative_flag = true;
           tokens->push_back(current);
           last = current;
@@ -268,7 +270,7 @@ namespace sapphire {
       }
 
       if (current.first == ",") {
-        if (last.second == kStringTypeSymbol &&
+        if (last.second == kLiteralTypeSymbol &&
           !compare(last.first, "]", ")", "}", "'")) {
           AppendMessage("Invalid comma at line " + to_string(src.first), kStateError,
             logger_);
@@ -307,16 +309,14 @@ namespace sapphire {
     }
   }
 
-  void LineParser::ProduceVMCode() {
+  void FirstStageParsing::ProduceVMCode() {
     deque<Argument> arguments;
     size_t idx = 0, limit = 0;
 
-    if (frame_->symbol.back().IsPlaceholder()) frame_->symbol.pop_back();
+    if (frame_->nodes.back().IsPlaceholder()) frame_->nodes.pop_back();
 
-    bool is_bin_operator = 
-      lexical::IsBinaryOperator(frame_->symbol.back().GetKeywordValue());
-    bool is_mono_operator = 
-      lexical::IsMonoOperator(frame_->symbol.back().GetKeywordValue());
+    bool is_bin_operator = lexical::IsBinaryOperator(frame_->nodes.back().GetKeywordValue());
+    bool is_mono_operator = lexical::IsMonoOperator(frame_->nodes.back().GetKeywordValue());
 
     if (is_bin_operator) limit = 2;
     if (is_mono_operator) limit = 1;
@@ -337,85 +337,85 @@ namespace sapphire {
       frame_->args.pop_back();
     }
 
-    action_base_.emplace_back(Command(frame_->symbol.back(), arguments));
-    frame_->symbol.pop_back();
-    frame_->args.emplace_back(Argument("", kArgumentReturnStack, kStringTypeNull));
-    if (frame_->symbol.empty() && !IgnoreVoidCall(action_base_.back().first.GetKeywordValue()) &&
-      (frame_->next.first == "," || frame_->next.second == kStringTypeNull)) {
-      action_base_.back().first.option.void_call = true;
+    action_base_.emplace_back(Sentense(frame_->nodes.back(), arguments));
+    frame_->nodes.pop_back();
+    frame_->args.emplace_back(Argument("", kArgumentReturnValue, kLiteralTypeInvalid));
+    if (frame_->nodes.empty() && !IgnoreVoidCall(action_base_.back().first.GetKeywordValue()) &&
+      (frame_->next.first == "," || frame_->next.second == kLiteralTypeInvalid)) {
+      action_base_.back().first.annotation.void_call = true;
     }
   }
 
-  bool LineParser::CleanupStack() {
+  bool FirstStageParsing::CleanupStack() {
     bool result = true;
 
-    while (!frame_->symbol.empty() && !frame_->symbol.back().IsPlaceholder()) {
+    while (!frame_->nodes.empty() && !frame_->nodes.back().IsPlaceholder()) {
       ProduceVMCode();
     }
 
     return result;
   }
 
-  void LineParser::BindStmt() {
+  void FirstStageParsing::BindStmt() {
     if (!frame_->args.empty()) {
-      Request request(kKeywordBind);
-      request.option.local_object = frame_->local_object;
+      ASTNode node(kKeywordBind);
+      node.annotation.local_object = frame_->local_object;
       frame_->local_object = false;
-      frame_->symbol.emplace_back(request);
+      frame_->nodes.emplace_back(node);
     }
   }
 
-  void LineParser::DeliveringStmt() {
+  void FirstStageParsing::DeliveringStmt() {
     if (!frame_->args.empty()) {
-      Request request(kKeywordDelivering);
-      request.option.local_object = frame_->local_object;
+      ASTNode node(kKeywordDelivering);
+      node.annotation.local_object = frame_->local_object;
       frame_->local_object = false;
-      frame_->symbol.emplace_back(request);
+      frame_->nodes.emplace_back(node);
     }
   }
 
-  void LineParser::ScopeMemberStmt() {
+  void FirstStageParsing::ScopeMemberStmt() {
     if (!frame_->seek_last_assert) {
       frame_->domain = frame_->args.back();
       frame_->args.pop_back();
     }
   }
 
-  void LineParser::UnaryExpr() {
+  void FirstStageParsing::UnaryExpr() {
     auto token = lexical::GetKeywordCode(frame_->current.first);
-    frame_->symbol.emplace_back(Request(token));
+    frame_->nodes.emplace_back(ASTNode(token));
   }
 
-  void LineParser::Calling() {
-    if (frame_->last.second != kStringTypeIdentifier) {
-      frame_->symbol.emplace_back(Request(kKeywordExpList));
+  void FirstStageParsing::Calling() {
+    if (frame_->last.second != kLiteralTypeIdentifier) {
+      frame_->nodes.emplace_back(ASTNode(kKeywordExpList));
     }
 
     if (compare(lexical::GetKeywordCode(frame_->last.first),
       kKeywordIf, kKeywordElif, kKeywordWhile,
       kKeywordCase, kKeywordWhen, kKeywordReturn)) {
-      frame_->symbol.emplace_back(Request(kKeywordExpList));
+      frame_->nodes.emplace_back(ASTNode(kKeywordExpList));
     }
     
-    frame_->symbol.push_back(Request());
+    frame_->nodes.push_back(ASTNode());
     frame_->args.emplace_back(Argument());
   }
 
-  bool LineParser::GetElementStmt() {
-    Request request(kStrAt, frame_->args.back());
-    frame_->symbol.emplace_back(request);
-    frame_->symbol.emplace_back(Request());
+  bool FirstStageParsing::GetElementStmt() {
+    ASTNode node(kStrAt, frame_->args.back());
+    frame_->nodes.emplace_back(node);
+    frame_->nodes.emplace_back(ASTNode());
     frame_->args.pop_back();
     frame_->args.emplace_back(Argument());
 
     return true;
   }
 
-  bool LineParser::ArrayGeneratorStmt() {
+  bool FirstStageParsing::ArrayGeneratorStmt() {
     bool result = true;
-    if (frame_->last.second == StringType::kStringTypeSymbol) {
-      frame_->symbol.emplace_back(Request(kKeywordInitialArray));
-      frame_->symbol.emplace_back(Request());
+    if (frame_->last.second == LiteralType::kLiteralTypeSymbol) {
+      frame_->nodes.emplace_back(ASTNode(kKeywordInitialArray));
+      frame_->nodes.emplace_back(ASTNode());
       frame_->args.emplace_back(Argument());
       result = true;
     }
@@ -426,47 +426,34 @@ namespace sapphire {
     return result;
   }
 
-  void LineParser::BinaryExpr() {
+  void FirstStageParsing::BinaryExpr() {
     auto token = lexical::GetKeywordCode(frame_->current.first);
     int current_priority = lexical::GetTokenPriority(token);
-    Request request(token);
+    ASTNode node(token);
 
-    if (!frame_->symbol.empty()) {
-      bool is_operator =
-        lexical::IsBinaryOperator(frame_->symbol.back().GetKeywordValue());
-      int stack_top_priority =
-        lexical::GetTokenPriority(frame_->symbol.back().GetKeywordValue());
+    if (!frame_->nodes.empty()) {
+      bool is_operator = lexical::IsBinaryOperator(frame_->nodes.back().GetKeywordValue());
+      int stack_top_priority = lexical::GetTokenPriority(frame_->nodes.back().GetKeywordValue());
 
       auto checking = [&stack_top_priority, &current_priority]()->bool {
         return (stack_top_priority >= current_priority);
       };
 
-      while (!frame_->symbol.empty() && is_operator && checking()) {
+      while (!frame_->nodes.empty() && is_operator && checking()) {
         ProduceVMCode();
-        is_operator =
-          (!frame_->symbol.empty() 
-          && lexical::IsBinaryOperator(frame_->symbol.back().GetKeywordValue()));
-        stack_top_priority = frame_->symbol.empty() ? 5 :
-          lexical::GetTokenPriority(frame_->symbol.back().GetKeywordValue());
+        is_operator = (!frame_->nodes.empty() && lexical::IsBinaryOperator(frame_->nodes.back().GetKeywordValue()));
+        stack_top_priority = frame_->nodes.empty() ? 5 : lexical::GetTokenPriority(frame_->nodes.back().GetKeywordValue());
       }
     }
 
-    frame_->symbol.emplace_back(request);
+    frame_->nodes.emplace_back(node);
   }
 
-  bool LineParser::FunctionHeaderStmt() {
+  bool FirstStageParsing::FunctionHeaderStmt() {
     //TODO:Preprecessing-time argument type checking
-    if (frame_->last.second != kStringTypeNull) {
-      error_string_ = "Invalid function definition";
-      return false;
-    }
 
-    if (tokens_.size() < 4) {
-      error_string_ = "Invalid function definition";
-      return false;
-    }
 
-    if (frame_->next_2.first != "(") {
+    if (frame_->last.second != kLiteralTypeInvalid || tokens_.size() < 4 || frame_->next_2.first != "(") {
       error_string_ = "Invalid function definition";
       return false;
     }
@@ -477,8 +464,8 @@ namespace sapphire {
     bool variable = false, variable_declared = false;
     bool good = true;
 
-    frame_->symbol.emplace_back(Request(kKeywordFn));
-    frame_->symbol.emplace_back(Request());
+    frame_->nodes.emplace_back(ASTNode(kKeywordFn));
+    frame_->nodes.emplace_back(ASTNode());
     frame_->args.emplace_back(Argument());
 
     auto invalid_param_pattern = [&]()->bool {
@@ -496,7 +483,7 @@ namespace sapphire {
     }
 
     frame_->args.emplace_back(
-      Argument(frame_->current.first, kArgumentLiteral, kStringTypeIdentifier));
+      Argument(frame_->current.first, kArgumentLiteralValue, kLiteralTypeIdentifier));
 
     //Parameter segment
     //left parenthesis will be disposed in first loop
@@ -505,7 +492,7 @@ namespace sapphire {
 
       if (frame_->current.first == "(") {
         if (left_paren) {
-          error_string_ = "Invalid symbol in function definition";
+          error_string_ = "Invalid nodes in function definition";
           good = false;
           break;
         }
@@ -520,20 +507,20 @@ namespace sapphire {
         if (frame_->next.first == kStrConstraintArrow) {
           //dispose right parenthesis
           frame_->Eat();
-          if (frame_->next.second == kStringTypeNull) {
+          if (frame_->next.second == kLiteralTypeInvalid) {
             error_string_ = "Invalid return value constraint";
             return false;
           }
 
           //dispose right arrow
           frame_->Eat();
-          if (frame_->current.second != kStringTypeIdentifier) {
+          if (frame_->current.second != kLiteralTypeIdentifier) {
             error_string_ = "Invalid return value constraint";
             return false;
           }
 
-          Argument constaint_arg(frame_->current.first, kArgumentLiteral, kStringTypeIdentifier);
-          constaint_arg.option.is_constraint = true;
+          Argument constaint_arg(frame_->current.first, kArgumentLiteralValue, kLiteralTypeIdentifier);
+          constaint_arg.properties.fn.constraint = true;
           frame_->args.emplace_back(constaint_arg);
         }
 
@@ -579,20 +566,20 @@ namespace sapphire {
         if (!variable_declared) variable_declared = true;
       }
       else if (frame_->current.first == ",") continue;
-      else if (frame_->current.second != kStringTypeIdentifier) {
+      else if (frame_->current.second != kLiteralTypeIdentifier) {
         error_string_ = "Invalid value in function definition";
         good = false;
         break;
       }
       else {
-        Argument arg(frame_->current.first, kArgumentLiteral, kStringTypeIdentifier);
+        Argument arg(frame_->current.first, kArgumentLiteralValue, kLiteralTypeIdentifier);
         if (optional) {
-          arg.option.optional_param = true;
+          arg.properties.fn.optional_param = true;
           optional = false;
         }
 
         if (variable) {
-          arg.option.variable_param = true;
+          arg.properties.fn.variable_param = true;
           variable = false;
         }
 
@@ -603,9 +590,9 @@ namespace sapphire {
     return good;
   }
 
-  bool LineParser::StructHeaderStmt(Terminator terminator) {
+  bool FirstStageParsing::StructHeaderStmt(Terminator terminator) {
     //TODO: allow access with type identifier(struct/module)
-    if (frame_->last.second != kStringTypeNull) {
+    if (frame_->last.second != kLiteralTypeInvalid) {
       error_string_ = "Invalid struct/module definition";
       return false;
     }
@@ -617,19 +604,19 @@ namespace sapphire {
 
     switch (terminator) {
     case kTerminatorStruct:
-      frame_->symbol.emplace_back(Request(kKeywordStruct));
+      frame_->nodes.emplace_back(ASTNode(kKeywordStruct));
       break;
     case kTerminatorModule:
-      frame_->symbol.emplace_back(Request(kKeywordModule));
+      frame_->nodes.emplace_back(ASTNode(kKeywordModule));
       break;
     default:
       break;
     }
     
-    frame_->symbol.emplace_back(Request());
+    frame_->nodes.emplace_back(ASTNode());
     frame_->Eat();
 
-    if (frame_->current.second != kStringTypeIdentifier) {
+    if (frame_->current.second != kLiteralTypeIdentifier) {
       error_string_ = "Invalid struct identifier";
       return false;
     }
@@ -637,9 +624,9 @@ namespace sapphire {
     frame_->args.emplace_back(Argument());
     //struct identifier
     frame_->args.emplace_back(Argument(
-      frame_->current.first, kArgumentLiteral, kStringTypeIdentifier));
+      frame_->current.first, kArgumentLiteralValue, kLiteralTypeIdentifier));
 
-    if (terminator == kTerminatorModule && frame_->next.second != kStringTypeNull) {
+    if (terminator == kTerminatorModule && frame_->next.second != kLiteralTypeInvalid) {
       error_string_ = "Invalid argument in module definition";
       return false;
     }
@@ -647,14 +634,14 @@ namespace sapphire {
       //inheritance source struct
       frame_->Eat(); frame_->Eat();
       frame_->args.emplace_back(Argument(
-        frame_->current.first, kArgumentLiteral, kStringTypeIdentifier));
+        frame_->current.first, kArgumentLiteralValue, kLiteralTypeIdentifier));
     }
 
     return true;
   }
 
-  bool LineParser::ForEachStmt() {
-    if (frame_->last.second != kStringTypeNull) {
+  bool FirstStageParsing::ForEachStmt() {
+    if (frame_->last.second != kLiteralTypeInvalid) {
       error_string_ = "Invalid for-each expression";
       return false;
     }
@@ -666,17 +653,17 @@ namespace sapphire {
 
     bool good = true;
 
-    frame_->symbol.emplace_back(Request(kKeywordFor));
-    frame_->symbol.emplace_back(Request());
+    frame_->nodes.emplace_back(ASTNode(kKeywordFor));
+    frame_->nodes.emplace_back(ASTNode());
     frame_->args.emplace_back(Argument());
 
-    if (frame_->Eat(); lexical::GetStringType(frame_->current.first) != kStringTypeIdentifier) {
+    if (frame_->Eat(); lexical::GetStringType(frame_->current.first) != kLiteralTypeIdentifier) {
       error_string_ = "Invalid identifier argument in for-each expression";
       return false;
     }
 
     frame_->args.emplace_back(Argument(
-      frame_->current.first, kArgumentLiteral, kStringTypeIdentifier));
+      frame_->current.first, kArgumentLiteralValue, kLiteralTypeIdentifier));
 
     
     if (frame_->Eat(); lexical::GetTerminatorCode(frame_->current.first) != kTerminatorIn) {
@@ -687,17 +674,17 @@ namespace sapphire {
     return good;
   }
 
-  bool LineParser::OtherExpressions() {
+  bool FirstStageParsing::OtherExpressions() {
     Keyword token = lexical::GetKeywordCode(frame_->current.first);
 
     if (IsSingleKeyword(token)) {
-      if (frame_->next.second != kStringTypeNull) {
+      if (frame_->next.second != kLiteralTypeInvalid) {
         error_string_ = "Invalid syntax after " + frame_->current.first;
         return false;
       }
 
-      Request request(token);
-      frame_->symbol.emplace_back(request);
+      ASTNode node(token);
+      frame_->nodes.emplace_back(node);
       return true;
     }
 
@@ -728,13 +715,13 @@ namespace sapphire {
       }
 
       if (IsReservedKeyword(token)) {
-        frame_->symbol.emplace_back(Request(token));
+        frame_->nodes.emplace_back(ASTNode(token));
         frame_->args.emplace_back(Argument());
         return true;
       }
       else if (IsVariableExpression(token)) {
-        frame_->symbol.emplace_back(Request(token));
-        frame_->symbol.emplace_back(Request());
+        frame_->nodes.emplace_back(ASTNode(token));
+        frame_->nodes.emplace_back(ASTNode());
         frame_->args.emplace_back(Argument());
         return true;
       }
@@ -745,54 +732,54 @@ namespace sapphire {
         }
       }
 
-      Request request(token);
-      frame_->symbol.emplace_back(request);
+      ASTNode node(token);
+      frame_->nodes.emplace_back(node);
 
       return true;
     }
 
     if (frame_->next.first == "(") {
-      Request request(frame_->current.first,
+      ASTNode node(frame_->current.first,
         frame_->domain.IsPlaceholder() ?
         Argument() : frame_->domain
       );
-      request.option.use_last_assert = frame_->seek_last_assert;
+      node.annotation.use_last_assert = frame_->seek_last_assert;
       if (frame_->seek_last_assert) frame_->seek_last_assert = false;
-      frame_->symbol.emplace_back(request);
+      frame_->nodes.emplace_back(node);
       frame_->domain = Argument();
       return true;
     }
     else if ((frame_->next.first == "=" || frame_->next.first == "<-") &&
       frame_->last.first != ".") {
       frame_->args.emplace_back(Argument(
-        frame_->current.first, kArgumentLiteral, kStringTypeIdentifier));
+        frame_->current.first, kArgumentLiteralValue, kLiteralTypeIdentifier));
       return true;
     }
     else {
       frame_->args.emplace_back(Argument(
-        frame_->current.first, kArgumentObjectStack, kStringTypeIdentifier));
+        frame_->current.first, kArgumentObjectStack, kLiteralTypeIdentifier));
 
       if (!frame_->domain.IsPlaceholder() || frame_->seek_last_assert) {
-        frame_->args.back().option.domain = frame_->domain.GetData();
-        frame_->args.back().option.domain_type = frame_->domain.GetType();
+        frame_->args.back().properties.domain.id = frame_->domain.GetData();
+        frame_->args.back().properties.domain.type = frame_->domain.GetType();
 
         if (frame_->seek_last_assert) {
-          frame_->args.back().option.use_last_assert = true;
+          frame_->args.back().properties.member_access.use_last_assert = true;
           frame_->seek_last_assert = false;
         }
 
         if (frame_->next.first == ".") {
-          Request request(kKeywordDomainAssertCommand);
-          Command command;
+          ASTNode node(kKeywordDomainAssertCommand);
+          Sentense command;
 
-          command.first = request;
+          command.first = node;
           command.second.push_back(frame_->args.back());
           frame_->args.pop_back();
           action_base_.push_back(command);
           frame_->seek_last_assert = true;
         }
         else {
-          frame_->args.back().option.assert_chain_tail = true;
+          frame_->args.back().properties.member_access.is_chain_tail = true;
         }
 
         frame_->domain = Argument();
@@ -802,19 +789,19 @@ namespace sapphire {
     }
 
     Argument arg(
-      frame_->current.first, kArgumentObjectStack, kStringTypeIdentifier);
+      frame_->current.first, kArgumentObjectStack, kLiteralTypeIdentifier);
     frame_->args.emplace_back(arg);
 
     return true;
   }
 
-  void LineParser::LiteralValue() {
+  void FirstStageParsing::LiteralValue() {
     frame_->args.emplace_back(
-      Argument(frame_->current.first, kArgumentLiteral, frame_->current.second));
+      Argument(frame_->current.first, kArgumentLiteralValue, frame_->current.second));
   }
 
 
-  Message LineParser::Parse() {
+  Message FirstStageParsing::Parse() {
     auto state = true;
     const auto size = tokens_.size();
     Message result;
@@ -878,7 +865,7 @@ namespace sapphire {
       else {
         auto token_type = frame_->current.second;
 
-        if (token_type == kStringTypeIdentifier) {
+        if (token_type == kLiteralTypeIdentifier) {
           state = OtherExpressions();
         }
         else {
@@ -888,7 +875,7 @@ namespace sapphire {
     }
 
     if (state) {
-      while (!frame_->symbol.empty()) {
+      while (!frame_->nodes.empty()) {
         ProduceVMCode();
       }
     }
@@ -902,13 +889,13 @@ namespace sapphire {
 
     frame_->args.clear();
     frame_->args.shrink_to_fit();
-    frame_->symbol.clear();
-    frame_->symbol.shrink_to_fit();
+    frame_->nodes.clear();
+    frame_->nodes.shrink_to_fit();
     delete frame_;
     return result;
   }
 
-  void LineParser::Clear() {
+  void FirstStageParsing::Clear() {
     tokens_.clear();
     tokens_.shrink_to_fit();
     action_base_.clear();
@@ -917,14 +904,14 @@ namespace sapphire {
     index_ = 0;
   }
 
-  Message LineParser::Make(CombinedToken &line) {
+  Message FirstStageParsing::Make(CombinedToken &line) {
     index_ = line.first;
     tokens_.clear();
     tokens_ = line.second;
     return Parse().SetIndex(line.first);
   }
 
-  bool VMCodeFactory::ReadScript(list<CombinedCodeline> &dest) {
+  bool GrammarAndSemanticAnalysis::ReadScript(list<CombinedCodeline> &dest) {
     bool inside_comment_block = false;
     size_t idx = 1;
     string buf;
@@ -962,12 +949,12 @@ namespace sapphire {
   }
 
   //TODO: for-each processing still works not correctly. check it out again
-  bool VMCodeFactory::Start() {
+  bool GrammarAndSemanticAnalysis::Start() {
     bool good = true;
-    LexicalFactory lexer(tokens_, logger_);
-    LineParser line_parser;
+    LexicalAnalysis lexer(tokens_, logger_);
+    FirstStageParsing parser;
     Message msg;
-    VMCode anchorage;
+    AnnotatedAST anchor;
     StateLevel level;
     Keyword ast_root;
 
@@ -984,26 +971,29 @@ namespace sapphire {
     for (auto it = tokens_.begin(); it != tokens_.end(); ++it) {
       if (!good) break;
 
-      msg = line_parser.Make(*it);
+      msg = parser.Make(*it);
 
       level = msg.GetLevel();
-      ast_root = line_parser.GetASTRoot();
+      ast_root = parser.GetASTRoot();
 
       if (level != kStateNormal) {
         AppendMessage(msg.GetDetail(), level, logger_, msg.GetIndex());
-        if (level == kStateError) { good = false; continue; }
+
+        if (level == kStateError) { 
+          good = false; 
+          continue; 
+        }
       }
 
-      anchorage.swap(line_parser.GetOutput());
-      line_parser.Clear();
+      anchor.swap(parser.GetOutput());
+      parser.Clear();
 
       if (inside_struct_) {
         if (ast_root == kKeywordFn) struct_member_fn_nest += 1;
 
         if (struct_member_fn_nest == 0 && 
           !compare(ast_root, kKeywordBind, kKeywordEnd, kKeywordInclude, kKeywordAttribute)) {
-          AppendMessage("Invalid expression inside struct", kStateError,
-            logger_, msg.GetIndex());
+          AppendMessage("Invalid expression inside struct", kStateError, logger_, msg.GetIndex());
           good = false;
           break;
         }
@@ -1014,8 +1004,7 @@ namespace sapphire {
 
         if (struct_member_fn_nest == 0 &&
           !compare(ast_root, kKeywordBind, kKeywordEnd, kKeywordAttribute)) {
-          AppendMessage("Invalid expression inside struct", kStateError,
-            logger_, msg.GetIndex());
+          AppendMessage("Invalid expression inside struct", kStateError, logger_, msg.GetIndex());
           good = false;
           break;
         }
@@ -1024,7 +1013,7 @@ namespace sapphire {
       if (IsNestRoot(ast_root)) {
         if (ast_root == kKeywordIf || ast_root == kKeywordCase) {
           jump_stack_.push(JumpListFrame{ ast_root,
-            dest_->size() + anchorage.size() - 1 });
+            dest_->size() + anchor.size() - 1 });
         }
 
         if (ast_root == kKeywordWhile || ast_root == kKeywordFor) {
@@ -1039,21 +1028,18 @@ namespace sapphire {
           inside_module_ = true;
         }
         
-        nest_.push(ast_root == kKeywordFor ? 
-          dest_->size() + anchorage.size() - 1 : dest_->size());
-        //nest_.push(dest_->size());
-        nest_end_.push(dest_->size() + anchorage.size() - 1);
+        nest_.push(ast_root == kKeywordFor ? dest_->size() + anchor.size() - 1 : dest_->size());
+        nest_end_.push(dest_->size() + anchor.size() - 1);
         nest_origin_.push(it->first);
         nest_type_.push(ast_root);
-        dest_->insert(dest_->end(), anchorage.begin(), anchorage.end());
-        anchorage.clear();
+        dest_->insert(dest_->end(), anchor.begin(), anchor.end());
+        anchor.clear();
         continue;
       }
 
       if (IsBranchKeyword(ast_root)) {
         if (jump_stack_.empty()) {
-          AppendMessage("Invalid branch keyword at line " + to_string(it->first), kStateError,
-            logger_);
+          AppendMessage("Invalid branch keyword at line " + to_string(it->first), kStateError, logger_);
           break;
         }
 
@@ -1062,8 +1048,7 @@ namespace sapphire {
             jump_stack_.top().jump_record.push_back(dest_->size());
           }
           else {
-            AppendMessage("Invalid branch keyword at line " + to_string(it->first),
-              logger_);
+            AppendMessage("Invalid branch keyword at line " + to_string(it->first), logger_);
             break;
           }
         }
@@ -1072,8 +1057,7 @@ namespace sapphire {
             jump_stack_.top().jump_record.push_back(dest_->size());
           }
           else {
-            AppendMessage("Invalid branch keyword at line " + to_string(it->first), kStateError,
-              logger_);
+            AppendMessage("Invalid branch keyword at line " + to_string(it->first), kStateError, logger_);
             break;
           }
         }
@@ -1081,18 +1065,16 @@ namespace sapphire {
 
       if (ast_root == kKeywordContinue || ast_root == kKeywordBreak) {
         if (cycle_escaper_.empty()) {
-          AppendMessage("Invalid cycle escaper at line " + to_string(it->first), kStateError,
-            logger_);
+          AppendMessage("Invalid cycle escaper at line " + to_string(it->first), kStateError, logger_);
           break;
         }
 
-        anchorage.back().first.option.escape_depth = nest_.size() - cycle_escaper_.top();
+        anchor.back().first.annotation.escape_depth = nest_.size() - cycle_escaper_.top();
       }
 
       if (ast_root == kKeywordEnd) {
         if (nest_type_.empty()) {
-          AppendMessage("Invalid 'end' token at line " + to_string(it->first), kStateError, 
-            logger_, msg.GetIndex());
+          AppendMessage("Invalid 'end' token at line " + to_string(it->first), kStateError, logger_, msg.GetIndex());
           good = false;
           break;
         }
@@ -1100,11 +1082,11 @@ namespace sapphire {
         if (!cycle_escaper_.empty() && nest_.size() == cycle_escaper_.top())
           cycle_escaper_.pop();
 
-        (*dest_)[nest_end_.top()].first.option.nest_end = dest_->size();
-        // Writing nest header info into 'end' command (anchorage.back())
-        auto &writing_dest = anchorage.back();
-        writing_dest.first.option.nest_root = nest_type_.top();
-        writing_dest.first.option.nest = nest_.top();
+        (*dest_)[nest_end_.top()].first.annotation.nest_end = dest_->size();
+        // Writing nest header info into 'end' command (anchor.back())
+        auto &writing_dest = anchor.back();
+        writing_dest.first.annotation.nest_root = nest_type_.top();
+        writing_dest.first.annotation.nest = nest_.top();
 
         if (compare(nest_type_.top(), kKeywordIf, kKeywordCase) && !jump_stack_.empty()){
           if (!jump_stack_.top().jump_record.empty()) {
@@ -1127,36 +1109,33 @@ namespace sapphire {
       }
 
       //Insert processed vmcode into destination and dispose.
-      dest_->insert(dest_->end(), anchorage.begin(), anchorage.end());
-      anchorage.clear();
+      dest_->insert(dest_->end(), anchor.begin(), anchor.end());
+      anchor.clear();
     }
 
     if (!nest_.empty()) {
-      AppendMessage("'end' token is not found for line " + 
-        to_string(nest_origin_.top()), kStateError, logger_);
+      AppendMessage("'end' token is not found for line " + to_string(nest_origin_.top()), kStateError, logger_);
       good = false;
     }
 
-    //toke id generating
+    //toke id generation
     if (good) {
       for (auto it = dest_->begin(); it != dest_->end(); ++it) {
         if (compare(it->first.GetKeywordValue(), kKeywordBind, kKeywordDelivering)
-          && it->second.size() == 2
-          && it->second[0].GetType() == kArgumentLiteral) {
-          it->second[0].option.token_id = TryAppendTokenId(it->second[0].GetData());
+          && it->second.size() == 2 && it->second[0].GetType() == kArgumentLiteralValue) {
+
+          it->second[0].properties.token_id = TryAppendTokenId(it->second[0].GetData());
         }
 
-        //request domain
+        //node domain
         if (it->first.HasDomain()) {
-          it->first.SetDomainTokenId(TryAppendTokenId(
-            it->first.GetInterfaceDomain().GetData()));
+          it->first.SetDomainTokenId(TryAppendTokenId(it->first.GetFunctionDomain().GetData()));
         }
 
         //argument
         for (auto &unit : it->second) {
           if (unit.GetType() == kArgumentObjectStack) {
-            unit.option.token_id = TryAppendTokenId(
-              unit.HasDomain() ? unit.option.domain : unit.GetData());
+            unit.properties.token_id = TryAppendTokenId(unit.HasDomain() ? unit.properties.domain.id : unit.GetData());
           }
         }
       }

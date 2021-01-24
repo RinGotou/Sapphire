@@ -9,11 +9,11 @@ using Processor = ArgumentProcessor<kHeadDoubleHorizon, kJoinerEqual>;
 
 void BootMainVMObject(string path, string log_path, bool real_time_log) {
   string absolute_path = fs::absolute(fs::path(path)).string();
-  VMCode &script_file = script::AppendBlankScript(absolute_path);
+  AnnotatedAST &script_file = script::AppendBlankScript(absolute_path);
 
   {
-    VMCodeFactory factory(path, script_file, log_path, real_time_log);
-    if (!factory.Start()) return;
+    GrammarAndSemanticAnalysis analysis(path, script_file, log_path, real_time_log);
+    if (!analysis.Start()) return;
   }
   
   Machine main_thread(script_file, log_path, real_time_log);
@@ -37,7 +37,6 @@ void HelpFile() {
     "\tlocale=LOCALE_STR   Locale string for interpreter.(default=en_US.UTF8)\n"
     "\tvm_stdout=FILE      Redirection of script standard output.\n"
     "\tvm_stdin=FILE       Redirection of script standard input.\n"
-    "\trtlog               Enable real-time logger\n"
     "\twait                Automatically pause at application exit.\n"
     "\thelp                Show this message.\n"
     "\tversion             Show version message of interpreter.\n"
@@ -87,7 +86,7 @@ void Processing(Processor &processor) {
       processor.ValueOf("locale").data() : "en_US.UTF8");
 
     runtime::InformScriptPath(path);
-    BootMainVMObject(path, log, processor.Exist("rtlog"));
+    BootMainVMObject(path, log, true);
     CloseStream();
   }
   else if (processor.Exist("help")) {
@@ -138,7 +137,7 @@ void InitFromConfigFile() {
 
     runtime::InformScriptPath(script);
     BootMainVMObject(script, log, real_time_log.is_ok() ?
-      real_time_log.unwrap() : false);
+      real_time_log.unwrap() : true);
     CloseStream();
   }
   catch (std::runtime_error &e) {
@@ -166,7 +165,6 @@ int main(int argc, char **argv) {
     Pattern("help"   , Option(false, false, 1)),
     Pattern("version", Option(false, false, 1)),
     Pattern("motto"  , Option(false, false, 1)),
-    Pattern("rtlog"  , Option(false, true)),
     Pattern("log"    , Option(true, true)),
     Pattern("locale" , Option(true, true)),
     Pattern("vm_stdout" ,Option(true, true)),

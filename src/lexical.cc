@@ -317,18 +317,18 @@ namespace sapphire::lexical {
     return compare(target, "true", "false");
   }
 
-  StringType GetStringType(string src, bool ignore_symbol_rule) {
-    StringType type = kStringTypeNull;
-    if (src.empty())              type = kStringTypeNull;
-    else if (IsBoolean(src))      type = kStringTypeBool;
-    else if (IsIdentifier(src))   type = kStringTypeIdentifier;
-    else if (IsInteger(src))      type = kStringTypeInt;
-    else if (IsFloat(src))        type = kStringTypeFloat;
-    else if (IsBlank(src))        type = kStringTypeBlank;
-    else if (IsString(src))       type = kStringTypeLiteralStr;
+  LiteralType GetStringType(string src, bool ignore_symbol_rule) {
+    LiteralType type = kLiteralTypeInvalid;
+    if (src.empty())              type = kLiteralTypeInvalid;
+    else if (IsBoolean(src))      type = kLiteralTypeBool;
+    else if (IsIdentifier(src))   type = kLiteralTypeIdentifier;
+    else if (IsInteger(src))      type = kLiteralTypeInt;
+    else if (IsFloat(src))        type = kLiteralTypeFloat;
+    else if (IsBlank(src))        type = kLiteralTypeWhitespace;
+    else if (IsString(src))       type = kLiteralTypeString;
 
     if (!ignore_symbol_rule) {
-      if (IsSymbol(src)) type = kStringTypeSymbol;
+      if (IsSymbol(src)) type = kLiteralTypeSymbol;
     }
     return type;
   }
