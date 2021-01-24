@@ -8,7 +8,6 @@ namespace sapphire {
     kArgumentObjectStack, 
     kArgumentReturnValue, 
     kArgumentInvalid
-
   };
 
   enum NodeType {
