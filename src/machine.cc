@@ -708,7 +708,7 @@ namespace sapphire {
 
         impl = &initializer_obj->Cast<Function>();
         if (impl->GetType() == kFunctionVMCode) {
-          frame.initializer_calling = true;
+          frame.do_initializer_calling = true;
           frame.struct_base = *ptr;
         }
       }
@@ -968,7 +968,7 @@ namespace sapphire {
       if (!state) {
         if (frame.branch_jump_stack.empty()) {
           frame.Goto(frame.jump_stack.top());
-          frame.cancel_cleanup = true;
+          frame.keep_condition = true;
         }
         else {
           create_env();
@@ -1097,14 +1097,15 @@ namespace sapphire {
         return;
       }
 
-      auto container_unit = CallMethod(iterator_obj, "get");
+      auto container_unit = CallMethod(iterator_obj, "get").GetObj();
       if (frame.error) return;
 
       frame.scope_indicator.push(true);
       obj_stack_.Push(true);
       obj_stack_.CreateObject(kStrIteratorObj, iterator_obj);
       obj_stack_.CreateObject(kStrContainerKeepAliveSlot, container_obj);
-      obj_stack_.CreateObject(unit_id, container_obj, TryAppendTokenId(unit_id));
+      obj_stack_.CreateObject(unit_id, container_unit, TryAppendTokenId(unit_id));
+
     }
   }
 
@@ -1420,10 +1421,10 @@ namespace sapphire {
 
     switch (token) {
     case kKeywordContinue:
-      frame.activated_continue = true; 
+      frame.from_continue = true; 
       break;
     case kKeywordBreak:
-      frame.activated_break = true; 
+      frame.from_break = true; 
       frame.final_cycle = true;
       break;
     default:break;
@@ -1478,13 +1479,13 @@ namespace sapphire {
 
   void Machine::CommandConditionEnd() {
     auto &frame = frame_stack_.top();
-    if (!frame.cancel_cleanup) {
+    if (!frame.keep_condition) {
       frame.condition_stack.pop();
       frame.scope_indicator.pop();
       obj_stack_.Pop();
       
       while (!frame.branch_jump_stack.empty()) frame.branch_jump_stack.pop();
-      frame.cancel_cleanup = false;
+      frame.keep_condition = false;
     }
 
     frame.jump_stack.pop();
@@ -1494,15 +1495,15 @@ namespace sapphire {
     auto &frame = frame_stack_.top();
 
     if (frame.final_cycle) {
-      if (frame.activated_continue) {
+      if (frame.from_continue) {
         frame.Goto(nest);
-        frame.activated_continue = false;
+        frame.from_continue = false;
         obj_stack_.ClearCurrent();
         //obj_stack_.GetCurrent().Clear();
         frame.jump_from_end = true;
       }
       else {
-        if (frame.activated_break) frame.activated_break = false;
+        if (frame.from_break) frame.from_break = false;
         while (!frame.return_stack.empty()) {
           delete frame.return_stack.back();
           frame.return_stack.pop_back();
@@ -1530,14 +1531,14 @@ namespace sapphire {
     auto &frame = frame_stack_.top();
 
     if (frame.final_cycle) {
-      if (frame.activated_continue) {
+      if (frame.from_continue) {
         frame.Goto(nest);
-        frame.activated_continue = false;
+        frame.from_continue = false;
         obj_stack_.GetCurrent().ClearExcept(kForEachExceptions);
         frame.jump_from_end = true;
       }
       else {
-        if (frame.activated_break) frame.activated_break = false;
+        if (frame.from_break) frame.from_break = false;
         frame.jump_stack.pop();
         obj_stack_.Pop();
         
@@ -1547,6 +1548,7 @@ namespace sapphire {
     }
     else {
       frame.Goto(nest);
+      // container unit will be disposed here, you need to regenerate a new one in header
       obj_stack_.GetCurrent().ClearExcept(kForEachExceptions);
       frame.jump_from_end = true;
     }
@@ -2531,6 +2533,7 @@ namespace sapphire {
       //keep alive
       auto ret_objview = FetchObjectView(args[0]);
       if (frame_stack_.top().error) return;
+      auto ret_keepalive = ret_objview.Seek();
 
       if (!constraint_type.empty() && ret_objview.Seek().GetTypeId() != constraint_type) {
         frame_stack_.top().MakeError("Mismatched return value type: " + constraint_type);
@@ -2547,7 +2550,7 @@ namespace sapphire {
       }
 
       RecoverLastState(true);
-      frame_stack_.top().RefreshReturnStack(ret_objview.Seek());
+      frame_stack_.top().RefreshReturnStack(ret_keepalive);
      
     }
     else if (args.size() == 0) {
@@ -3149,8 +3152,8 @@ namespace sapphire {
     };
     //Protect current runtime environment and load another function
     auto update_stack_frame = [&](Function &func) -> void {
-      bool inside_initializer_calling = frame->initializer_calling;
-      frame->initializer_calling = false;
+      bool inside_initializer_calling = frame->do_initializer_calling;
+      frame->do_initializer_calling = false;
       code_stack_.push_back(&func.Get<VMCode>());
       frame_stack_.push(RuntimeFrame(func.GetId()));
       obj_stack_.Push();
@@ -3179,7 +3182,7 @@ namespace sapphire {
       code_stack_.pop_back();
       code_stack_.push_back(&func.Get<VMCode>());
       obj_map.Naturalize(obj_stack_.GetCurrent());
-      //auto inside_initiailizer_calling = frame_stack_.top().initializer_calling;
+      //auto inside_initiailizer_calling = frame_stack_.top().do_initializer_calling;
       frame_stack_.top() = RuntimeFrame(func.GetId());
       //frame_stack_.top().inside_initializer_calling = inside_initiailizer_calling;
       obj_stack_.ClearCurrent();
@@ -3197,7 +3200,7 @@ namespace sapphire {
         //start new processing in next tick.
         if (invoking_request) goto direct_load_vmcode;
         if (IsTailRecursion(frame->idx, &impl->Get<VMCode>())) tail_recursion();
-        else if (IsTailCall(frame->idx) && !frame->initializer_calling) tail_call(*impl);
+        else if (IsTailCall(frame->idx) && !frame->do_initializer_calling) tail_call(*impl);
         else {
         direct_load_vmcode:
           update_stack_frame(*impl);
@@ -3232,16 +3235,6 @@ namespace sapphire {
       return switch_to_next_tick;
     };
 
-    //auto unpack_invoking_request = [&]() -> bool {
-    //  bool failed = false;
-
-    //  auto invoking_req = BuildStringVector(msg.GetDetail());
-    //  auto obj = msg.GetObj();
-    //  failed = FetchFunctionImplEx(impl, invoking_req[0], invoking_req[1], &obj);
-
-    //  return failed;
-    //};
-
     auto cleanup_cache = [&]() -> void {
       for (auto &unit : view_delegator_) delete unit;
       view_delegator_.clear();
@@ -3268,24 +3261,21 @@ namespace sapphire {
         if (frame->error) break;
         //Update register data
         refresh_tick();
-        if (!(frame->inside_initializer_calling && frame->stop_point)) {
+        if (!frame->stop_point) {
           frame->Stepping();
         }
         continue;
       }
 
-      //load current command and refreshing indicators
-      command          = &(*code)[frame->idx];
-      script_idx       = command->first.idx;
-      // dispose returning value
+      command = &(*code)[frame->idx];
+      script_idx = command->first.idx;
+      // indicator for disposing returning value or not
       frame->void_call = command->first.option.void_call; 
       frame->current_code = code;
       frame->is_command = command->first.type == kRequestCommand;
 
-      //Built-in machine commands.
       if (command->first.type == kRequestCommand) {
-        MachineCommands(command->first.GetKeywordValue(), 
-          command->second, command->first);
+        MachineCommands(command->first.GetKeywordValue(), command->second, command->first);
         
         auto is_return = command->first.GetKeywordValue() == kKeywordReturn;
 
@@ -3299,20 +3289,16 @@ namespace sapphire {
         continue;
       }
       else {
-        //cleaning object map for user-defined function and C++ function
         obj_map.clear();
 
-        //Query function(Interpreter built-in or user-defined)
-        //error string will be generated in FetchFunctionImpl.
         if (command->first.type == kRequestFunction) {
           if (!FetchFunctionImpl(impl, command, obj_map)) {
             break;
           }
         }
 
-        //Build object map for function call expressed by command
         GenerateArgs(*impl, command->second, obj_map);
-        if (frame->initializer_calling) GenerateStructInstance(obj_map);
+        if (frame->do_initializer_calling) GenerateStructInstance(obj_map);
         if (frame->error) break;
 
 
@@ -3320,18 +3306,15 @@ namespace sapphire {
         if (frame->error) break;
         if (next_tick) continue;
 
-        //Pushing returning value to returning stack.
         if (msg.HasObject()) frame->RefreshReturnStack(msg.GetObjectInfo(), msg.GetPtr());
         else frame->RefreshReturnStack(Object());
       }
-      //indicator + 1
+
       frame->Stepping();
     }
 
     if (frame->error) {
-      //TODO:reporting function calling chain
-      AppendMessage(frame->msg_string, kStateError,
-        logger_, script_idx);
+      AppendMessage(frame->msg_string, kStateError, logger_, script_idx);
     }
 
     error_ = frame->error;

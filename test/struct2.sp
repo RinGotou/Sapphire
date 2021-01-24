@@ -11,7 +11,7 @@ struct model
 end
 
 struct phone
-  model_ = null()
+  attribute model_
   
   fn initializer(id)
     println('Init phone object')

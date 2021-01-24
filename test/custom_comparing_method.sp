@@ -1,5 +1,5 @@
 struct base
-  value = null()
+  attribute value # Bug? : null doesn't have a initializer
   
   fn initializer(value)
     me.value = value

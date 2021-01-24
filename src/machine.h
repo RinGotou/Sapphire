@@ -194,18 +194,17 @@ namespace sapphire {
   public:
     bool error;
     bool warning;
-    bool activated_continue;
-    bool activated_break;
+    bool from_continue;
+    bool from_break;
     bool void_call;
     bool disable_step;
     bool final_cycle;
     bool jump_from_end;
-    bool initializer_calling;
+    bool do_initializer_calling;
     bool inside_initializer_calling;
     bool stop_point;
     bool has_return_value_from_invoking;
-    bool cancel_cleanup;
-    bool direct_delivering;
+    bool keep_condition;
     bool is_command;
     bool rstk_operated;
     VMCode *current_code;
@@ -226,18 +225,17 @@ namespace sapphire {
     RuntimeFrame(string scope = kStrRootScope) :
       error(false),
       warning(false),
-      activated_continue(false),
-      activated_break(false),
+      from_continue(false),
+      from_break(false),
       void_call(false),
       disable_step(false),
       final_cycle(false),
       jump_from_end(false),
-      initializer_calling(false),
+      do_initializer_calling(false),
       inside_initializer_calling(false),
       stop_point(false),
       has_return_value_from_invoking(false),
-      cancel_cleanup(false),
-      direct_delivering(false),
+      keep_condition(false),
       is_command(false),
       rstk_operated(false),
       current_code(nullptr),
@@ -290,15 +288,6 @@ namespace sapphire {
 
   using FrameStack = stack<RuntimeFrame, deque<RuntimeFrame>>;
 
-  //struct _IgnoredException : std::exception {};
-  //struct _CustomError : std::exception {
-  //public:
-  //  //TODO:Memory Management
-  //  _CustomError(const char *msg) : 
-  //    std::exception(std::runtime_error(msg)) {}
-  //};
-
-  //TODO: new argument generator and storage?
   class Machine {
   private:
     StandardLogger *logger_;
@@ -368,10 +357,6 @@ namespace sapphire {
     void CommandGetChar(ArgumentList &args);
     void SysCommand(ArgumentList &args);
     void CommandSleep(ArgumentList &args);
-
-    //TODO: Smaller command implementations
-    //void CommandJumpIf();
-    //void CommandJumpIfNot();
 
     void CommandTime();
     void CommandVersion();
