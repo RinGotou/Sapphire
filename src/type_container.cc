@@ -1,29 +1,6 @@
-#include "containers.h"
+#include "machine.h"
 
 namespace sapphire {
-  //Message IteratorStepForward(ObjectMap &p) {
-  //  auto &it = p[kStrMe].Cast<UnifiedIterator>();
-  //  it.StepForward();
-  //  return Message();
-  //}
-
-  //Message IteratorStepBack(ObjectMap &p) {
-  //  auto &it = p[kStrMe].Cast<UnifiedIterator>();
-  //  it.StepBack();
-  //  return Message();
-  //}
-
-  //Message IteratorOperatorCompare(ObjectMap &p) {
-  //  auto &rhs = p[kStrRightHandSide].Cast<UnifiedIterator>();
-  //  auto &lhs = p[kStrMe].Cast<UnifiedIterator>();
-  //  return Message().SetObject(lhs.Compare(rhs));
-  //}
-
-  //Message IteratorGet(ObjectMap &p) {
-  //  auto &it = p[kStrMe].Cast<UnifiedIterator>();
-  //  return Message().SetObject(it.Unpack());
-  //}
-
   Message NewArray(ObjectMap &p) {
     ManagedArray base = make_shared<ObjectArray>();
 
@@ -45,7 +22,7 @@ namespace sapphire {
     return Message().SetObject(Object(base, kTypeIdArray));
   }
 
-  Message ArrayGetElement(ObjectMap &p) {
+  Message Array_GetElement(ObjectMap &p) {
     ObjectArray &base = p.Cast<ObjectArray>(kStrMe);
     auto &idx = p.Cast<int64_t>("index");
     size_t size = base.size();
@@ -56,17 +33,17 @@ namespace sapphire {
     return Message().SetObjectRef(base[size_t(idx)]);
   }
 
-  Message ArrayGetSize(ObjectMap &p) {
+  Message Array_GetSize(ObjectMap &p) {
     auto &obj = p[kStrMe];
     int64_t size = static_cast<int64_t>(obj.Cast<ObjectArray>().size());
     return Message().SetObject(Object(make_shared<int64_t>(size), kTypeIdInt));
   }
 
-  Message ArrayEmpty(ObjectMap &p) {
+  Message Array_Empty(ObjectMap &p) {
     return Message().SetObject(p[kStrMe].Cast<ObjectArray>().empty());
   }
 
-  Message ArrayPush(ObjectMap &p) {
+  Message Array_Push(ObjectMap &p) {
     ObjectArray &base = p.Cast<ObjectArray>(kStrMe);
     Object obj = components::DumpObject(p["object"]);
     base.emplace_back(obj);
@@ -74,28 +51,14 @@ namespace sapphire {
     return Message();
   }
 
-  Message ArrayPop(ObjectMap &p) {
+  Message Array_Pop(ObjectMap &p) {
     ObjectArray &base = p.Cast<ObjectArray>(kStrMe);
     if (!base.empty()) base.pop_back();
 
     return Message().SetObject(base.empty());
   }
 
-  //Message ArrayHead(ObjectMap &p) {
-  //  auto &base = p[kStrMe].Cast<ObjectArray>();
-  //  shared_ptr<UnifiedIterator> it = 
-  //    make_shared<UnifiedIterator>(base.begin(), kContainerObjectArray);
-  //  return Message().SetObject(Object(it, kTypeIdIterator));
-  //}
-
-  //Message ArrayTail(ObjectMap &p) {
-  //  auto &base = p[kStrMe].Cast<ObjectArray>();
-  //  shared_ptr<UnifiedIterator> it = 
-  //    make_shared<UnifiedIterator>(base.end(), kContainerObjectArray);
-  //  return Message().SetObject(Object(it, kTypeIdIterator));
-  //}
-
-  Message ArrayClear(ObjectMap &p) {
+  Message Array_Clear(ObjectMap &p) {
     auto &base = p.Cast<ObjectArray>(kStrMe);
     base.clear();
     base.shrink_to_fit();
@@ -111,12 +74,12 @@ namespace sapphire {
     return Message().SetObject(Object(pair, kTypeIdPair));
   }
 
-  Message PairLeft(ObjectMap &p) {
+  Message Pair_Left(ObjectMap &p) {
     auto &base = p.Cast<ObjectPair>(kStrMe);
     return Message().SetObject(Object().PackObject(base.first));
   }
 
-  Message PairRight(ObjectMap &p) {
+  Message Pair_Right(ObjectMap &p) {
     auto &base = p.Cast<ObjectPair>(kStrMe);
     return Message().SetObject(Object().PackObject(base.second));
   }
@@ -126,7 +89,7 @@ namespace sapphire {
     return Message().SetObject(Object(table, kTypeIdTable));
   }
 
-  Message TableInsert(ObjectMap &p) {
+  Message Table_Insert(ObjectMap &p) {
     using namespace components;
     auto &table = p.Cast<ObjectTable>(kStrMe);
     auto &key = p["key"];
@@ -142,7 +105,7 @@ namespace sapphire {
     return Message();
   }
 
-  Message TableGetElement(ObjectMap &p) {
+  Message Table_GetElement(ObjectMap &p) {
     // Ref: https://stackoverflow.com/questions/53149145/
     // Seems nothing to worry about pointers to element
 
@@ -152,7 +115,7 @@ namespace sapphire {
     return Message().SetObjectRef(result);
   }
 
-  Message TableFindElement(ObjectMap &p) {
+  Message Table_FindElement(ObjectMap &p) {
     auto &table = p.Cast<ObjectTable>(kStrMe);
     auto &key = p["key"];
     auto it = table.find(key);
@@ -163,42 +126,28 @@ namespace sapphire {
     return Message().SetObject(Object());
   }
 
-  Message TableEraseElement(ObjectMap &p) {
+  Message Table_EraseElement(ObjectMap &p) {
     auto &table = p.Cast<ObjectTable>(kStrMe);
     auto &key = p["key"];
     auto count = table.erase(key);
     return Message().SetObject(static_cast<int64_t>(count));
   }
 
-  Message TableEmpty(ObjectMap &p) {
+  Message Table_Empty(ObjectMap &p) {
     auto &table = p.Cast<ObjectTable>(kStrMe);
     return Message().SetObject(table.empty());
   }
 
-  Message TableSize(ObjectMap &p) {
+  Message Table_GetSize(ObjectMap &p) {
     auto &table = p.Cast<ObjectTable>(kStrMe);
     return Message().SetObject(static_cast<int64_t>(table.size()));
   }
 
-  Message TableClear(ObjectMap &p) {
+  Message Table_Clear(ObjectMap &p) {
     auto &table = p.Cast<ObjectTable>(kStrMe);
     table.clear();
     return Message();
   }
-
-  //Message TableHead(ObjectMap &p) {
-  //  auto &table = p.Cast<ObjectTable>(kStrMe);
-  //  shared_ptr<UnifiedIterator> it =
-  //    make_shared<UnifiedIterator>(table.begin(), kContainerObjectTable);
-  //  return Message().SetObject(Object(it, kTypeIdIterator));
-  //}
-
-  //Message TableTail(ObjectMap &p) {
-  //  auto &table = p.Cast<ObjectTable>(kStrMe);
-  //  shared_ptr<UnifiedIterator> it =
-  //    make_shared<UnifiedIterator>(table.end(), kContainerObjectTable);
-  //  return Message().SetObject(Object(it, kTypeIdIterator));
-  //}
 
   void InitContainerComponents() {
     using namespace components;
@@ -207,34 +156,20 @@ namespace sapphire {
     StructMethodGenerator(kTypeIdArray).Create(
       {
         Function(NewArray, "size|init_value", kStrInitializer, kParamAutoFill).SetLimit(0),
-        Function(ArrayGetElement, "index", "at"),
-        Function(ArrayGetSize, "", "size"),
-        Function(ArrayPush, "object", "push"),
-        Function(ArrayPop, "", "pop"),
-        Function(ArrayEmpty, "", "empty"),
-        //Function(ArrayHead, "", "head"),
-        //Function(ArrayTail, "", "tail"),
-        Function(ArrayClear, "", "clear")
+        Function(Array_GetElement, "index", "at"),
+        Function(Array_GetSize, "", "size"),
+        Function(Array_Push, "object", "push"),
+        Function(Array_Pop, "", "pop"),
+        Function(Array_Empty, "", "empty"),
+        Function(Array_Clear, "", "clear")
       }
     );
-    
-    //todo:remove iterator type
-    //CreateStruct(kTypeIdIterator);
-    //StructMethodGenerator(kTypeIdIterator).Create(
-    //  {
-    //    Function(IteratorGet, "", "obj"),
-    //    Function(IteratorStepForward, "", "step_forward"),
-    //    Function(IteratorStepBack, "", "step_back"),
-    //    Function(IteratorOperatorCompare, kStrRightHandSide, kStrCompare)
-    //  }
-    //);
 
     CreateStruct(kTypeIdPair);
     StructMethodGenerator(kTypeIdPair).Create(
       {
-        //Function(NewPair, "left|right", kStrInitializer),
-        Function(PairLeft, "", "left"),
-        Function(PairRight, "", "right")
+        Function(Pair_Left, "", "left"),
+        Function(Pair_Right, "", "right")
       }
     );
 
@@ -242,20 +177,17 @@ namespace sapphire {
     StructMethodGenerator(kTypeIdTable).Create(
       {
         Function(NewTable, "", kStrInitializer),
-        Function(TableInsert, "key|value", "insert"),
-        Function(TableGetElement, "key", kStrAt),
-        Function(TableFindElement, "key", "find"),
-        Function(TableEraseElement, "key", "erase"),
-        Function(TableEmpty, "", "empty"),
-        Function(TableSize, "", "size"),
-        Function(TableClear, "", "clear")
-        //Function(TableHead, "", "head"),
-        //Function(TableTail, "", "tail")
+        Function(Table_Insert, "key|value", "insert"),
+        Function(Table_GetElement, "key", kStrAt),
+        Function(Table_FindElement, "key", "find"),
+        Function(Table_EraseElement, "key", "erase"),
+        Function(Table_Empty, "", "empty"),
+        Function(Table_GetSize, "", "size"),
+        Function(Table_Clear, "", "clear")
       }
     );
 
     EXPORT_CONSTANT(kTypeIdArray);
-    //EXPORT_CONSTANT(kTypeIdIterator);
     EXPORT_CONSTANT(kTypeIdPair);
     EXPORT_CONSTANT(kTypeIdTable);
   }
