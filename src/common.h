@@ -112,15 +112,6 @@ namespace sapphire {
 #endif
 #endif
 
-  /* Plain Type Code */
-  enum PlainType {
-    kPlainInt     = 1, 
-    kPlainFloat   = 2, 
-    kPlainString  = 3, 
-    kPlainBool    = 4, 
-    kNotPlainType = -1
-  };
-
   const string kTypeIdAnyStorage      = "!any_storage"; // for internal implementation
   const string kTypeIdNull            = "null";
   const string kTypeIdInt             = "int";

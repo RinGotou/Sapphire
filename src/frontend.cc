@@ -220,7 +220,7 @@ namespace sapphire {
 
         if (idx == target.size() - 1) {
           AppendMessage("Unnecessary semicolon at line " +
-            to_string(src.first), kStateWarning, logger_);
+            to_string(src.first), StateLevel::Warning, logger_);
         }
         else {
           dest_->emplace_back(CombinedToken(src.first, deque<Token>()));
@@ -315,8 +315,8 @@ namespace sapphire {
 
     if (frame_->nodes.back().IsPlaceholder()) frame_->nodes.pop_back();
 
-    bool is_bin_operator = lexical::IsBinaryOperator(frame_->nodes.back().GetKeywordValue());
-    bool is_mono_operator = lexical::IsMonoOperator(frame_->nodes.back().GetKeywordValue());
+    bool is_bin_operator = lexical::IsBinaryOperator(frame_->nodes.back().GetOperation());
+    bool is_mono_operator = lexical::IsMonoOperator(frame_->nodes.back().GetOperation());
 
     if (is_bin_operator) limit = 2;
     if (is_mono_operator) limit = 1;
@@ -339,8 +339,8 @@ namespace sapphire {
 
     action_base_.emplace_back(Sentense(frame_->nodes.back(), arguments));
     frame_->nodes.pop_back();
-    frame_->args.emplace_back(Argument("", kArgumentReturnValue, LiteralType::Invalid));
-    if (frame_->nodes.empty() && !IgnoreVoidCall(action_base_.back().first.GetKeywordValue()) &&
+    frame_->args.emplace_back(Argument("", ArgumentType::RetStack, LiteralType::Invalid));
+    if (frame_->nodes.empty() && !IgnoreVoidCall(action_base_.back().first.GetOperation()) &&
       (frame_->next.first == "," || frame_->next.second == LiteralType::Invalid)) {
       action_base_.back().first.annotation.void_call = true;
     }
@@ -432,8 +432,8 @@ namespace sapphire {
     ASTNode node(token);
 
     if (!frame_->nodes.empty()) {
-      bool is_operator = lexical::IsBinaryOperator(frame_->nodes.back().GetKeywordValue());
-      int stack_top_priority = lexical::GetTokenPriority(frame_->nodes.back().GetKeywordValue());
+      bool is_operator = lexical::IsBinaryOperator(frame_->nodes.back().GetOperation());
+      int stack_top_priority = lexical::GetTokenPriority(frame_->nodes.back().GetOperation());
 
       auto checking = [&stack_top_priority, &current_priority]()->bool {
         return (stack_top_priority >= current_priority);
@@ -441,8 +441,8 @@ namespace sapphire {
 
       while (!frame_->nodes.empty() && is_operator && checking()) {
         ProduceVMCode();
-        is_operator = (!frame_->nodes.empty() && lexical::IsBinaryOperator(frame_->nodes.back().GetKeywordValue()));
-        stack_top_priority = frame_->nodes.empty() ? 5 : lexical::GetTokenPriority(frame_->nodes.back().GetKeywordValue());
+        is_operator = (!frame_->nodes.empty() && lexical::IsBinaryOperator(frame_->nodes.back().GetOperation()));
+        stack_top_priority = frame_->nodes.empty() ? 5 : lexical::GetTokenPriority(frame_->nodes.back().GetOperation());
       }
     }
 
@@ -483,7 +483,7 @@ namespace sapphire {
     }
 
     frame_->args.emplace_back(
-      Argument(frame_->current.first, kArgumentLiteralValue, LiteralType::Identifier));
+      Argument(frame_->current.first, ArgumentType::Literal, LiteralType::Identifier));
 
     //Parameter segment
     //left parenthesis will be disposed in first loop
@@ -519,7 +519,7 @@ namespace sapphire {
             return false;
           }
 
-          Argument constaint_arg(frame_->current.first, kArgumentLiteralValue, LiteralType::Identifier);
+          Argument constaint_arg(frame_->current.first, ArgumentType::Literal, LiteralType::Identifier);
           constaint_arg.properties.fn.constraint = true;
           frame_->args.emplace_back(constaint_arg);
         }
@@ -572,7 +572,7 @@ namespace sapphire {
         break;
       }
       else {
-        Argument arg(frame_->current.first, kArgumentLiteralValue, LiteralType::Identifier);
+        Argument arg(frame_->current.first, ArgumentType::Literal, LiteralType::Identifier);
         if (optional) {
           arg.properties.fn.optional_param = true;
           optional = false;
@@ -624,7 +624,7 @@ namespace sapphire {
     frame_->args.emplace_back(Argument());
     //struct identifier
     frame_->args.emplace_back(Argument(
-      frame_->current.first, kArgumentLiteralValue, LiteralType::Identifier));
+      frame_->current.first, ArgumentType::Literal, LiteralType::Identifier));
 
     if (terminator == Terminator::Module && frame_->next.second != LiteralType::Invalid) {
       error_string_ = "Invalid argument in module definition";
@@ -634,7 +634,7 @@ namespace sapphire {
       //inheritance source struct
       frame_->Eat(); frame_->Eat();
       frame_->args.emplace_back(Argument(
-        frame_->current.first, kArgumentLiteralValue, LiteralType::Identifier));
+        frame_->current.first, ArgumentType::Literal, LiteralType::Identifier));
     }
 
     return true;
@@ -663,7 +663,7 @@ namespace sapphire {
     }
 
     frame_->args.emplace_back(Argument(
-      frame_->current.first, kArgumentLiteralValue, LiteralType::Identifier));
+      frame_->current.first, ArgumentType::Literal, LiteralType::Identifier));
 
     
     if (frame_->Eat(); lexical::GetTerminatorCode(frame_->current.first) != Terminator::In) {
@@ -752,12 +752,12 @@ namespace sapphire {
     else if ((frame_->next.first == "=" || frame_->next.first == "<-") &&
       frame_->last.first != ".") {
       frame_->args.emplace_back(Argument(
-        frame_->current.first, kArgumentLiteralValue, LiteralType::Identifier));
+        frame_->current.first, ArgumentType::Literal, LiteralType::Identifier));
       return true;
     }
     else {
       frame_->args.emplace_back(Argument(
-        frame_->current.first, kArgumentObjectStack, LiteralType::Identifier));
+        frame_->current.first, ArgumentType::Pool, LiteralType::Identifier));
 
       if (!frame_->domain.IsPlaceholder() || frame_->seek_last_assert) {
         frame_->args.back().properties.domain.id = frame_->domain.GetData();
@@ -789,7 +789,7 @@ namespace sapphire {
     }
 
     Argument arg(
-      frame_->current.first, kArgumentObjectStack, LiteralType::Identifier);
+      frame_->current.first, ArgumentType::Pool, LiteralType::Identifier);
     frame_->args.emplace_back(arg);
 
     return true;
@@ -797,7 +797,7 @@ namespace sapphire {
 
   void FirstStageParsing::LiteralValue() {
     frame_->args.emplace_back(
-      Argument(frame_->current.first, kArgumentLiteralValue, frame_->current.second));
+      Argument(frame_->current.first, ArgumentType::Literal, frame_->current.second));
   }
 
 
@@ -1121,8 +1121,8 @@ namespace sapphire {
     //toke id generation
     if (good) {
       for (auto it = dest_->begin(); it != dest_->end(); ++it) {
-        if (compare(it->first.GetKeywordValue(), Operation::Bind, Operation::Delivering)
-          && it->second.size() == 2 && it->second[0].GetType() == kArgumentLiteralValue) {
+        if (compare(it->first.GetOperation(), Operation::Bind, Operation::Delivering)
+          && it->second.size() == 2 && it->second[0].GetType() == ArgumentType::Literal) {
 
           it->second[0].properties.token_id = TryAppendTokenId(it->second[0].GetData());
         }
@@ -1134,7 +1134,7 @@ namespace sapphire {
 
         //argument
         for (auto &unit : it->second) {
-          if (unit.GetType() == kArgumentObjectStack) {
+          if (unit.GetType() == ArgumentType::Pool) {
             unit.properties.token_id = TryAppendTokenId(unit.HasDomain() ? unit.properties.domain.id : unit.GetData());
           }
         }

@@ -4,12 +4,12 @@
 
 namespace sapphire {
   inline PlainType FindTypeCode(string type_id) {
-    PlainType type = kNotPlainType;
+    PlainType type = PlainType::Invalid;
 
-    if (type_id == kTypeIdInt) type = kPlainInt;
-    if (type_id == kTypeIdFloat) type = kPlainFloat;
-    if (type_id == kTypeIdString) type = kPlainString;
-    if (type_id == kTypeIdBool) type = kPlainBool;
+    if (type_id == kTypeIdInt) type = PlainType::Int;
+    if (type_id == kTypeIdFloat) type = PlainType::Float;
+    if (type_id == kTypeIdString) type = PlainType::String;
+    if (type_id == kTypeIdBool) type = PlainType::Bool;
 
     return type;
   }
@@ -27,8 +27,8 @@ namespace sapphire {
     }
     else {
       switch (auto type = FindTypeCode(obj.GetTypeId()); type) {
-      case kPlainFloat:result = static_cast<int64_t>(obj.Cast<double>()); break;
-      case kPlainBool:result = obj.Cast<bool>() ? 1 : 0; break;
+      case PlainType::Float:result = static_cast<int64_t>(obj.Cast<double>()); break;
+      case PlainType::Bool:result = obj.Cast<bool>() ? 1 : 0; break;
       default:break;
       }
     }
@@ -44,8 +44,8 @@ namespace sapphire {
     }
     else {
       switch (auto type = FindTypeCode(obj.GetTypeId()); type) {
-      case kPlainInt:result = static_cast<double>(obj.Cast<int64_t>()); break;
-      case kPlainBool:result = obj.Cast<bool>() ? 1.0 : 0.0; break;
+      case PlainType::Int:result = static_cast<double>(obj.Cast<int64_t>()); break;
+      case PlainType::Bool:result = obj.Cast<bool>() ? 1.0 : 0.0; break;
       default:break;
       }
     }
@@ -61,9 +61,9 @@ namespace sapphire {
     }
     else {
       switch (auto type = FindTypeCode(obj.GetTypeId()); type) {
-      case kPlainFloat:result = to_string(obj.Cast<double>()); break;
-      case kPlainBool:result = obj.Cast<bool>() ? kStrTrue : kStrFalse; break;
-      case kPlainInt:result = to_string(obj.Cast<int64_t>()); break;
+      case PlainType::Float:result = to_string(obj.Cast<double>()); break;
+      case PlainType::Bool:result = obj.Cast<bool>() ? kStrTrue : kStrFalse; break;
+      case PlainType::Int:result = to_string(obj.Cast<int64_t>()); break;
       default:break;
       }
     }
@@ -81,10 +81,10 @@ namespace sapphire {
 
 
     switch (type) {
-    case kPlainInt: result = obj.Cast<int64_t>() > 0; break;
-    case kPlainFloat: result = obj.Cast<double>() > 0.0; break;
-    case kPlainBool: result = obj.Cast<bool>(); break;
-    case kPlainString: result = !obj.Cast<string>().empty(); break;
+    case PlainType::Int: result = obj.Cast<int64_t>() > 0; break;
+    case PlainType::Float: result = obj.Cast<double>() > 0.0; break;
+    case PlainType::Bool: result = obj.Cast<bool>(); break;
+    case PlainType::String: result = !obj.Cast<string>().empty(); break;
     default:
       break;
     }
@@ -286,8 +286,8 @@ namespace sapphire {
     }
     else if (idx == vmcode.size() - 2) {
       bool needed_by_next_call =
-        vmcode[idx + 1].first.GetKeywordValue() == Operation::Return &&
-        vmcode[idx + 1].second.back().GetType() == kArgumentReturnValue &&
+        vmcode[idx + 1].first.GetOperation() == Operation::Return &&
+        vmcode[idx + 1].second.back().GetType() == ArgumentType::RetStack &&
         vmcode[idx + 1].second.size() == 1;
       if (!current.first.annotation.void_call && needed_by_next_call) {
         result = true;
@@ -307,8 +307,8 @@ namespace sapphire {
     }
     else if (idx == vmcode.size() - 2) {
       bool needed_by_next_call = 
-        vmcode[idx + 1].first.GetKeywordValue() == Operation::Return &&
-        vmcode[idx + 1].second.back().GetType() == kArgumentReturnValue &&
+        vmcode[idx + 1].first.GetOperation() == Operation::Return &&
+        vmcode[idx + 1].second.back().GetType() == ArgumentType::RetStack &&
         vmcode[idx + 1].second.size() == 1;
       if (!vmcode[idx].first.annotation.void_call && needed_by_next_call) {
         result = true;
@@ -380,11 +380,11 @@ namespace sapphire {
     ObjectPointer ptr = nullptr;
     ObjectView view;
 
-    if (arg.GetType() == kArgumentLiteralValue) {
+    if (arg.GetType() == ArgumentType::Literal) {
       view = FetchLiteralObject(arg);
-      view.source = ObjectViewSource::kSourceLiteral;
+      view.source = ObjectViewSource::ObjectViewSource::Literal;
     }
-    else if (arg.GetType() == kArgumentObjectStack) {
+    else if (arg.GetType() == ArgumentType::Pool) {
       if (!arg.properties.domain.id.empty() || arg.properties.member_access.use_last_assert) {
         if (arg.properties.member_access.use_last_assert) {
           auto &base = frame.assert_rc_copy.Cast<ObjectStruct>();
@@ -398,7 +398,7 @@ namespace sapphire {
 
           if (arg.properties.member_access.is_chain_tail) frame.assert_rc_copy = Object();
         }
-        else if (arg.properties.domain.type == kArgumentObjectStack) {
+        else if (arg.properties.domain.type == ArgumentType::Pool) {
           ptr = obj_stack_.Find(arg.GetData(), arg.properties.domain.id, arg.properties.token_id);
 
           if (ptr != nullptr) {
@@ -407,7 +407,7 @@ namespace sapphire {
           }
           else MEMBER_NOT_FOUND_MSG;
         }
-        else if (arg.properties.domain.type == kArgumentReturnValue) {
+        else if (arg.properties.domain.type == ArgumentType::RetStack) {
           auto &sub_container = return_stack.back()->IsObjectView() ?
             dynamic_cast<ObjectView *>(return_stack.back())->Seek().Cast<ObjectStruct>() :
             dynamic_cast<ObjectPointer>(return_stack.back())->Cast<ObjectStruct>();
@@ -435,9 +435,9 @@ namespace sapphire {
           frame.MakeError("Object is not found: " + arg.GetData());
         }
       }
-      view.source = ObjectViewSource::kSourceReference;
+      view.source = ObjectViewSource::ObjectViewSource::Ref;
     }
-    else if (arg.GetType() == kArgumentReturnValue) {
+    else if (arg.GetType() == ArgumentType::RetStack) {
       if (!return_stack.empty()) {
         if (!return_stack.back()->IsAlive()) OBJECT_DEAD_MSG;
         view_delegator_.emplace_back(return_stack.back());
@@ -455,7 +455,7 @@ namespace sapphire {
       else {
         frame.MakeError("Can't get object from stack(Internal error)");
       }
-      view.source = ObjectViewSource::kSourceReference;
+      view.source = ObjectViewSource::ObjectViewSource::Ref;
     }
 
 #undef OBJECT_DEAD_MSG
@@ -600,7 +600,7 @@ namespace sapphire {
     auto id = command->first.GetFunctionId();
     auto domain = command->first.GetFunctionDomain();
 
-    auto has_domain = domain.GetType() != kArgumentInvalid ||
+    auto has_domain = domain.GetType() != ArgumentType::Invalid ||
       command->first.annotation.use_last_assert;
 
     if (has_domain) {
@@ -670,7 +670,7 @@ namespace sapphire {
         }
 
         impl = &initializer_obj->Cast<Function>();
-        if (impl->GetType() == kFunctionVMCode) {
+        if (impl->GetType() == FunctionType::Operation) {
           frame.do_initializer_calling = true;
           frame.struct_base = *ptr;
         }
@@ -688,8 +688,8 @@ namespace sapphire {
   void Machine::CheckDomainObject(Function &impl, ASTNode &node, bool first_assert) {
     auto &frame = frame_stack_.top();
     auto domain = node.GetFunctionDomain();
-    auto operation = node.GetKeywordValue();
-    auto need_catching = domain.GetType() == kArgumentObjectStack
+    auto operation = node.GetOperation();
+    auto need_catching = domain.GetType() == ArgumentType::Pool
       && ((operation != Operation::DomainAssertCommand)
         || (operation == Operation::DomainAssertCommand && first_assert));
 
@@ -715,10 +715,10 @@ namespace sapphire {
       data = unit.GetData();
       type = unit.GetType();
 
-      if (unit.properties.domain.type == kArgumentObjectStack) {
+      if (unit.properties.domain.type == ArgumentType::Pool) {
         view = ObjectView(obj_stack_.Find(unit.properties.domain.id, unit.properties.token_id));
       }
-      else if (type == kArgumentObjectStack) {
+      else if (type == ArgumentType::Pool) {
         view = ObjectView(obj_stack_.Find(string(data), unit.properties.token_id));
       }
       else {
@@ -750,7 +750,7 @@ namespace sapphire {
     bool variable = false;
     bool not_assert_before = false;
     bool first_assert = false;
-    ParameterPattern argument_mode = kParamFixed;
+    ParameterPattern argument_mode = ParameterPattern::Fixed;
     vector<string> params;
     AnnotatedAST code(&origin_code);
     string return_value_constraint;
@@ -779,8 +779,8 @@ namespace sapphire {
       params.push_back(id);
     }
 
-    if (optional) argument_mode = kParamAutoFill;
-    if (variable) argument_mode = kParamAutoSize;
+    if (optional) argument_mode = ParameterPattern::Optional;
+    if (variable) argument_mode = ParameterPattern::Variable;
 
     Function impl(nest + 1, code, args[0].GetData(), params, argument_mode);
 
@@ -790,8 +790,8 @@ namespace sapphire {
 
     if (closure) {
       for (auto it = code.begin(); it != code.end(); ++it) {
-        first_assert = not_assert_before && it->first.GetKeywordValue() == Operation::DomainAssertCommand;
-        not_assert_before = it->first.GetKeywordValue() != Operation::DomainAssertCommand;
+        first_assert = not_assert_before && it->first.GetOperation() == Operation::DomainAssertCommand;
+        not_assert_before = it->first.GetOperation() != Operation::DomainAssertCommand;
         CheckDomainObject(impl, it->first, first_assert);
         CheckArgrumentList(impl, it->second);
       }
@@ -824,13 +824,13 @@ namespace sapphire {
     ObjectMap obj_map = args;
     obj_map.emplace(NamedObject(kStrMe, obj));
 
-    if (impl->GetType() == kFunctionVMCode) {
+    if (impl->GetType() == FunctionType::Operation) {
       result = CallVMCFunction(*impl, obj_map);
     }
-    else if (impl->GetType() == kFunctionExternal) {
+    else if (impl->GetType() == FunctionType::External) {
       frame.MakeError("Unsupported feature(Invoke external function)");
     }
-    else if (impl->GetType() == kFunctionCXX) {
+    else if (impl->GetType() == FunctionType::Component) {
       auto activity = impl->Get<Activity>();
       result = activity(obj_map);
       //if (!result.HasObject()) {
@@ -853,7 +853,7 @@ namespace sapphire {
     auto &frame = frame_stack_.top();
     Message result;
 
-    if (impl.GetType() != kFunctionVMCode) {
+    if (impl.GetType() != FunctionType::Operation) {
       frame.MakeError("Invalid function variant");
       return result;
     }
@@ -1609,7 +1609,7 @@ namespace sapphire {
     }
 
     for (auto &unit : args) {
-      if (unit.GetType() != kArgumentObjectStack) {
+      if (unit.GetType() != ArgumentType::Pool) {
         error = true;
         break;
       }
@@ -1626,7 +1626,7 @@ namespace sapphire {
     auto &frame = frame_stack_.top();
 
     if (args.size() == 2) {
-      if (args[0].GetType() == kArgumentLiteralValue || args[1].GetType() == kArgumentLiteralValue) {
+      if (args[0].GetType() == ArgumentType::Literal || args[1].GetType() == ArgumentType::Literal) {
         frame.MakeError("Cannot modify a literal value");
         return;
       }
@@ -1692,7 +1692,7 @@ namespace sapphire {
       return;
     }
 
-    if (args[0].GetType() == kArgumentLiteralValue || args[1].GetType() == kArgumentLiteralValue) {
+    if (args[0].GetType() == ArgumentType::Literal || args[1].GetType() == ArgumentType::Literal) {
       frame.MakeError("Cannot modify a literal value");
       return;
     }
@@ -1714,7 +1714,7 @@ namespace sapphire {
   void Machine::CommandBind(ArgumentList &args, bool local_value, bool ext_value) {
     auto &frame = frame_stack_.top();
 
-    if (args[0].GetType() == kArgumentLiteralValue &&
+    if (args[0].GetType() == ArgumentType::Literal &&
       lexical::GetStringType(args[0].GetData(), true) != LiteralType::Identifier) {
       frame.MakeError("Cannot modify a literal value");
       return;
@@ -1726,7 +1726,7 @@ namespace sapphire {
 
     if (frame.error) return;
 
-    if (lhs.source == ObjectViewSource::kSourceReference) {
+    if (lhs.source == ObjectViewSource::ObjectViewSource::Ref) {
       auto &real_lhs = lhs.Seek().Unpack();
       real_lhs = components::DumpObject(rhs.Seek());
       return;
@@ -1764,13 +1764,13 @@ namespace sapphire {
   void Machine::CommandDelivering(ArgumentList &args, bool local_value, bool ext_value) {
     auto &frame = frame_stack_.top();
 
-    if (args[0].GetType() == kArgumentLiteralValue &&
+    if (args[0].GetType() == ArgumentType::Literal &&
       lexical::GetStringType(args[0].GetData(), true) != LiteralType::Identifier) {
       frame.MakeError("Cannot modify a literal value");
       return;
     }
 
-    if (args[1].GetType() == kArgumentLiteralValue) {
+    if (args[1].GetType() == ArgumentType::Literal) {
       frame.MakeError("Cannot modify a literal value");
       return;
     }
@@ -1781,7 +1781,7 @@ namespace sapphire {
 
     if (frame.error) return;
 
-    if (lhs.source == ObjectViewSource::kSourceReference) {
+    if (lhs.source == ObjectViewSource::ObjectViewSource::Ref) {
       auto &real_lhs = lhs.Seek().Unpack();
       real_lhs = rhs.Seek();
       rhs.Seek().Unpack() = Object();
@@ -1931,7 +1931,7 @@ namespace sapphire {
     }
 
     Argument &arg = args[0];
-    if (arg.GetType() == kArgumentLiteralValue) {
+    if (arg.GetType() == ArgumentType::Literal) {
       frame.RefreshReturnStack(*FetchLiteralObject(arg));
     }
     else {
@@ -2185,7 +2185,7 @@ namespace sapphire {
 
     if (frame.error) return;
 
-    if (type_lhs == kNotPlainType || type_rhs  == kNotPlainType) {
+    if (type_lhs == PlainType::Invalid || type_rhs  == PlainType::Invalid) {
       frame.MakeError("Try to operate with non-plain type.");
       return;
     }
@@ -2196,7 +2196,7 @@ namespace sapphire {
   _Type result = MathBox<_Type, op_code>().Do(_Func(lhs.Seek()), _Func(rhs.Seek())); \
   frame.RefreshReturnStack(Object(result, _TypeId));
 
-    if (result_type == kPlainString) {
+    if (result_type == PlainType::String) {
       if (IsIllegalStringOperator(op_code)) {
         frame.RefreshReturnStack(Object());
         return;
@@ -2204,13 +2204,13 @@ namespace sapphire {
 
       RESULT_PROCESSING(string, StringProducer, kTypeIdString);
     }
-    else if (result_type == kPlainInt) {
+    else if (result_type == PlainType::Int) {
       RESULT_PROCESSING(int64_t, IntProducer, kTypeIdInt);
     }
-    else if (result_type == kPlainFloat) {
+    else if (result_type == PlainType::Float) {
       RESULT_PROCESSING(double, FloatProducer, kTypeIdFloat);
     }
-    else if (result_type == kPlainBool) {
+    else if (result_type == PlainType::Bool) {
       RESULT_PROCESSING(bool, BoolProducer, kTypeIdBool);
     }
 #undef RESULT_PROCESSING
@@ -2267,7 +2267,7 @@ namespace sapphire {
 #define RESULT_PROCESSING(_Type, _Func) \
   result = LogicBox<_Type, op_code>().Do(_Func(lhs.Seek()), _Func(rhs.Seek()));
 
-    if (result_type == kPlainString) {
+    if (result_type == PlainType::String) {
       if (IsIllegalStringOperator(op_code)) {
         frame.RefreshReturnStack(Object());
         return;
@@ -2275,13 +2275,13 @@ namespace sapphire {
 
       RESULT_PROCESSING(string, StringProducer);
     }
-    else if (result_type == kPlainInt) {
+    else if (result_type == PlainType::Int) {
       RESULT_PROCESSING(int64_t, IntProducer);
     }
-    else if (result_type == kPlainFloat) {
+    else if (result_type == PlainType::Float) {
       RESULT_PROCESSING(double, FloatProducer);
     }
-    else if (result_type == kPlainBool) {
+    else if (result_type == PlainType::Bool) {
       RESULT_PROCESSING(bool, BoolProducer);
     }
 
@@ -2539,10 +2539,10 @@ namespace sapphire {
     auto &frame = frame_stack_.top();
 
     if (!EXPECTED_COUNT(1)) {
-      if constexpr (pattern == kParamAutoSize) {
+      if constexpr (pattern == ParameterPattern::Variable) {
         frame.MakeError("Argument mismatching: is_variable_param(func)");
       }
-      else if constexpr (pattern == kParamAutoFill) {
+      else if constexpr (pattern == ParameterPattern::Optional) {
         frame.MakeError("Argument mismatching: is_optional_param(func");
       }
 
@@ -2765,10 +2765,10 @@ namespace sapphire {
       CommandHasBehavior(args);
       break;
     case Operation::IsVariableParam:
-      CommandCheckParameterPattern<kParamAutoSize>(args);
+      CommandCheckParameterPattern<ParameterPattern::Variable>(args);
       break;
     case Operation::IsOptionalParam:
-      CommandCheckParameterPattern<kParamAutoFill>(args);
+      CommandCheckParameterPattern<ParameterPattern::Optional>(args);
       break;
     case Operation::OptionalParamRange:
       CommandOptionalParamRange(args);
@@ -2796,13 +2796,13 @@ namespace sapphire {
 
   void Machine::GenerateArgs(Function &impl, ArgumentList &args, ObjectMap &obj_map) {
     switch (impl.GetPattern()) {
-    case kParamFixed:
+    case ParameterPattern::Fixed:
       Generate_Fixed(impl, args, obj_map);
       break;
-    case kParamAutoSize:
+    case ParameterPattern::Variable:
       Generate_AutoSize(impl, args, obj_map);
       break;
-    case kParamAutoFill:
+    case ParameterPattern::Optional:
       Generate_AutoFill(impl, args, obj_map);
       break;
     default:
@@ -3056,7 +3056,7 @@ namespace sapphire {
     auto load_function_impl = [&](bool invoking_request) -> bool {
       bool switch_to_next_tick = false;
       switch (impl->GetType()) {
-      case kFunctionVMCode:
+      case FunctionType::Operation:
         //start new processing in next tick.
         if (invoking_request) goto direct_load_vmcode;
         if (IsTailRecursion(frame->idx, &impl->Get<AnnotatedAST>())) tail_recursion();
@@ -3067,7 +3067,7 @@ namespace sapphire {
         }
         switch_to_next_tick = true;
         break;
-      case kFunctionExternal:
+      case FunctionType::External:
         if (invoking_request) {
           frame->MakeError("Unsupported feature");
           break;
@@ -3078,12 +3078,12 @@ namespace sapphire {
           switch_to_next_tick = true;
         }
         break;
-      case kFunctionCXX:
+      case FunctionType::Component:
         msg = impl->Get<Activity>()(obj_map);
         if (msg.GetLevel() == StateLevel::Error) {
           frame->MakeError(msg.GetDetail());
         }
-        else if (msg.GetLevel() == kStateWarning) {
+        else if (msg.GetLevel() == StateLevel::Warning) {
           frame->MakeWarning(msg.GetDetail());
         }
         switch_to_next_tick = invoking_request;
@@ -3108,7 +3108,7 @@ namespace sapphire {
       if (frame->stop_point) break;
 
       if (frame->warning) {
-        AppendMessage(frame->msg_string, kStateWarning, logger_);
+        AppendMessage(frame->msg_string, StateLevel::Warning, logger_);
         frame->warning = false;
       }
 
@@ -3132,12 +3132,12 @@ namespace sapphire {
       // indicator for disposing returning value or not
       frame->void_call = sentense->first.annotation.void_call; 
       frame->current_code = code;
-      frame->is_command = sentense->first.type == kNodeMachineCommand;
+      frame->is_command = sentense->first.type == NodeType::Operation;
 
-      if (sentense->first.type == kNodeMachineCommand) {
-        MachineCommands(sentense->first.GetKeywordValue(), sentense->second, sentense->first);
+      if (sentense->first.type == NodeType::Operation) {
+        MachineCommands(sentense->first.GetOperation(), sentense->second, sentense->first);
         
-        auto is_return = sentense->first.GetKeywordValue() == Operation::Return;
+        auto is_return = sentense->first.GetOperation() == Operation::Return;
 
         if (is_return) refresh_tick();
         if (frame->error) break;
@@ -3151,7 +3151,7 @@ namespace sapphire {
       else {
         obj_map.clear();
 
-        if (sentense->first.type == kNodeFunction) {
+        if (sentense->first.type == NodeType::Function) {
           if (!FetchFunctionImpl(impl, sentense, obj_map)) {
             break;
           }

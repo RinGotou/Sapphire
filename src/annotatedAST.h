@@ -3,17 +3,17 @@
 #include "object.h"
 
 namespace sapphire {
-  enum ArgumentType {
-    kArgumentLiteralValue, 
-    kArgumentObjectStack, 
-    kArgumentReturnValue, 
-    kArgumentInvalid
+  enum class ArgumentType {
+    Literal, 
+    Pool, 
+    RetStack, 
+    Invalid
   };
 
-  enum NodeType {
-    kNodeMachineCommand, 
-    kNodeFunction, 
-    kNodeInvalid
+  enum class NodeType {
+    Operation, 
+    Function, 
+    Invalid
   };
 
   struct ArgumentProperties {
@@ -32,7 +32,7 @@ namespace sapphire {
     ArgumentProperties() : 
       fn{ false, false, false },
       member_access{ false, false },
-      domain{ "", kArgumentInvalid },
+      domain{ "", ArgumentType::Invalid },
       token_id(0) {}
   };
 
@@ -69,7 +69,7 @@ namespace sapphire {
 
   public:
     Argument() :
-      data_(), type_(kArgumentInvalid), token_type_(LiteralType::Invalid), properties() {}
+      data_(), type_(ArgumentType::Invalid), token_type_(LiteralType::Invalid), properties() {}
     Argument(string data, ArgumentType type, LiteralType token_type) :
       data_(data), type_(type), token_type_(token_type), properties() {}
 
@@ -79,13 +79,13 @@ namespace sapphire {
     }
 
     bool HasDomain() {
-      return properties.domain.type != kArgumentInvalid;
+      return properties.domain.type != ArgumentType::Invalid;
     }
 
     auto &GetData() { return data_; }
     auto &GetType() { return type_; }
     LiteralType GetStringType() { return token_type_; }
-    bool IsPlaceholder() const { return type_ == kArgumentInvalid; }
+    bool IsPlaceholder() const { return type_ == ArgumentType::Invalid; }
   };
 
   struct FunctionInfo { string id; Argument domain; };
@@ -100,40 +100,40 @@ namespace sapphire {
     Annotation annotation;
 
     ASTNode() :
-      data_(), idx(0), type(kNodeInvalid), annotation() {}
+      data_(), idx(0), type(NodeType::Invalid), annotation() {}
     ASTNode(Operation token) :
-      data_(token), idx(0), type(kNodeMachineCommand), annotation() {} 
+      data_(token), idx(0), type(NodeType::Operation), annotation() {} 
     ASTNode(string token, Argument domain = Argument()) :
-      data_(FunctionInfo{ token, domain }), idx(0), type(kNodeFunction), annotation() {}
+      data_(FunctionInfo{ token, domain }), idx(0), type(NodeType::Function), annotation() {}
 
     string GetFunctionId() {
-      if (type == kNodeFunction) return std::get<FunctionInfo>(data_).id;
+      if (type == NodeType::Function) return std::get<FunctionInfo>(data_).id;
       return string();
     }
 
     Argument GetFunctionDomain() {
-      if (type == kNodeFunction) return std::get<FunctionInfo>(data_).domain;
+      if (type == NodeType::Function) return std::get<FunctionInfo>(data_).domain;
       return Argument();
     }
 
     bool HasDomain() {
-      if (type != kNodeFunction) return false;
+      if (type != NodeType::Function) return false;
       auto &func_info = std::get<FunctionInfo>(data_);
-      return func_info.domain.GetType() != kArgumentInvalid;
+      return func_info.domain.GetType() != ArgumentType::Invalid;
     }
 
     void SetDomainTokenId(size_t token_id) {
-      if (type != kNodeFunction) return;
+      if (type != NodeType::Function) return;
       auto &func_info = std::get<FunctionInfo>(data_);
       func_info.domain.properties.token_id = token_id;
     }
 
-    Operation GetKeywordValue() {
-      if (type == kNodeMachineCommand) return std::get<Operation>(data_);
+    Operation GetOperation() {
+      if (type == NodeType::Operation) return std::get<Operation>(data_);
       return Operation::Null;
     }
 
-    bool IsPlaceholder() const { return type == kNodeInvalid; }
+    bool IsPlaceholder() const { return type == NodeType::Invalid; }
    };
 
   using ArgumentList = deque<Argument>;

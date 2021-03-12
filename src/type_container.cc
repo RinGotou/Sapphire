@@ -155,7 +155,7 @@ namespace sapphire {
     CreateStruct(kTypeIdArray);
     StructMethodGenerator(kTypeIdArray).Create(
       {
-        Function(NewArray, "size|init_value", kStrInitializer, kParamAutoFill).SetLimit(0),
+        Function(NewArray, "size|init_value", kStrInitializer, ParameterPattern::Optional).SetLimit(0),
         Function(Array_GetElement, "index", "at"),
         Function(Array_GetSize, "", "size"),
         Function(Array_Push, "object", "push"),

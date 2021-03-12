@@ -95,7 +95,7 @@ namespace sapphire {
   void InitConsoleComponents() {
     using namespace components;
 
-    CreateFunctionObject(Function(SetWorkingDir, "dir", "chdir", kParamAutoFill).SetLimit(0));
+    CreateFunctionObject(Function(SetWorkingDir, "dir", "chdir", ParameterPattern::Optional).SetLimit(0));
     CreateFunctionObject(Function(GetWorkingDir, "", "current_directory"));
     CreateFunctionObject(Function(GetScriptAbsolutePath, "", "boot_directory"));
     CreateFunctionObject(Function(GetCoreAbsolutePath, "", "core_directory"));

@@ -96,7 +96,7 @@ namespace sapphire {
       if (action_base_.empty()) {
         return Operation::Null;
       }
-      return action_base_.back().first.GetKeywordValue();
+      return action_base_.back().first.GetOperation();
     }
 
     void Clear();

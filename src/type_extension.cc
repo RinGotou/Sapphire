@@ -76,10 +76,10 @@ namespace sapphire {
 
     if (activity != nullptr && informer != nullptr) {
       string param_pattern(informer(id.data()));
-      auto mode = kParamFixed;
+      auto mode = ParameterPattern::Fixed;
 
       if (!param_pattern.empty() && param_pattern.front() == '@') {
-        mode = kParamAutoSize;
+        mode = ParameterPattern::Variable;
         if (param_pattern.size() == 1) 
           return Message("Invalid argument size for variable function", StateLevel::Error);
         param_pattern = param_pattern.substr(1, param_pattern.size() - 1);
