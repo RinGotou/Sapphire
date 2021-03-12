@@ -9,6 +9,14 @@
   }
 
 namespace sapphire {
+  enum class PlainType {
+    Int = 1,
+    Float = 2,
+    String = 3,
+    Bool = 4,
+    Invalid = -1
+  };
+
   using Expect = pair<string, string>;
   using ExpectationList = initializer_list<Expect>;
   using NullableList = initializer_list<string>;
@@ -17,7 +25,7 @@ namespace sapphire {
 //    ObjectMap &obj_map,
 //    NullableList &&nullable = {});
 //
-//#define TC_ERROR(_Obj) Message(std::get<string>(_Obj), kStateError)
+//#define TC_ERROR(_Obj) Message(std::get<string>(_Obj), StateLevel::Error)
 //#define TC_FAIL(_Obj) !std::get<bool>(_Obj)
 
   string ParseRawString(const string &src);
@@ -28,22 +36,22 @@ namespace sapphire {
   using ResultTraitKey = pair<PlainType, PlainType>;
   using TraitUnit = pair<ResultTraitKey, PlainType>;
   const map<ResultTraitKey, PlainType> kResultDynamicTraits = {
-    TraitUnit(ResultTraitKey(kPlainInt, kPlainInt), kPlainInt),
-    TraitUnit(ResultTraitKey(kPlainInt, kPlainFloat), kPlainFloat),
-    TraitUnit(ResultTraitKey(kPlainInt, kPlainString), kPlainString),
-    TraitUnit(ResultTraitKey(kPlainInt, kPlainBool), kPlainInt),
-    TraitUnit(ResultTraitKey(kPlainFloat, kPlainFloat), kPlainFloat),
-    TraitUnit(ResultTraitKey(kPlainFloat, kPlainInt), kPlainFloat),
-    TraitUnit(ResultTraitKey(kPlainFloat, kPlainString), kPlainString),
-    TraitUnit(ResultTraitKey(kPlainFloat, kPlainBool), kPlainFloat),
-    TraitUnit(ResultTraitKey(kPlainString, kPlainString), kPlainString),
-    TraitUnit(ResultTraitKey(kPlainString, kPlainInt), kPlainString),
-    TraitUnit(ResultTraitKey(kPlainString, kPlainFloat), kPlainString),
-    TraitUnit(ResultTraitKey(kPlainString, kPlainBool), kPlainString),
-    TraitUnit(ResultTraitKey(kPlainBool, kPlainBool), kPlainBool),
-    TraitUnit(ResultTraitKey(kPlainBool, kPlainInt), kPlainInt),
-    TraitUnit(ResultTraitKey(kPlainBool, kPlainFloat), kPlainFloat),
-    TraitUnit(ResultTraitKey(kPlainBool, kPlainString), kPlainString)
+    TraitUnit(ResultTraitKey(PlainType::Int, PlainType::Int), PlainType::Int),
+    TraitUnit(ResultTraitKey(PlainType::Int, PlainType::Float), PlainType::Float),
+    TraitUnit(ResultTraitKey(PlainType::Int, PlainType::String), PlainType::String),
+    TraitUnit(ResultTraitKey(PlainType::Int, PlainType::Bool), PlainType::Int),
+    TraitUnit(ResultTraitKey(PlainType::Float, PlainType::Float), PlainType::Float),
+    TraitUnit(ResultTraitKey(PlainType::Float, PlainType::Int), PlainType::Float),
+    TraitUnit(ResultTraitKey(PlainType::Float, PlainType::String), PlainType::String),
+    TraitUnit(ResultTraitKey(PlainType::Float, PlainType::Bool), PlainType::Float),
+    TraitUnit(ResultTraitKey(PlainType::String, PlainType::String), PlainType::String),
+    TraitUnit(ResultTraitKey(PlainType::String, PlainType::Int), PlainType::String),
+    TraitUnit(ResultTraitKey(PlainType::String, PlainType::Float), PlainType::String),
+    TraitUnit(ResultTraitKey(PlainType::String, PlainType::Bool), PlainType::String),
+    TraitUnit(ResultTraitKey(PlainType::Bool, PlainType::Bool), PlainType::Bool),
+    TraitUnit(ResultTraitKey(PlainType::Bool, PlainType::Int), PlainType::Int),
+    TraitUnit(ResultTraitKey(PlainType::Bool, PlainType::Float), PlainType::Float),
+    TraitUnit(ResultTraitKey(PlainType::Bool, PlainType::String), PlainType::String)
   };
 
   template <typename ResultType, class Tx, class Ty, Operation op>

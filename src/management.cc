@@ -296,7 +296,7 @@ namespace sapphire::extension {
     auto *source = static_cast<ObjectMap *>(obj_map);
     auto it = source->find(string(id));
     if (it == source->end()) return 0;
-    if (it->second.GetMode() != kObjectExternal) return -1;
+    if (it->second.GetMode() != ObjectMode::External) return -1;
     *target = it->second.GetExternalPointer();
     return 1;
   }

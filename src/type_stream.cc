@@ -25,7 +25,7 @@ namespace sapphire {
     InStream &ifs = p.Cast<InStream>(kStrMe);
 
     if (!ifs.Good()) {
-      return Message("Invalid instream.", kStateError);
+      return Message("Invalid instream.", StateLevel::Error);
     }
 
     string result = ifs.GetLine();

@@ -34,11 +34,11 @@ namespace sapphire {
   vector<string> BuildStringVector(string source);
   string CombineStringVector(vector<string> target);
 
-  enum ObjectMode {
-    kObjectInvalid   = 0,
-    kObjectNormal    = 1,
-    kObjectRef       = 2,
-    kObjectExternal  = 3
+  enum class ObjectMode {
+    Invalid   = 0,
+    Normal    = 1,
+    Ref       = 2,
+    External  = 3
   };
 
   class ExternalRCContainer {
@@ -83,14 +83,14 @@ namespace sapphire {
 
   private:
     void EraseRefLink() {
-      if (info_.mode == kObjectRef && info_.alive) {
+      if (info_.mode == ObjectMode::Ref && info_.alive) {
         auto *obj = static_cast<ObjectPointer>(info_.real_dest);
         obj->links_.value().erase(this);
       }
     }
 
     void EstablishRefLink() {
-      if (info_.mode == kObjectRef && info_.alive) {
+      if (info_.mode == ObjectMode::Ref && info_.alive) {
         auto *obj = static_cast<ObjectPointer>(info_.real_dest);
         if(!obj->links_.has_value()) obj->links_.emplace(ReferenceLinks());
         obj->links_.value().insert(this);
@@ -101,7 +101,7 @@ namespace sapphire {
     ~Object() {
       EraseRefLink();
 
-      if (info_.mode != kObjectRef && links_.has_value() && !links_.value().empty()) {
+      if (info_.mode != ObjectMode::Ref && links_.has_value() && !links_.value().empty()) {
         for (auto &unit : links_.value()) {
           if (unit != nullptr) {
             unit->info_.alive = false;
@@ -111,7 +111,7 @@ namespace sapphire {
       }
     }
 
-    Object() : info_{ nullptr, kObjectNormal, false, false, true, kTypeIdNull},
+    Object() : info_{ nullptr, ObjectMode::Normal, false, false, true, kTypeIdNull},
       links_(), shared_ptr<void>(nullptr) {}
 
     Object(const Object &obj) : 
@@ -126,27 +126,27 @@ namespace sapphire {
 
     template <typename T>
     Object(shared_ptr<T> ptr, string type_id) :
-      info_{nullptr, kObjectNormal, false, type_id == kTypeIdStruct, true, type_id},
+      info_{nullptr, ObjectMode::Normal, false, type_id == kTypeIdStruct, true, type_id},
       links_(), shared_ptr<void>(ptr) {}
 
     template <typename T>
     Object(T &t, string type_id) :
-      info_{nullptr, kObjectNormal, false, type_id == kTypeIdStruct, true, type_id},
+      info_{nullptr, ObjectMode::Normal, false, type_id == kTypeIdStruct, true, type_id},
       links_(), 
       shared_ptr<void>(make_shared<T>(t)) {}
 
     template <typename T>
     Object(T &&t, string type_id) :
-      info_{ nullptr, kObjectNormal, false, type_id == kTypeIdStruct, true, type_id },
+      info_{ nullptr, ObjectMode::Normal, false, type_id == kTypeIdStruct, true, type_id },
       links_(),
       shared_ptr<void>(make_shared<T>(std::forward<T>(t))) {}
 
     Object(void *ext_ptr, ExternalMemoryDisposer disposer, string type_id) :
-      info_{ext_ptr, kObjectExternal, false, false, true, type_id}, links_(std::nullopt),
+      info_{ext_ptr, ObjectMode::External, false, false, true, type_id}, links_(std::nullopt),
       shared_ptr<void>(make_shared<ExternalRCContainer>(ext_ptr, disposer, type_id)) {}
 
     Object(string str) :
-      info_{nullptr, kObjectNormal, false, false, true, kTypeIdString},
+      info_{nullptr, ObjectMode::Normal, false, false, true, kTypeIdString},
       links_(), shared_ptr<void>(make_shared<string>(str)) {}
 
     Object(const ObjectInfo &info, const shared_ptr<void> &ptr) :
@@ -167,7 +167,7 @@ namespace sapphire {
     }
 
     shared_ptr<void> Get() {
-      if (info_.mode == kObjectRef) {
+      if (info_.mode == ObjectMode::Ref) {
         return static_cast<ObjectPointer>(info_.real_dest)->Get();
       }
       
@@ -175,7 +175,7 @@ namespace sapphire {
     }
 
     Object &Unpack() {
-      if (info_.mode == kObjectRef) {
+      if (info_.mode == ObjectMode::Ref) {
         return *static_cast<ObjectPointer>(info_.real_dest);
       }
       return *this;
@@ -183,7 +183,7 @@ namespace sapphire {
 
     template <typename Tx>
     Tx &Cast() {
-      if (info_.mode == kObjectRef) { 
+      if (info_.mode == ObjectMode::Ref) { 
         return static_cast<ObjectPointer>(info_.real_dest)->Cast<Tx>(); 
       }
 
@@ -201,7 +201,7 @@ namespace sapphire {
     }
 
     bool GetDeliveringFlag() {
-      if (info_.mode == kObjectRef) {
+      if (info_.mode == ObjectMode::Ref) {
         return static_cast<ObjectPointer>(info_.real_dest)
           ->GetDeliveringFlag();
       }
@@ -211,7 +211,7 @@ namespace sapphire {
     }
 
     bool SeekDeliveringFlag() {
-      if (info_.mode == kObjectRef) {
+      if (info_.mode == ObjectMode::Ref) {
         return static_cast<ObjectPointer>(info_.real_dest)
           ->SeekDeliveringFlag();
       }
@@ -219,7 +219,7 @@ namespace sapphire {
     }
 
     bool IsSubContainer() {
-      if (info_.mode == kObjectRef) {
+      if (info_.mode == ObjectMode::Ref) {
         return static_cast<ObjectPointer>(info_.real_dest)->IsSubContainer();
       }
 
@@ -236,7 +236,7 @@ namespace sapphire {
     Object &operator=(const Object &&object) { return operator=(object); }
     Object &swap(Object &&obj) { return swap(obj); }
     string GetTypeId() const { return info_.type_id; }
-    bool IsRef() const { return info_.mode == kObjectRef; }
+    bool IsRef() const { return info_.mode == ObjectMode::Ref; }
     bool NullPtr() const { return !this->operator bool() && info_.real_dest == nullptr; }
     ObjectMode GetMode() const { return info_.mode; }
     void SetContainerFlag() { info_.sub_container = true; }
@@ -246,9 +246,9 @@ namespace sapphire {
   using MovableObject = unique_ptr<Object>;
 
   enum class ObjectViewSource {
-    kSourceReference,
-    kSourceLiteral,
-    kSourceNull
+    Ref,
+    Literal,
+    Null
   };
 
   class ObjectView : virtual public _ObjectCommonBase {

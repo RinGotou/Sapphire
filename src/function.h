@@ -13,11 +13,7 @@ namespace sapphire {
   using Activity = Message(*)(ObjectMap &);
   using ExtensionActivity = int(*)(VMState);
 
-  enum ParameterPattern {
-    kParamAutoSize,
-    kParamAutoFill,
-    kParamFixed
-  };
+  enum class ParameterPattern { Variable, Optional, Fixed };
 
   class _FunctionImpl {
   public:
@@ -55,13 +51,13 @@ namespace sapphire {
     return lhs_obj == rhs_obj;
   }
 
-  inline bool CompareVMCodeInstance(FunctionBase &lhs, FunctionBase &rhs) {
+  inline bool CompareOperationInstance(FunctionBase &lhs, FunctionBase &rhs) {
     auto &lhs_obj = std::get<ExtensionFunction>(lhs).Get();
     auto &rhs_obj = std::get<ExtensionFunction>(rhs).Get();
     return &lhs_obj == &rhs_obj;
   }
 
-  enum FunctionImplType { kFunctionCXX, kFunctionVMCode, kFunctionExternal, kFunctionInvalid };
+  enum class FunctionType { Component, Operation, External, Invalid };
 
   class Function {
   private:
@@ -70,7 +66,7 @@ namespace sapphire {
 
   private:
     ParameterPattern mode_;
-    FunctionImplType type_;
+    FunctionType type_;
     size_t limit_;
     size_t offset_;
     string id_;
@@ -79,25 +75,25 @@ namespace sapphire {
   public:
     Function() :
       base_(InvalidFunction(_NullFunctionType())),
-      record_(), mode_(), type_(kFunctionInvalid), 
+      record_(), mode_(), type_(FunctionType::Invalid), 
       limit_(0), offset_(0), id_(), params_() {}
 
     Function(Activity activity, string params, string id,
-      ParameterPattern argument_mode = kParamFixed) :
+      ParameterPattern argument_mode = ParameterPattern::Fixed) :
       base_(_Function(activity)), record_(),
-      mode_(argument_mode), type_(kFunctionCXX), limit_(0),
+      mode_(argument_mode), type_(FunctionType::Component), limit_(0),
       offset_(0), id_(id), params_(BuildStringVector(params)) {}
 
     Function(size_t offset, AnnotatedAST ir, string id, vector<string> params,
-      ParameterPattern argument_mode = kParamFixed) :
+      ParameterPattern argument_mode = ParameterPattern::Fixed) :
       base_(_Function(ir)), record_(),
-      mode_(argument_mode), type_(kFunctionVMCode), limit_(0),
+      mode_(argument_mode), type_(FunctionType::Operation), limit_(0),
       offset_(offset), id_(id), params_(params) {}
 
     Function(ExtensionActivity activity, string id, string params_pattern,
-      ParameterPattern argument_mode = kParamFixed) :
+      ParameterPattern argument_mode = ParameterPattern::Fixed) :
       base_(_Function(activity)), record_(),
-      mode_(argument_mode), type_(kFunctionExternal), limit_(0),
+      mode_(argument_mode), type_(FunctionType::External), limit_(0),
       offset_(0), id_(id), params_(BuildStringVector(params_pattern)) {}
 
     template <typename _ImplType>
@@ -106,12 +102,12 @@ namespace sapphire {
     string GetId() const { return id_; }
     ParameterPattern GetPattern() const { return mode_; }
     vector<string> &GetParameters() { return params_; }
-    FunctionImplType GetType() const { return type_; }
+    FunctionType GetType() const { return type_; }
     size_t GetParamSize() const { return params_.size(); }
     ObjectMap &GetClosureRecord() { return record_; }
     size_t GetLimit() const { return limit_; }
     size_t GetOffset() const { return offset_; }
-    bool Good() const { return (type_ != kFunctionInvalid); }
+    bool Good() const { return (type_ != FunctionType::Invalid); }
 
     Function &SetClosureRecord(ObjectMap record) {
       record_ = record;
@@ -133,9 +129,9 @@ namespace sapphire {
       bool result = false;
 
       switch (type_) {
-      case kFunctionCXX: CompareFunctionBase<Activity>(base_, rhs.base_); break;
-      case kFunctionExternal: CompareFunctionBase<ExtensionActivity>(base_, rhs.base_); break;
-      case kFunctionVMCode: CompareVMCodeInstance(base_, rhs.base_); break;
+      case FunctionType::Component: CompareFunctionBase<Activity>(base_, rhs.base_); break;
+      case FunctionType::External:  CompareFunctionBase<ExtensionActivity>(base_, rhs.base_); break;
+      case FunctionType::Operation: CompareOperationInstance(base_, rhs.base_); break;
       default:break;
       }
 

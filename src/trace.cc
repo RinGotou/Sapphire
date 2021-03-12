@@ -10,9 +10,9 @@ namespace sapphire {
     }
 
     switch (level) {
-    case kStateError:  buf.append("Error:"); break;
+    case StateLevel::Error:  buf.append("Error:"); break;
     case kStateWarning:buf.append("Warning:"); break;
-    case kStateNormal: buf.append("Info:"); break;
+    case StateLevel::Normal: buf.append("Info:"); break;
     default:break;
     }
 

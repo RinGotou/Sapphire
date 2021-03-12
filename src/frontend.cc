@@ -1,6 +1,6 @@
 #include "frontend.h"
 
-#define ERROR_MSG(_Msg) Message(_Msg, kStateError)
+#define ERROR_MSG(_Msg) Message(_Msg, StateLevel::Error)
 
 // !!! This module is deprecated and will be destroyed in the future.
 
@@ -213,7 +213,7 @@ namespace sapphire {
       if (current.first == ";") {
         if (!bracket_stack.empty()) {
           AppendMessage("Invalid end of statment at line " +
-            to_string(src.first), kStateError, logger_);
+            to_string(src.first), StateLevel::Error, logger_);
           good = false;
           break;
         }
@@ -232,7 +232,7 @@ namespace sapphire {
 
       if (current.second == LiteralType::Invalid) {
         AppendMessage("Unknown token - " + current.first +
-          " at line " + to_string(src.first), kStateError, logger_);
+          " at line " + to_string(src.first), StateLevel::Error, logger_);
         good = false;
         break;
       }
@@ -254,14 +254,14 @@ namespace sapphire {
       if (compare(current.first, ")", "]", "}")) {
         if (bracket_stack.empty()) {
           AppendMessage("Left bracket is missing - " + current.first +
-            " at line " + to_string(src.first), kStateError, logger_);
+            " at line " + to_string(src.first), StateLevel::Error, logger_);
           good = false;
           break;
         }
 
         if (GetLeftBracket(current.first) != bracket_stack.top()) {
           AppendMessage("Left bracket is missing - " + current.first +
-            " at line " + to_string(src.first), kStateError, logger_);
+            " at line " + to_string(src.first), StateLevel::Error, logger_);
           good = false;
           break;
         }
@@ -272,7 +272,7 @@ namespace sapphire {
       if (current.first == ",") {
         if (last.second == LiteralType::Symbol &&
           !compare(last.first, "]", ")", "}", "'")) {
-          AppendMessage("Invalid comma at line " + to_string(src.first), kStateError,
+          AppendMessage("Invalid comma at line " + to_string(src.first), StateLevel::Error,
             logger_);
           good = false;
           break;
@@ -976,10 +976,10 @@ namespace sapphire {
       level = msg.GetLevel();
       ast_root = parser.GetASTRoot();
 
-      if (level != kStateNormal) {
+      if (level != StateLevel::Normal) {
         AppendMessage(msg.GetDetail(), level, logger_, msg.GetIndex());
 
-        if (level == kStateError) { 
+        if (level == StateLevel::Error) { 
           good = false; 
           continue; 
         }
@@ -993,7 +993,7 @@ namespace sapphire {
 
         if (struct_member_fn_nest == 0 && 
           !compare(ast_root, Operation::Bind, Operation::End, Operation::Include, Operation::Attribute)) {
-          AppendMessage("Invalid expression inside struct", kStateError, logger_, msg.GetIndex());
+          AppendMessage("Invalid expression inside struct", StateLevel::Error, logger_, msg.GetIndex());
           good = false;
           break;
         }
@@ -1004,7 +1004,7 @@ namespace sapphire {
 
         if (struct_member_fn_nest == 0 &&
           !compare(ast_root, Operation::Bind, Operation::End, Operation::Attribute)) {
-          AppendMessage("Invalid expression inside struct", kStateError, logger_, msg.GetIndex());
+          AppendMessage("Invalid expression inside struct", StateLevel::Error, logger_, msg.GetIndex());
           good = false;
           break;
         }
@@ -1039,7 +1039,7 @@ namespace sapphire {
 
       if (IsBranchKeyword(ast_root)) {
         if (jump_stack_.empty()) {
-          AppendMessage("Invalid branch operation at line " + to_string(it->first), kStateError, logger_);
+          AppendMessage("Invalid branch operation at line " + to_string(it->first), StateLevel::Error, logger_);
           break;
         }
 
@@ -1057,7 +1057,7 @@ namespace sapphire {
             jump_stack_.top().jump_record.push_back(dest_->size());
           }
           else {
-            AppendMessage("Invalid branch operation at line " + to_string(it->first), kStateError, logger_);
+            AppendMessage("Invalid branch operation at line " + to_string(it->first), StateLevel::Error, logger_);
             break;
           }
         }
@@ -1065,7 +1065,7 @@ namespace sapphire {
 
       if (ast_root == Operation::Continue || ast_root == Operation::Break) {
         if (cycle_escaper_.empty()) {
-          AppendMessage("Invalid cycle escaper at line " + to_string(it->first), kStateError, logger_);
+          AppendMessage("Invalid cycle escaper at line " + to_string(it->first), StateLevel::Error, logger_);
           break;
         }
 
@@ -1074,7 +1074,7 @@ namespace sapphire {
 
       if (ast_root == Operation::End) {
         if (nest_type_.empty()) {
-          AppendMessage("Invalid 'end' token at line " + to_string(it->first), kStateError, logger_, msg.GetIndex());
+          AppendMessage("Invalid 'end' token at line " + to_string(it->first), StateLevel::Error, logger_, msg.GetIndex());
           good = false;
           break;
         }
@@ -1114,7 +1114,7 @@ namespace sapphire {
     }
 
     if (!nest_.empty()) {
-      AppendMessage("'end' token is not found for line " + to_string(nest_origin_.top()), kStateError, logger_);
+      AppendMessage("'end' token is not found for line " + to_string(nest_origin_.top()), StateLevel::Error, logger_);
       good = false;
     }
 

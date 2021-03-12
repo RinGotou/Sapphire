@@ -64,7 +64,7 @@ namespace sapphire {
   Object &Object::operator=(const Object &object) {
     info_ = object.info_;
 
-    if (info_.mode != kObjectRef) {
+    if (info_.mode != ObjectMode::Ref) {
       info_.real_dest = nullptr;
       dynamic_cast<shared_ptr<void> *>(this)->operator=(object);
     }
@@ -76,7 +76,7 @@ namespace sapphire {
   }
 
   Object &Object::PackContent(shared_ptr<void> ptr, string type_id) {
-    if (info_.mode == kObjectRef) {
+    if (info_.mode == ObjectMode::Ref) {
       return static_cast<ObjectPointer>(info_.real_dest)
         ->PackContent(ptr, type_id);
     }
@@ -100,7 +100,7 @@ namespace sapphire {
   Object &Object::PackObject(Object &object) {
     reset();
     info_.type_id = object.info_.type_id;
-    info_.mode = kObjectRef;
+    info_.mode = ObjectMode::Ref;
 
     if (!object.IsRef()) {
       info_.real_dest = &object;

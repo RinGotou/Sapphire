@@ -8,7 +8,7 @@ namespace sapphire {
     auto &me = p.Cast<string>(kStrMe);
 
     if (index < 0 || index >= static_cast<int64_t>(me.size())) {
-      return Message("Invalid index for this string", kStateError);
+      return Message("Invalid index for this string", StateLevel::Error);
     }
 
     auto elem = make_shared<string>();
@@ -22,11 +22,11 @@ namespace sapphire {
     auto &me = p.Cast<string>(kStrMe);
 
     if (begin < 0 || begin >= static_cast<int64_t>(me.size())) {
-      return Message("Invalid begin index for this string", kStateError);
+      return Message("Invalid begin index for this string", StateLevel::Error);
     }
 
     if (size > (static_cast<int64_t>(me.size()) - begin) || size < 0) {
-      return Message("Invalid size for this string", kStateError);
+      return Message("Invalid size for this string", StateLevel::Error);
     }
 
     auto elem = me.substr(begin, size);
@@ -66,7 +66,7 @@ namespace sapphire {
     auto &me = p.Cast<wstring>(kStrMe);
 
     if (index < 0 || index >= static_cast<int64_t>(me.size())) {
-      return Message("Invalid index for this string", kStateError);
+      return Message("Invalid index for this string", StateLevel::Error);
     }
 
     auto elem = make_shared<wstring>();
@@ -80,11 +80,11 @@ namespace sapphire {
     auto &me = p.Cast<wstring>(kStrMe);
 
     if (begin < 0 || begin >= static_cast<int64_t>(me.size())) {
-      return Message("Invalid begin index for this string", kStateError);
+      return Message("Invalid begin index for this string", StateLevel::Error);
     }
 
     if (size > (static_cast<int64_t>(me.size()) - begin) || size < 0) {
-      return Message("Invalid size for this string", kStateError);
+      return Message("Invalid size for this string", StateLevel::Error);
     }
 
     auto elem = me.substr(begin, size);
@@ -160,7 +160,7 @@ namespace sapphire {
     auto &value = p.Cast<string>("value");
 
     if (value.size() != 1) {
-      return Message("Invalid char", kStateError);
+      return Message("Invalid char", StateLevel::Error);
     }
 
     return Message().SetObject(static_cast<int64_t>(value[0]));

@@ -6,7 +6,7 @@ namespace sapphire {
 
     if (!p["size"].NullPtr()) {
       auto size = p.Cast<int64_t>("size");
-      if (size < 0) return Message("Invalid array size.", kStateError);
+      if (size < 0) return Message("Invalid array size.", StateLevel::Error);
       auto size_value = static_cast<size_t>(size);
 
 
@@ -27,7 +27,7 @@ namespace sapphire {
     auto &idx = p.Cast<int64_t>("index");
     size_t size = base.size();
 
-    if (size_t(idx) >= size) return Message("Index is out of range", kStateError);
+    if (size_t(idx) >= size) return Message("Index is out of range", StateLevel::Error);
     if (size_t(idx) < 0) return Message("Index is out of range");
 
     return Message().SetObjectRef(base[size_t(idx)]);
@@ -96,7 +96,7 @@ namespace sapphire {
     auto &value = p["value"];
 
     if (!lexical::IsPlainType(key.GetTypeId())) {
-      return Message("Invalid key type", kStateError);
+      return Message("Invalid key type", StateLevel::Error);
     }
 
     auto result = table.insert(

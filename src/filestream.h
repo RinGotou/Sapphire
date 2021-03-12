@@ -23,9 +23,9 @@ namespace sapphire {
   void CloseStream();
 
   enum class SeekingMode {
-    kSeekingBegin = SEEK_SET, 
-    kSeekingCurrent = SEEK_CUR, 
-    kSeekingEnd = SEEK_END
+    Begin   = SEEK_SET, 
+    Current = SEEK_CUR, 
+    End     = SEEK_END
   };
 
   class BasicStream {

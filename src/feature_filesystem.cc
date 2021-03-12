@@ -37,7 +37,7 @@ namespace sapphire {
       fs::copy(fs::path(from), fs::path(to));
     }
     catch (std::exception & e) {
-      result = Message(e.what(), kStateError);
+      result = Message(e.what(), StateLevel::Error);
     }
 
     return result;

@@ -38,7 +38,7 @@ namespace sapphire {
     auto loader = extension->GetExtensionLoader();
 
     if (loader == nullptr) {
-      return Message("Invalid extension interface", kStateError);
+      return Message("Invalid extension interface", StateLevel::Error);
     }
 
     ExtInterfaces interfaces{
@@ -81,7 +81,7 @@ namespace sapphire {
       if (!param_pattern.empty() && param_pattern.front() == '@') {
         mode = kParamAutoSize;
         if (param_pattern.size() == 1) 
-          return Message("Invalid argument size for variable function", kStateError);
+          return Message("Invalid argument size for variable function", StateLevel::Error);
         param_pattern = param_pattern.substr(1, param_pattern.size() - 1);
       }
 

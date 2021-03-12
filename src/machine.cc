@@ -2945,7 +2945,7 @@ namespace sapphire {
     //Under consideration
     if (frame_stack_.top().error) {
       //TODO:reporting function calling chain
-      AppendMessage(frame_stack_.top().msg_string, kStateError,
+      AppendMessage(frame_stack_.top().msg_string, StateLevel::Error,
         logger_, stop_index);
     }
 
@@ -3080,7 +3080,7 @@ namespace sapphire {
         break;
       case kFunctionCXX:
         msg = impl->Get<Activity>()(obj_map);
-        if (msg.GetLevel() == kStateError) {
+        if (msg.GetLevel() == StateLevel::Error) {
           frame->MakeError(msg.GetDetail());
         }
         else if (msg.GetLevel() == kStateWarning) {
@@ -3174,7 +3174,7 @@ namespace sapphire {
     }
 
     if (frame->error) {
-      AppendMessage(frame->msg_string, kStateError, logger_, script_idx);
+      AppendMessage(frame->msg_string, StateLevel::Error, logger_, script_idx);
     }
 
     error_ = frame->error;

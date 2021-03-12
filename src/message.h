@@ -3,11 +3,7 @@
 #include "object.h"
 
 namespace sapphire {
-  enum StateLevel {
-    kStateNormal,
-    kStateError,
-    kStateWarning
-  };
+  enum class StateLevel { Normal, Error, Warning };
 
   struct ObjectPrototype { ObjectInfo info; shared_ptr<void> ptr; };
 
@@ -20,13 +16,13 @@ namespace sapphire {
 
   public:
     Message() :
-      level_(kStateNormal), detail_(""), slot_(std::nullopt), idx_(0) {}
+      level_(StateLevel::Normal), detail_(""), slot_(std::nullopt), idx_(0) {}
     Message(Message &msg) :
       level_(msg.level_), detail_(msg.detail_), slot_(msg.slot_), idx_(msg.idx_) {}
     Message(Message &&msg) :
       level_(msg.level_), detail_(std::forward<string>(msg.detail_)),
       slot_(std::forward<optional<ObjectPrototype>>(msg.slot_)), idx_(msg.idx_) {}
-    Message(string detail, StateLevel level = kStateNormal) :
+    Message(string detail, StateLevel level = StateLevel::Normal) :
       level_(level), detail_(detail), idx_(0) {}
 
     Message &operator=(Message &msg) {
@@ -68,14 +64,14 @@ namespace sapphire {
 
     Message &SetObjectRef(Object &obj) {
       slot_ = ObjectPrototype{
-        ObjectInfo{&obj, kObjectRef, true, false, true, obj.GetTypeId()}, nullptr
+        ObjectInfo{&obj, ObjectMode::Ref, true, false, true, obj.GetTypeId()}, nullptr
       };
 
       return *this;
     }
 
-#define MAKE_PROTOTYPE(_Id, _Type)  ObjectPrototype{                     \
-      ObjectInfo{ nullptr, kObjectNormal, true, false, true, _Id },      \
+#define MAKE_PROTOTYPE(_Id, _Type)  ObjectPrototype {                     \
+      ObjectInfo{ nullptr, ObjectMode::Normal, true, false, true, _Id },      \
       make_shared<_Type>(value)                                          \
     }
 
@@ -117,7 +113,7 @@ namespace sapphire {
     }
 
     void Clear() {
-      level_ = kStateNormal;
+      level_ = StateLevel::Normal;
       detail_.clear();
       detail_.shrink_to_fit();
       slot_ = std::nullopt;
