@@ -46,7 +46,7 @@ namespace sapphire {
     TraitUnit(ResultTraitKey(kPlainBool, kPlainString), kPlainString)
   };
 
-  template <typename ResultType, class Tx, class Ty, Keyword op>
+  template <typename ResultType, class Tx, class Ty, Operation op>
   struct BinaryOpBox {
     ResultType Do(Tx A, Ty B) {
       return Tx();
@@ -54,84 +54,84 @@ namespace sapphire {
   };
 
   template <typename ResultType, class Tx, class Ty>
-  struct BinaryOpBox<ResultType, Tx, Ty, kKeywordPlus> {
+  struct BinaryOpBox<ResultType, Tx, Ty, Operation::Plus> {
     ResultType Do(Tx A, Ty B) {
       return A + B;
     }
   };
 
   template <typename ResultType, class Tx, class Ty>
-  struct BinaryOpBox<ResultType, Tx, Ty, kKeywordMinus> {
+  struct BinaryOpBox<ResultType, Tx, Ty, Operation::Minus> {
     ResultType Do(Tx A, Ty B) {
       return A - B;
     }
   };
 
   template <typename ResultType, class Tx, class Ty>
-  struct BinaryOpBox<ResultType, Tx, Ty, kKeywordTimes> {
+  struct BinaryOpBox<ResultType, Tx, Ty, Operation::Times> {
     ResultType Do(Tx A, Ty B) {
       return A * B;
     }
   };
 
   template <typename ResultType, class Tx, class Ty>
-  struct BinaryOpBox<ResultType, Tx, Ty, kKeywordDivide> {
+  struct BinaryOpBox<ResultType, Tx, Ty, Operation::Divide> {
     ResultType Do(Tx A, Ty B) {
       return A / B;
     }
   };
 
   template <typename Tx, class Ty>
-  struct BinaryOpBox<bool, Tx, Ty, kKeywordEquals> {
+  struct BinaryOpBox<bool, Tx, Ty, Operation::Equals> {
     bool Do(Tx A, Ty B) {
       return A == B;
     }
   };
 
   template <typename Tx, class Ty>
-  struct BinaryOpBox<bool, Tx, Ty, kKeywordLessOrEqual> {
+  struct BinaryOpBox<bool, Tx, Ty, Operation::LessOrEqual> {
     bool Do(Tx A, Ty B) {
       return A <= B;
     }
   };
 
   template <typename Tx, class Ty>
-  struct BinaryOpBox<bool, Tx, Ty, kKeywordGreaterOrEqual> {
+  struct BinaryOpBox<bool, Tx, Ty, Operation::GreaterOrEqual> {
     bool Do(Tx A, Ty B) {
       return A >= B;
     }
   };
 
   template <typename Tx, class Ty>
-  struct BinaryOpBox<bool, Tx, Ty, kKeywordNotEqual> {
+  struct BinaryOpBox<bool, Tx, Ty, Operation::NotEqual> {
     bool Do(Tx A, Ty B) {
       return A != B;
     }
   };
 
   template <typename Tx, class Ty>
-  struct BinaryOpBox<bool, Tx, Ty, kKeywordGreater> {
+  struct BinaryOpBox<bool, Tx, Ty, Operation::Greater> {
     bool Do(Tx A, Ty B) {
       return A > B;
     }
   };
 
   template <typename Tx, class Ty>
-  struct BinaryOpBox<bool, Tx, Ty, kKeywordLess> {
+  struct BinaryOpBox<bool, Tx, Ty, Operation::Less> {
     bool Do(Tx A, Ty B) {
       return A < B;
     }
   };
 
   template <typename Tx, class Ty>
-  struct BinaryOpBox<bool, Tx, Ty, kKeywordAnd> {
+  struct BinaryOpBox<bool, Tx, Ty, Operation::And> {
     bool Do(Tx A, Ty B) {
       return A && B;
     }
   };
 
   template <typename Tx, class Ty>
-  struct BinaryOpBox<bool, Tx, Ty, kKeywordOr> {
+  struct BinaryOpBox<bool, Tx, Ty, Operation::Or> {
     bool Do(Tx A, Ty B) {
       return A || B;
     }
@@ -139,7 +139,7 @@ namespace sapphire {
 
   //Dispose divide operation for bool type
   template <>
-  struct BinaryOpBox<bool, bool, bool, kKeywordDivide> {
+  struct BinaryOpBox<bool, bool, bool, Operation::Divide> {
     bool Do(bool A, bool B) {
       return true;
     }
@@ -161,23 +161,23 @@ namespace sapphire {
     }                                               \
   }                                                 \
 
-  DISPOSE_STRING_MATH_OP(kKeywordMinus);
-  DISPOSE_STRING_MATH_OP(kKeywordTimes);
-  DISPOSE_STRING_MATH_OP(kKeywordDivide);
-  DISPOSE_STRING_LOGIC_OP(kKeywordLessOrEqual);
-  DISPOSE_STRING_LOGIC_OP(kKeywordGreaterOrEqual);
-  DISPOSE_STRING_LOGIC_OP(kKeywordGreater);
-  DISPOSE_STRING_LOGIC_OP(kKeywordLess);
-  DISPOSE_STRING_LOGIC_OP(kKeywordAnd);
-  DISPOSE_STRING_LOGIC_OP(kKeywordOr);
+  DISPOSE_STRING_MATH_OP(Operation::Minus);
+  DISPOSE_STRING_MATH_OP(Operation::Times);
+  DISPOSE_STRING_MATH_OP(Operation::Divide);
+  DISPOSE_STRING_LOGIC_OP(Operation::LessOrEqual);
+  DISPOSE_STRING_LOGIC_OP(Operation::GreaterOrEqual);
+  DISPOSE_STRING_LOGIC_OP(Operation::Greater);
+  DISPOSE_STRING_LOGIC_OP(Operation::Less);
+  DISPOSE_STRING_LOGIC_OP(Operation::And);
+  DISPOSE_STRING_LOGIC_OP(Operation::Or);
 
 #undef DISPOSE_STRING_MATH_OP
 #undef DISPOSE_STRING_LOGIC_OP
 
-  template <typename ResultType, Keyword op>
+  template <typename ResultType, Operation op>
   using MathBox = BinaryOpBox<ResultType, ResultType, ResultType, op>;
 
-  template <typename Tx, Keyword op>
+  template <typename Tx, Operation op>
   using LogicBox = BinaryOpBox<bool, Tx, Tx, op>;
 
   const string kIteratorBehavior = "obj|step_forward|compare";
@@ -321,7 +321,7 @@ namespace sapphire {
     Message CallVMCFunction(Function &impl, ObjectMap &obj_map);
 
     void CommandLoad(ArgumentList &args);
-    void CommandIfOrWhile(Keyword token, ArgumentList &args, size_t nest_end);
+    void CommandIfOrWhile(Operation token, ArgumentList &args, size_t nest_end);
     void InitForEach(ArgumentList &args, size_t nest_end);
     void CheckForEach(ArgumentList &args, size_t nest_end);
     
@@ -330,7 +330,7 @@ namespace sapphire {
     void CommandCase(ArgumentList &args, size_t nest_end);
     void CommandElse();
     void CommandWhen(ArgumentList &args);
-    void CommandContinueOrBreak(Keyword token, size_t escape_depth);
+    void CommandContinueOrBreak(Operation token, size_t escape_depth);
     void CommandStructBegin(ArgumentList &args);
     void CommandModuleBegin(ArgumentList &args);
     void CommandConditionEnd();
@@ -362,10 +362,10 @@ namespace sapphire {
     void CommandVersion();
     void CommandMachineCodeName();
 
-    template <Keyword op_code>
+    template <Operation op_code>
     void BinaryMathOperatorImpl(ArgumentList &args);
 
-    template <Keyword op_code>
+    template <Operation op_code>
     void BinaryLogicOperatorImpl(ArgumentList &args);
 
     void OperatorIncreasing(ArgumentList &args);
@@ -383,7 +383,7 @@ namespace sapphire {
     void CommandCheckParameterPattern(ArgumentList &args);
     void CommandOptionalParamRange(ArgumentList &args);
 
-    void MachineCommands(Keyword token, ArgumentList &args, ASTNode &request);
+    void MachineCommands(Operation token, ArgumentList &args, ASTNode &request);
 
     void GenerateArgs(Function &impl, ArgumentList &args, ObjectMap &obj_map);
     void Generate_Fixed(Function &impl, ArgumentList &args, ObjectMap &obj_map);

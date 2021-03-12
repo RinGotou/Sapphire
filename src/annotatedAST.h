@@ -45,7 +45,7 @@ namespace sapphire {
     size_t nest_end;
     size_t escape_depth;
 
-    Keyword nest_root;
+    Operation nest_root;
 
     Annotation() : 
       void_call(false), 
@@ -55,7 +55,7 @@ namespace sapphire {
       nest(0),
       nest_end(0),
       escape_depth(0),
-      nest_root(kKeywordNull) {}
+      nest_root(Operation::Null) {}
   };
 
   class Argument {
@@ -69,7 +69,7 @@ namespace sapphire {
 
   public:
     Argument() :
-      data_(), type_(kArgumentInvalid), token_type_(kLiteralTypeInvalid), properties() {}
+      data_(), type_(kArgumentInvalid), token_type_(LiteralType::Invalid), properties() {}
     Argument(string data, ArgumentType type, LiteralType token_type) :
       data_(data), type_(type), token_type_(token_type), properties() {}
 
@@ -92,7 +92,7 @@ namespace sapphire {
 
   class ASTNode {
   private:
-    variant<Keyword, FunctionInfo> data_;
+    variant<Operation, FunctionInfo> data_;
 
   public:
     size_t idx;
@@ -101,7 +101,7 @@ namespace sapphire {
 
     ASTNode() :
       data_(), idx(0), type(kNodeInvalid), annotation() {}
-    ASTNode(Keyword token) :
+    ASTNode(Operation token) :
       data_(token), idx(0), type(kNodeMachineCommand), annotation() {} 
     ASTNode(string token, Argument domain = Argument()) :
       data_(FunctionInfo{ token, domain }), idx(0), type(kNodeFunction), annotation() {}
@@ -128,9 +128,9 @@ namespace sapphire {
       func_info.domain.properties.token_id = token_id;
     }
 
-    Keyword GetKeywordValue() {
-      if (type == kNodeMachineCommand) return std::get<Keyword>(data_);
-      return kKeywordNull;
+    Operation GetKeywordValue() {
+      if (type == kNodeMachineCommand) return std::get<Operation>(data_);
+      return Operation::Null;
     }
 
     bool IsPlaceholder() const { return type == kNodeInvalid; }

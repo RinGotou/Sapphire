@@ -27,50 +27,50 @@ namespace sapphire {
 namespace sapphire::lexical {
   Terminator GetTerminatorCode(string src) {
     if (IsBinaryOperator(GetKeywordCode(src))) {
-      return kTerminatorBinaryOperator;
+      return Terminator::BinaryOperator;
     }
 
     if (IsMonoOperator(GetKeywordCode(src))) {
-      return kTerminatorMonoOperator;
+      return Terminator::MonoOperator;
     }
 
-    if (src == "=")   return kTerminatorAssign;
-    if (src == ",")   return kTerminatorComma;
-    if (src == "[")   return kTerminatorLeftBracket;
-    if (src == ".")   return kTerminatorDot;
-    if (src == "(")   return kTerminatorLeftParen;
-    if (src == "]")   return kTerminatorRightSqrBracket;
-    if (src == ")")   return kTerminatorRightBracket;
-    if (src == "{")   return kTerminatorLeftBrace;
-    if (src == "}")   return kTerminatorRightCurBracket;
-    if (src == "fn")  return kTerminatorFn;
-    if (src == "struct") return kTerminatorStruct;
-    if (src == "module") return kTerminatorModule;
-    if (src == "for") return kTerminatorFor;
-    if (src == "in")  return kTerminatorIn;
-    if (src == "<-")  return kTerminatorArrow;
-    return kTerminatorNull;
+    if (src == "=")   return Terminator::Assign;
+    if (src == ",")   return Terminator::Comma;
+    if (src == "[")   return Terminator::LeftBracket;
+    if (src == ".")   return Terminator::Dot;
+    if (src == "(")   return Terminator::LeftParen;
+    if (src == "]")   return Terminator::RightSqrBracket;
+    if (src == ")")   return Terminator::RightBracket;
+    if (src == "{")   return Terminator::LeftBrace;
+    if (src == "}")   return Terminator::RightCurBracket;
+    if (src == "fn")  return Terminator::Fn;
+    if (src == "struct") return Terminator::Struct;
+    if (src == "module") return Terminator::Module;
+    if (src == "for") return Terminator::For;
+    if (src == "in")  return Terminator::In;
+    if (src == "<-")  return Terminator::Arrow;
+    return Terminator::Null;
   }
 
-  bool IsBinaryOperator(Keyword token) {
+  bool IsBinaryOperator(Operation token) {
     bool result;
     switch (token) {
-    case kKeywordBind:
-    case kKeywordDelivering:
-    case kKeywordPlus:
-    case kKeywordMinus:
-    case kKeywordTimes:
-    case kKeywordDivide:
-    case kKeywordEquals:
-    case kKeywordLessOrEqual:
-    case kKeywordGreaterOrEqual:
-    case kKeywordNotEqual:
-    case kKeywordGreater:
-    case kKeywordLess:
-    case kKeywordAnd:
-    case kKeywordOr:
-    case kKeywordIncrease:
-    case kKeywordDecrease:
+    case Operation::Bind:
+    case Operation::Delivering:
+    case Operation::Plus:
+    case Operation::Minus:
+    case Operation::Times:
+    case Operation::Divide:
+    case Operation::Equals:
+    case Operation::LessOrEqual:
+    case Operation::GreaterOrEqual:
+    case Operation::NotEqual:
+    case Operation::Greater:
+    case Operation::Less:
+    case Operation::And:
+    case Operation::Or:
+    case Operation::Increase:
+    case Operation::Decrease:
       result = true;
       break;
     default:
@@ -80,10 +80,10 @@ namespace sapphire::lexical {
     return result;
   }
 
-  bool IsMonoOperator(Keyword token) {
+  bool IsMonoOperator(Operation token) {
     bool result;
     switch (token) {
-    case kKeywordNot:
+    case Operation::Not:
       result = true;
       break;
     default:
@@ -94,35 +94,35 @@ namespace sapphire::lexical {
     return result;
   }
 
-  bool IsOperator(Keyword token) {
+  bool IsOperator(Operation token) {
     return IsBinaryOperator(token) || IsMonoOperator(token);
   }
 
-  int GetTokenPriority(Keyword token) {
+  int GetTokenPriority(Operation token) {
     int result;
     switch (token) {
-    case kKeywordBind:
-    case kKeywordDelivering:
+    case Operation::Bind:
+    case Operation::Delivering:
       result = 0;
       break;
-    case kKeywordAnd:
-    case kKeywordOr:
+    case Operation::And:
+    case Operation::Or:
       result = 1;
       break;
-    case kKeywordEquals:
-    case kKeywordLessOrEqual:
-    case kKeywordGreaterOrEqual:
-    case kKeywordNotEqual:
-    case kKeywordGreater:
-    case kKeywordLess:
+    case Operation::Equals:
+    case Operation::LessOrEqual:
+    case Operation::GreaterOrEqual:
+    case Operation::NotEqual:
+    case Operation::Greater:
+    case Operation::Less:
       result = 2;
       break;
-    case kKeywordPlus:
-    case kKeywordMinus:
+    case Operation::Plus:
+    case Operation::Minus:
       result = 3;
       break;
-    case kKeywordTimes:
-    case kKeywordDivide:
+    case Operation::Times:
+    case Operation::Divide:
       result = 4;
       break;
     default:
@@ -133,77 +133,77 @@ namespace sapphire::lexical {
     return result;
   }
 
-  unordered_map<string, Keyword> &GetKeywordBase() {
-    using T = pair<string, Keyword>;
-    static unordered_map<string, Keyword> base = {
-      T(kStrAssert         ,kKeywordAssert),
-      T(kStrLocal          ,kKeywordLocal),
-      T(kStrHash           ,kKeywordHash),
-      T(kStrFor            ,kKeywordFor),
-      T(kStrIn             ,kKeywordIn),
-      T(kStrNullObj        ,kKeywordNullObj),
-      T(kStrToString       ,kKeywordToString),
-      T(kStrTime           ,kKeywordTime),
-      T(kStrVersion        ,kKeywordVersion),
-      T(kStrCodeNameCmd    ,kKeywordCodeName),
-      T(kStrSwap           ,kKeywordSwap),
-      T(kStrSwapIf         ,kKeywordSwapIf),
-      T(kStrIf             ,kKeywordIf),
-      T(kStrFn             ,kKeywordFn),
-      T(kStrEnd            ,kKeywordEnd),
-      T(kStrElse           ,kKeywordElse),
-      T(kStrElif           ,kKeywordElif),
-      T(kStrWhile          ,kKeywordWhile),
-      T(kStrPlus           ,kKeywordPlus),
-      T(kStrMinus          ,kKeywordMinus),
-      T(kStrTimes          ,kKeywordTimes),
-      T(kStrDiv            ,kKeywordDivide),
-      T(kStrEquals         ,kKeywordEquals),
-      T(kStrAnd            ,kKeywordAnd),
-      T(kStrOr             ,kKeywordOr),
-      T(kStrNot            ,kKeywordNot),
-      T(kStrIncrease       ,kKeywordIncrease),
-      T(kStrDecrease       ,kKeywordDecrease),
-      T(kStrLessOrEqual    ,kKeywordLessOrEqual),
-      T(kStrGreaterOrEqual ,kKeywordGreaterOrEqual),
-      T(kStrNotEqual       ,kKeywordNotEqual),
-      T(kStrGreater        ,kKeywordGreater),
-      T(kStrLess           ,kKeywordLess),
-      T(kStrReturn         ,kKeywordReturn),
-      T(kStrContinue       ,kKeywordContinue),
-      T(kStrBreak          ,kKeywordBreak),
-      T(kStrCase           ,kKeywordCase),
-      T(kStrWhen           ,kKeywordWhen),
-      T(kStrTypeId         ,kKeywordTypeId),
-      T(kStrMethodsCmd     ,kKeywordMethods),
-      T(kStrUsing          ,kKeywordUsing),
-      T(kStrExist          ,kKeywordExist),
-      T(kStrStruct         ,kKeywordStruct),
-      T(kStrModule         ,kKeywordModule),
-      T(kStrInclude        ,kKeywordInclude),
-      T(kStrSuper          ,kKeywordSuper),
-      T(kStrIsBaseOf       ,kKeywordIsBaseOf),
-      T(kStrHasBehavior    ,kKeywordHasBehavior),
-      T(kStrIsVariableParam ,kKeywordIsVariableParam),
-      T(kStrIsOptionalParam ,kKeywordIsOptionalParam),
-      T(kStrOptionalParamRange ,kKeywordOptionalParamRange),
-      T(kStrAttribute          ,kKeywordAttribute),
-      T(kStrConstraintArrow    ,kKeywordConstaint),
-      T(kStrPrint              ,kKeywordPrint),
-      T(kStrPrintLine          ,kKeywordPrintLine),
-      T(kStrInput              ,kKeywordInput),
-      T(kStrConsole            ,kKeywordConole),
-      T(kStrGetChar            ,kKeywordGetChar),
-      T(kStrSleep              ,kKeywordSleep)
+  unordered_map<string, Operation> &GetKeywordBase() {
+    using T = pair<string, Operation>;
+    static unordered_map<string, Operation> base = {
+      T(kStrAssert         ,Operation::Assert),
+      T(kStrLocal          ,Operation::Local),
+      T(kStrHash           ,Operation::Hash),
+      T(kStrFor            ,Operation::For),
+      T(kStrIn             ,Operation::In),
+      T(kStrNullObj        ,Operation::NullObj),
+      T(kStrToString       ,Operation::ToString),
+      T(kStrTime           ,Operation::Time),
+      T(kStrVersion        ,Operation::Version),
+      T(kStrCodeNameCmd    ,Operation::CodeName),
+      T(kStrSwap           ,Operation::Swap),
+      T(kStrSwapIf         ,Operation::SwapIf),
+      T(kStrIf             ,Operation::If),
+      T(kStrFn             ,Operation::Fn),
+      T(kStrEnd            ,Operation::End),
+      T(kStrElse           ,Operation::Else),
+      T(kStrElif           ,Operation::Elif),
+      T(kStrWhile          ,Operation::While),
+      T(kStrPlus           ,Operation::Plus),
+      T(kStrMinus          ,Operation::Minus),
+      T(kStrTimes          ,Operation::Times),
+      T(kStrDiv            ,Operation::Divide),
+      T(kStrEquals         ,Operation::Equals),
+      T(kStrAnd            ,Operation::And),
+      T(kStrOr             ,Operation::Or),
+      T(kStrNot            ,Operation::Not),
+      T(kStrIncrease       ,Operation::Increase),
+      T(kStrDecrease       ,Operation::Decrease),
+      T(kStrLessOrEqual    ,Operation::LessOrEqual),
+      T(kStrGreaterOrEqual ,Operation::GreaterOrEqual),
+      T(kStrNotEqual       ,Operation::NotEqual),
+      T(kStrGreater        ,Operation::Greater),
+      T(kStrLess           ,Operation::Less),
+      T(kStrReturn         ,Operation::Return),
+      T(kStrContinue       ,Operation::Continue),
+      T(kStrBreak          ,Operation::Break),
+      T(kStrCase           ,Operation::Case),
+      T(kStrWhen           ,Operation::When),
+      T(kStrTypeId         ,Operation::TypeId),
+      T(kStrMethodsCmd     ,Operation::Methods),
+      T(kStrUsing          ,Operation::Using),
+      T(kStrExist          ,Operation::Exist),
+      T(kStrStruct         ,Operation::Struct),
+      T(kStrModule         ,Operation::Module),
+      T(kStrInclude        ,Operation::Include),
+      T(kStrSuper          ,Operation::Super),
+      T(kStrIsBaseOf       ,Operation::IsBaseOf),
+      T(kStrHasBehavior    ,Operation::HasBehavior),
+      T(kStrIsVariableParam ,Operation::IsVariableParam),
+      T(kStrIsOptionalParam ,Operation::IsOptionalParam),
+      T(kStrOptionalParamRange ,Operation::OptionalParamRange),
+      T(kStrAttribute          ,Operation::Attribute),
+      T(kStrConstraintArrow    ,Operation::Constaint),
+      T(kStrPrint              ,Operation::Print),
+      T(kStrPrintLine          ,Operation::PrintLine),
+      T(kStrInput              ,Operation::Input),
+      T(kStrConsole            ,Operation::Conole),
+      T(kStrGetChar            ,Operation::GetChar),
+      T(kStrSleep              ,Operation::Sleep)
     };
     return base;
   }
 
-  Keyword GetKeywordCode(string src) {
+  Operation GetKeywordCode(string src) {
     auto &base = GetKeywordBase();
     auto it = base.find(src);
     if (it != base.end()) return it->second;
-    return kKeywordNull;
+    return Operation::Null;
   }
 
   bool IsString(string target) {
@@ -318,17 +318,17 @@ namespace sapphire::lexical {
   }
 
   LiteralType GetStringType(string src, bool ignore_symbol_rule) {
-    LiteralType type = kLiteralTypeInvalid;
-    if (src.empty())              type = kLiteralTypeInvalid;
-    else if (IsBoolean(src))      type = kLiteralTypeBool;
-    else if (IsIdentifier(src))   type = kLiteralTypeIdentifier;
-    else if (IsInteger(src))      type = kLiteralTypeInt;
-    else if (IsFloat(src))        type = kLiteralTypeFloat;
-    else if (IsBlank(src))        type = kLiteralTypeWhitespace;
-    else if (IsString(src))       type = kLiteralTypeString;
+    LiteralType type = LiteralType::Invalid;
+    if (src.empty())              type = LiteralType::Invalid;
+    else if (IsBoolean(src))      type = LiteralType::Bool;
+    else if (IsIdentifier(src))   type = LiteralType::Identifier;
+    else if (IsInteger(src))      type = LiteralType::Int;
+    else if (IsFloat(src))        type = LiteralType::Float;
+    else if (IsBlank(src))        type = LiteralType::Whitespace;
+    else if (IsString(src))       type = LiteralType::String;
 
     if (!ignore_symbol_rule) {
-      if (IsSymbol(src)) type = kLiteralTypeSymbol;
+      if (IsSymbol(src)) type = LiteralType::Symbol;
     }
     return type;
   }

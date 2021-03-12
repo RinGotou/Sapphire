@@ -14,9 +14,9 @@ namespace sapphire {
     return type;
   }
 
-  inline bool IsIllegalStringOperator(Keyword keyword) {
-    return keyword != kKeywordPlus && keyword != kKeywordNotEqual
-      && keyword != kKeywordEquals;
+  inline bool IsIllegalStringOperator(Operation operation) {
+    return operation != Operation::Plus && operation != Operation::NotEqual
+      && operation != Operation::Equals;
   }
 
   inline int64_t IntProducer(Object &obj) {
@@ -286,7 +286,7 @@ namespace sapphire {
     }
     else if (idx == vmcode.size() - 2) {
       bool needed_by_next_call =
-        vmcode[idx + 1].first.GetKeywordValue() == kKeywordReturn &&
+        vmcode[idx + 1].first.GetKeywordValue() == Operation::Return &&
         vmcode[idx + 1].second.back().GetType() == kArgumentReturnValue &&
         vmcode[idx + 1].second.size() == 1;
       if (!current.first.annotation.void_call && needed_by_next_call) {
@@ -307,7 +307,7 @@ namespace sapphire {
     }
     else if (idx == vmcode.size() - 2) {
       bool needed_by_next_call = 
-        vmcode[idx + 1].first.GetKeywordValue() == kKeywordReturn &&
+        vmcode[idx + 1].first.GetKeywordValue() == Operation::Return &&
         vmcode[idx + 1].second.back().GetType() == kArgumentReturnValue &&
         vmcode[idx + 1].second.size() == 1;
       if (!vmcode[idx].first.annotation.void_call && needed_by_next_call) {
@@ -327,12 +327,12 @@ namespace sapphire {
     if (ptr != nullptr) return ptr;
 
     auto type = arg.GetStringType();
-    if (type == kLiteralTypeInt) {
+    if (type == LiteralType::Int) {
       int64_t int_value;
       from_chars(value.data(), value.data() + value.size(), int_value);
       ptr = CreateConstantObject(value, Object(int_value, kTypeIdInt));
     }
-    else if (type == kLiteralTypeFloat) {
+    else if (type == LiteralType::Float) {
       double float_value;
 #ifndef _MSC_VER
       //dealing with issues of charconv implementation in low-version clang
@@ -344,14 +344,14 @@ namespace sapphire {
     }
     else {
       switch (type) {
-      case kLiteralTypeBool:
+      case LiteralType::Bool:
         ptr = CreateConstantObject(value, Object(value == kStrTrue, kTypeIdBool));
         break;
-      case kLiteralTypeString:
+      case LiteralType::String:
         ptr = CreateConstantObject(value, Object(ParseRawString(value)));
         break;
         //for binding expression
-      case kLiteralTypeIdentifier:
+      case LiteralType::Identifier:
         ptr = CreateConstantObject(value, Object(value));
         break;
       default:
@@ -688,10 +688,10 @@ namespace sapphire {
   void Machine::CheckDomainObject(Function &impl, ASTNode &node, bool first_assert) {
     auto &frame = frame_stack_.top();
     auto domain = node.GetFunctionDomain();
-    auto keyword = node.GetKeywordValue();
+    auto operation = node.GetKeywordValue();
     auto need_catching = domain.GetType() == kArgumentObjectStack
-      && ((keyword != kKeywordDomainAssertCommand)
-        || (keyword == kKeywordDomainAssertCommand && first_assert));
+      && ((operation != Operation::DomainAssertCommand)
+        || (operation == Operation::DomainAssertCommand && first_assert));
 
     if (!need_catching) return;
     
@@ -790,8 +790,8 @@ namespace sapphire {
 
     if (closure) {
       for (auto it = code.begin(); it != code.end(); ++it) {
-        first_assert = not_assert_before && it->first.GetKeywordValue() == kKeywordDomainAssertCommand;
-        not_assert_before = it->first.GetKeywordValue() != kKeywordDomainAssertCommand;
+        first_assert = not_assert_before && it->first.GetKeywordValue() == Operation::DomainAssertCommand;
+        not_assert_before = it->first.GetKeywordValue() != Operation::DomainAssertCommand;
         CheckDomainObject(impl, it->first, first_assert);
         CheckArgrumentList(impl, it->second);
       }
@@ -893,7 +893,7 @@ namespace sapphire {
     frame.RefreshReturnStack(std::move(view));
   }
 
-  void Machine::CommandIfOrWhile(Keyword keyword, ArgumentList &args, size_t nest_end) {
+  void Machine::CommandIfOrWhile(Operation operation, ArgumentList &args, size_t nest_end) {
     auto &frame = frame_stack_.top();
     auto &code = code_stack_.front();
     bool has_jump_record = false;
@@ -904,7 +904,7 @@ namespace sapphire {
       return;
     }
 
-    if (keyword == kKeywordIf || keyword == kKeywordWhile) {
+    if (operation == Operation::If || operation == Operation::While) {
       frame.AddJumpRecord(nest_end);
       has_jump_record = code->FindJumpRecord(frame.idx + frame.jump_offset, frame.branch_jump_stack);
     }
@@ -921,7 +921,7 @@ namespace sapphire {
 
     state = view.Seek().Cast<bool>();
 
-    if (keyword == kKeywordIf) {
+    if (operation == Operation::If) {
       auto create_env = [&]()->void {
         frame.scope_indicator.push(true);
         frame.condition_stack.push(state);
@@ -943,7 +943,7 @@ namespace sapphire {
         create_env();
       }
     }
-    else if (keyword == kKeywordElif) {
+    else if (operation == Operation::Elif) {
       if (frame.condition_stack.empty()) {
         frame.MakeError("Unexpected Elif");
         return;
@@ -967,7 +967,7 @@ namespace sapphire {
         }
       }
     }
-    else if (keyword == kKeywordWhile) {
+    else if (operation == Operation::While) {
       if (!frame.jump_from_end) {
         frame.scope_indicator.push(true);
         obj_stack_.Push(true, true);
@@ -1265,7 +1265,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandContinueOrBreak(Keyword keyword, size_t escape_depth) {
+  void Machine::CommandContinueOrBreak(Operation operation, size_t escape_depth) {
     auto &frame = frame_stack_.top();
     auto &scope_indicator = frame.scope_indicator;
 
@@ -1282,11 +1282,11 @@ namespace sapphire {
 
     frame.Goto(frame.jump_stack.top());
 
-    switch (keyword) {
-    case kKeywordContinue:
+    switch (operation) {
+    case Operation::Continue:
       frame.from_continue = true; 
       break;
-    case kKeywordBreak:
+    case Operation::Break:
       frame.from_break = true; 
       frame.final_cycle = true;
       break;
@@ -1715,7 +1715,7 @@ namespace sapphire {
     auto &frame = frame_stack_.top();
 
     if (args[0].GetType() == kArgumentLiteralValue &&
-      lexical::GetStringType(args[0].GetData(), true) != kLiteralTypeIdentifier) {
+      lexical::GetStringType(args[0].GetData(), true) != LiteralType::Identifier) {
       frame.MakeError("Cannot modify a literal value");
       return;
     }
@@ -1734,7 +1734,7 @@ namespace sapphire {
     else {
       string id = lhs.Seek().Cast<string>();
 
-      if (lexical::GetStringType(id) != kLiteralTypeIdentifier) {
+      if (lexical::GetStringType(id) != LiteralType::Identifier) {
         frame.MakeError("Invalid object id");
         return;
       }
@@ -1765,7 +1765,7 @@ namespace sapphire {
     auto &frame = frame_stack_.top();
 
     if (args[0].GetType() == kArgumentLiteralValue &&
-      lexical::GetStringType(args[0].GetData(), true) != kLiteralTypeIdentifier) {
+      lexical::GetStringType(args[0].GetData(), true) != LiteralType::Identifier) {
       frame.MakeError("Cannot modify a literal value");
       return;
     }
@@ -1789,7 +1789,7 @@ namespace sapphire {
     else {
       string id = lhs.Seek().Cast<string>();
 
-      if (lexical::GetStringType(id) != kLiteralTypeIdentifier) {
+      if (lexical::GetStringType(id) != LiteralType::Identifier) {
         frame.MakeError("Invalid object id");
         return;
       }
@@ -1946,13 +1946,13 @@ namespace sapphire {
         auto type = lexical::GetStringType(str, true);
 
         switch (type) {
-        case kLiteralTypeInt:
+        case LiteralType::Int:
           ret_obj.PackContent(make_shared<int64_t>(stol(str)), kTypeIdInt);
           break;
-        case kLiteralTypeFloat:
+        case LiteralType::Float:
           ret_obj.PackContent(make_shared<double>(stod(str)), kTypeIdFloat);
           break;
-        case kLiteralTypeBool:
+        case LiteralType::Bool:
           ret_obj.PackContent(make_shared<bool>(str == kStrTrue), kTypeIdBool);
           break;
         default:
@@ -2167,7 +2167,7 @@ namespace sapphire {
     frame.RefreshReturnStack(Object(CODENAME));
   }
 
-  template <Keyword op_code>
+  template <Operation op_code>
   void Machine::BinaryMathOperatorImpl(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
@@ -2216,7 +2216,7 @@ namespace sapphire {
 #undef RESULT_PROCESSING
   }
 
-  template <Keyword op_code>
+  template <Operation op_code>
   void Machine::BinaryLogicOperatorImpl(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
@@ -2236,7 +2236,7 @@ namespace sapphire {
     if (frame.error) return;
 
     if (!lexical::IsPlainType(lhs.Seek().GetTypeId())) {
-      if constexpr (op_code != kKeywordEquals && op_code != kKeywordNotEqual) {
+      if constexpr (op_code != Operation::Equals && op_code != Operation::NotEqual) {
         frame.RefreshReturnStack(Object());
       }
       else {
@@ -2257,7 +2257,7 @@ namespace sapphire {
 
         bool value = obj.Cast<bool>();
 
-        frame.RefreshReturnStack(op_code == kKeywordNotEqual ? !value : value);
+        frame.RefreshReturnStack(op_code == Operation::NotEqual ? !value : value);
       }
 
       return;
@@ -2585,64 +2585,64 @@ namespace sapphire {
     frame.RefreshReturnStack(result);
   }
 
-  void Machine::MachineCommands(Keyword keyword, ArgumentList &args, ASTNode &node) {
+  void Machine::MachineCommands(Operation operation, ArgumentList &args, ASTNode &node) {
     auto &frame = frame_stack_.top();
 
-    switch (keyword) {
-    case kKeywordLoad:
+    switch (operation) {
+    case Operation::Load:
       CommandLoad(args);
       break;
-    case kKeywordIf:
-    case kKeywordElif:
-    case kKeywordWhile:
-      CommandIfOrWhile(keyword, args, node.annotation.nest_end);
+    case Operation::If:
+    case Operation::Elif:
+    case Operation::While:
+      CommandIfOrWhile(operation, args, node.annotation.nest_end);
       break;
-    case kKeywordPlus:
-      BinaryMathOperatorImpl<kKeywordPlus>(args);
+    case Operation::Plus:
+      BinaryMathOperatorImpl<Operation::Plus>(args);
       break;
-    case kKeywordMinus:
-      BinaryMathOperatorImpl<kKeywordMinus>(args);
+    case Operation::Minus:
+      BinaryMathOperatorImpl<Operation::Minus>(args);
       break;
-    case kKeywordTimes:
-      BinaryMathOperatorImpl<kKeywordTimes>(args);
+    case Operation::Times:
+      BinaryMathOperatorImpl<Operation::Times>(args);
       break;
-    case kKeywordDivide:
-      BinaryMathOperatorImpl<kKeywordDivide>(args);
+    case Operation::Divide:
+      BinaryMathOperatorImpl<Operation::Divide>(args);
       break;
-    case kKeywordEquals:
-      BinaryLogicOperatorImpl<kKeywordEquals>(args);
+    case Operation::Equals:
+      BinaryLogicOperatorImpl<Operation::Equals>(args);
       break;
-    case kKeywordLessOrEqual:
-      BinaryLogicOperatorImpl<kKeywordLessOrEqual>(args);
+    case Operation::LessOrEqual:
+      BinaryLogicOperatorImpl<Operation::LessOrEqual>(args);
       break;
-    case kKeywordGreaterOrEqual:
-      BinaryLogicOperatorImpl<kKeywordGreaterOrEqual>(args);
+    case Operation::GreaterOrEqual:
+      BinaryLogicOperatorImpl<Operation::GreaterOrEqual>(args);
       break;
-    case kKeywordNotEqual:
-      BinaryLogicOperatorImpl<kKeywordNotEqual>(args);
+    case Operation::NotEqual:
+      BinaryLogicOperatorImpl<Operation::NotEqual>(args);
       break;
-    case kKeywordGreater:
-      BinaryLogicOperatorImpl<kKeywordGreater>(args);
+    case Operation::Greater:
+      BinaryLogicOperatorImpl<Operation::Greater>(args);
       break;
-    case kKeywordLess:
-      BinaryLogicOperatorImpl<kKeywordLess>(args);
+    case Operation::Less:
+      BinaryLogicOperatorImpl<Operation::Less>(args);
       break;
-    case kKeywordAnd:
-      BinaryLogicOperatorImpl<kKeywordAnd>(args);
+    case Operation::And:
+      BinaryLogicOperatorImpl<Operation::And>(args);
       break;
-    case kKeywordOr:
-      BinaryLogicOperatorImpl<kKeywordOr>(args);
+    case Operation::Or:
+      BinaryLogicOperatorImpl<Operation::Or>(args);
       break;
-    case kKeywordIncrease:
+    case Operation::Increase:
       OperatorIncreasing(args);
       break;
-    case kKeywordDecrease:
+    case Operation::Decrease:
       OperatorDecreasing(args);
       break;
-    case kKeywordNot:
+    case Operation::Not:
       OperatorLogicNot(args);
       break;
-    case kKeywordFor:
+    case Operation::For:
       if (frame.jump_from_end) {
         CheckForEach(args, node.annotation.nest_end);
         frame.jump_from_end = false;
@@ -2652,141 +2652,141 @@ namespace sapphire {
       }
       //CommandForEach(args, node.option.nest_end);
       break;
-    case kKeywordNullObj:
+    case Operation::NullObj:
       CommandNullObj(args);
       break;
-    case kKeywordToString:
+    case Operation::ToString:
       CommandToString(args);
       break;
-    case kKeywordTime:
+    case Operation::Time:
       CommandTime();
       break;
-    case kKeywordVersion:
+    case Operation::Version:
       CommandVersion();
       break;
-    case kKeywordCodeName:
+    case Operation::CodeName:
       CommandMachineCodeName();
       break;
-    case kKeywordSwap:
+    case Operation::Swap:
       CommandSwap(args);
       break;
-    case kKeywordSwapIf:
+    case Operation::SwapIf:
       CommandSwapIf(args);
       break;
-    case kKeywordBind:
+    case Operation::Bind:
       CommandBind(args, node.annotation.local_object, node.annotation.ext_object);
       break;
-    case kKeywordDelivering:
+    case Operation::Delivering:
       CommandDelivering(args, node.annotation.local_object, node.annotation.ext_object);
       break;
-    case kKeywordExpList:
+    case Operation::ExpList:
       ExpList(args);
       break;
-    case kKeywordInitialArray:
+    case Operation::InitialArray:
       InitArray(args);
       break;
-    case kKeywordReturn:
+    case Operation::Return:
       CommandReturn(args);
       break;
-    case kKeywordAssert:
+    case Operation::Assert:
       CommandAssert(args);
       break;
-    case kKeywordTypeId:
+    case Operation::TypeId:
       CommandTypeId(args);
       break;
-    case kKeywordMethods:
+    case Operation::Methods:
       CommandMethods(args);
       break;
-    case kKeywordExist:
+    case Operation::Exist:
       CommandExist(args);
       break;
-    case kKeywordFn:
+    case Operation::Fn:
       ClosureCatching(args, node.annotation.nest_end, frame_stack_.size() > 1);
       break;
-    case kKeywordCase:
+    case Operation::Case:
       CommandCase(args, node.annotation.nest_end);
       break;
-    case kKeywordWhen:
+    case Operation::When:
       CommandWhen(args);
       break;
-    case kKeywordEnd:
+    case Operation::End:
       switch (node.annotation.nest_root) {
-      case kKeywordWhile:
+      case Operation::While:
         CommandLoopEnd(node.annotation.nest);
         break;
-      case kKeywordFor:
+      case Operation::For:
         CommandForEachEnd(node.annotation.nest);
         break;
-      case kKeywordIf:
-      case kKeywordCase:
+      case Operation::If:
+      case Operation::Case:
         CommandConditionEnd();
         break;
-      case kKeywordStruct:
+      case Operation::Struct:
         CommandStructEnd();
         break;
-      case kKeywordModule:
+      case Operation::Module:
         CommandModuleEnd();
         break;
       default:break;
       }
       break;
-    case kKeywordContinue:
-    case kKeywordBreak:
-      CommandContinueOrBreak(keyword, node.annotation.escape_depth);
+    case Operation::Continue:
+    case Operation::Break:
+      CommandContinueOrBreak(operation, node.annotation.escape_depth);
       break;
-    case kKeywordElse:
+    case Operation::Else:
       CommandElse();
       break;
-    case kKeywordUsing:
+    case Operation::Using:
       CommandUsing(args);
       break;
-    case kKeywordStruct:
+    case Operation::Struct:
       CommandStructBegin(args);
       break;
-    case kKeywordModule:
+    case Operation::Module:
       CommandModuleBegin(args);
       break;
-    case kKeywordDomainAssertCommand:
+    case Operation::DomainAssertCommand:
       DomainAssert(args);
       break;
-    case kKeywordInclude:
+    case Operation::Include:
       CommandInclude(args);
       break;
-    case kKeywordSuper:
+    case Operation::Super:
       CommandSuper(args);
       break;
-    case kKeywordAttribute:
+    case Operation::Attribute:
       CommandAttribute(args);
       break;
-    case kKeywordIsBaseOf:
+    case Operation::IsBaseOf:
       CommandIsBaseOf(args);
       break;
-    case kKeywordHasBehavior:
+    case Operation::HasBehavior:
       CommandHasBehavior(args);
       break;
-    case kKeywordIsVariableParam:
+    case Operation::IsVariableParam:
       CommandCheckParameterPattern<kParamAutoSize>(args);
       break;
-    case kKeywordIsOptionalParam:
+    case Operation::IsOptionalParam:
       CommandCheckParameterPattern<kParamAutoFill>(args);
       break;
-    case kKeywordOptionalParamRange:
+    case Operation::OptionalParamRange:
       CommandOptionalParamRange(args);
       break;
-    case kKeywordPrint:
+    case Operation::Print:
       CommandPrint(args);
       break;
-    case kKeywordPrintLine:
+    case Operation::PrintLine:
       CommandPrint(args);
       fputs("\n", VM_STDOUT);
       break;
-    case kKeywordInput:
+    case Operation::Input:
       CommandInput(args);
       break;
-    case kKeywordConole:
+    case Operation::Conole:
       SysCommand(args);
       break;
-    case kKeywordGetChar:
+    case Operation::GetChar:
       CommandGetChar(args);
       break;
     default:
@@ -3137,7 +3137,7 @@ namespace sapphire {
       if (sentense->first.type == kNodeMachineCommand) {
         MachineCommands(sentense->first.GetKeywordValue(), sentense->second, sentense->first);
         
-        auto is_return = sentense->first.GetKeywordValue() == kKeywordReturn;
+        auto is_return = sentense->first.GetKeywordValue() == Operation::Return;
 
         if (is_return) refresh_tick();
         if (frame->error) break;

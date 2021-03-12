@@ -4,7 +4,7 @@
 
 // !!! This module is deprecated and will be destroyed in the future.
 
-#define INVALID_TOKEN Token(string(), kLiteralTypeInvalid)
+#define INVALID_TOKEN Token(string(), LiteralType::Invalid)
 
 namespace sapphire {
   using CombinedCodeline = pair<size_t, string>;
@@ -92,9 +92,9 @@ namespace sapphire {
     FirstStageParsing() : frame_(nullptr), index_(0) {}
     AnnotatedAST &GetOutput() { return action_base_; }
 
-    Keyword GetASTRoot() {
+    Operation GetASTRoot() {
       if (action_base_.empty()) {
-        return kKeywordNull;
+        return Operation::Null;
       }
       return action_base_.back().first.GetKeywordValue();
     }
@@ -104,7 +104,7 @@ namespace sapphire {
   };
 
   struct JumpListFrame {
-    Keyword nest_code;
+    Operation nest_code;
     size_t nest;
     list<size_t> jump_record;
   };
@@ -120,7 +120,7 @@ namespace sapphire {
     stack<size_t> nest_end_;
     stack<size_t> nest_origin_;
     stack<size_t> cycle_escaper_;
-    stack<Keyword> nest_type_;
+    stack<Operation> nest_type_;
     stack<JumpListFrame> jump_stack_;
     list<CombinedCodeline> script_;
     deque<CombinedToken> tokens_;
