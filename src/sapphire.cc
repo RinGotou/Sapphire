@@ -16,7 +16,7 @@ void BootMainVMObject(string path, string log_path, bool real_time_log) {
     if (!analysis.Start()) return;
   }
   
-  Machine main_thread(script_file, log_path, real_time_log);
+  AASTMachine main_thread(script_file, log_path, real_time_log);
   main_thread.Run();
 }
 

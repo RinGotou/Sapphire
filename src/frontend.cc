@@ -573,10 +573,6 @@ namespace sapphire {
       }
       else {
         Argument arg(frame_->current.first, ArgumentType::Literal, LiteralType::Identifier);
-        if (optional) {
-          arg.properties.fn.optional_param = true;
-          optional = false;
-        }
 
         if (variable) {
           arg.properties.fn.variable_param = true;

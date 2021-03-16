@@ -13,7 +13,7 @@ namespace sapphire {
   using Activity = Message(*)(ObjectMap &);
   using ExtensionActivity = int(*)(VMState);
 
-  enum class ParameterPattern { Variable, Optional, Fixed };
+  enum class ParameterPattern { Variable, Fixed };
 
   class _FunctionImpl {
   public:

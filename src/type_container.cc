@@ -3,19 +3,25 @@
 namespace sapphire {
   Message NewArray(ObjectMap &p) {
     ManagedArray base = make_shared<ObjectArray>();
+    auto args = p.Cast<ObjectArray>("args");
 
-    if (!p["size"].NullPtr()) {
-      auto size = p.Cast<int64_t>("size");
-      if (size < 0) return Message("Invalid array size.", StateLevel::Error);
-      auto size_value = static_cast<size_t>(size);
+    if (args.size() > 2) {
+      return Message("Too much arguments for constructing array");
+    }
 
+    auto size = args[0].Cast<int64_t>();
 
-      Object obj = p["init_value"];
+    if (args.size() == 1) {
+      for (size_t idx = 0; idx < size_t(size); idx += 1) {
+        base->emplace_back(Object());
+      }
+    }
+    else {
+      ObjectView view(&args[1]);
+      view.source = ObjectViewSource::Ref;
 
-      auto type_id = obj.GetTypeId();
-
-      for (size_t count = 0; count < size_value; ++count) {
-        base->emplace_back(components::DumpObject(obj));
+      for (size_t idx = 0; idx < size_t(size); idx += 1) {
+        base->emplace_back(components::DumpObject(view.Seek()));
       }
     }
 
@@ -155,7 +161,7 @@ namespace sapphire {
     CreateStruct(kTypeIdArray);
     StructMethodGenerator(kTypeIdArray).Create(
       {
-        Function(NewArray, "size|init_value", kStrInitializer, ParameterPattern::Optional).SetLimit(0),
+        Function(NewArray, "args", kStrInitializer, ParameterPattern::Variable),
         Function(Array_GetElement, "index", "at"),
         Function(Array_GetSize, "", "size"),
         Function(Array_Push, "object", "push"),

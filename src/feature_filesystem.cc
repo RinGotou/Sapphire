@@ -54,15 +54,15 @@ namespace sapphire {
     auto &dir_obj = p["dir"];
     string dest_dir;
 
-    if (dir_obj.NullPtr()) {
-      dest_dir = runtime::GetScriptAbsolutePath();
-    }
-    else {
-      dest_dir = dir_obj.Cast<string>();
-    }
+    dest_dir = dir_obj.Cast<string>();
 
     bool result = runtime::SetWorkingDirectory(dest_dir);
     return Message().SetObject(result);
+  }
+
+  Message StartHere(ObjectMap &p) {
+    using namespace runtime;
+    return Message().SetObject(SetWorkingDirectory(GetScriptAbsolutePath()));
   }
 
   Message GetWorkingDir(ObjectMap &p) {
@@ -95,7 +95,8 @@ namespace sapphire {
   void InitConsoleComponents() {
     using namespace components;
 
-    CreateFunctionObject(Function(SetWorkingDir, "dir", "chdir", ParameterPattern::Optional).SetLimit(0));
+    CreateFunctionObject(Function(StartHere, "", "starthere"));
+    CreateFunctionObject(Function(SetWorkingDir, "dir", "chdir"));
     CreateFunctionObject(Function(GetWorkingDir, "", "current_directory"));
     CreateFunctionObject(Function(GetScriptAbsolutePath, "", "boot_directory"));
     CreateFunctionObject(Function(GetCoreAbsolutePath, "", "core_directory"));

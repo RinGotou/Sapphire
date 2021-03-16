@@ -296,7 +296,7 @@ namespace sapphire {
 
   using FrameStack = stack<RuntimeFrame, deque<RuntimeFrame>>;
 
-  class Machine {
+  class AASTMachine {
   private:
     StandardLogger *logger_;
     bool is_logger_host_;
@@ -395,8 +395,7 @@ namespace sapphire {
 
     void GenerateArgs(Function &impl, ArgumentList &args, ObjectMap &obj_map);
     void Generate_Fixed(Function &impl, ArgumentList &args, ObjectMap &obj_map);
-    void Generate_AutoSize(Function &impl, ArgumentList &args, ObjectMap &obj_map);
-    void Generate_AutoFill(Function &impl, ArgumentList &args, ObjectMap &obj_map);
+    void Generate_Variable(Function &impl, ArgumentList &args, ObjectMap &obj_map);
     void CallExtensionFunction(ObjectMap &p, Function &impl);
     void GenerateStructInstance(ObjectMap &p);
     void GenerateErrorMessages(size_t stop_index);
@@ -410,14 +409,14 @@ namespace sapphire {
     
 
   public:
-    ~Machine() { if (is_logger_host_) delete logger_; }
-    Machine() = delete;
-    Machine(const Machine &rhs) = delete;
-    Machine(const Machine &&rhs) = delete;
-    void operator=(const Machine &) = delete;
-    void operator=(const Machine &&) = delete;
+    ~AASTMachine() { if (is_logger_host_) delete logger_; }
+    AASTMachine() = delete;
+    AASTMachine(const AASTMachine &rhs) = delete;
+    AASTMachine(const AASTMachine &&rhs) = delete;
+    void operator=(const AASTMachine &) = delete;
+    void operator=(const AASTMachine &&) = delete;
 
-    Machine(AnnotatedAST &ir, string log_path, bool rtlog = false) :
+    AASTMachine(AnnotatedAST &ir, string log_path, bool rtlog = false) :
       logger_(nullptr),
       is_logger_host_(true),
       code_stack_(),
@@ -432,7 +431,7 @@ namespace sapphire {
         (StandardLogger *)new StandardCachedLogger(log_path, "a");
     }
 
-    Machine(AnnotatedAST &ir, StandardLogger *logger) :
+    AASTMachine(AnnotatedAST &ir, StandardLogger *logger) :
       logger_(logger),
       is_logger_host_(false),
       code_stack_(),

@@ -18,7 +18,7 @@ namespace sapphire {
 
   struct ArgumentProperties {
     struct {
-      bool optional_param, variable_param, constraint;
+      bool variable_param, constraint;
     } fn;
     struct {
       bool use_last_assert, is_chain_tail;
@@ -30,7 +30,7 @@ namespace sapphire {
     size_t token_id;
 
     ArgumentProperties() : 
-      fn{ false, false, false },
+      fn{ false, false },
       member_access{ false, false },
       domain{ "", ArgumentType::Invalid },
       token_id(0) {}

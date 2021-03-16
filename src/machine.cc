@@ -167,14 +167,14 @@ namespace sapphire {
 
   int PushObjectToVM(const char *id, void *ptr, const char *type_id, ExternalMemoryDisposer disposer,
     void *vm) {
-    auto &machine = *static_cast<Machine *>(vm);
+    auto &machine = *static_cast<AASTMachine *>(vm);
     Object ext_obj(ptr, disposer, string(type_id));
     auto result = machine.PushObject(string(id), ext_obj);
     return result ? 1 : 0;
   }
 
   void ReceiveError(void *vm, const char *msg) {
-    auto &machine = *static_cast<Machine *>(vm);
+    auto &machine = *static_cast<AASTMachine *>(vm);
     machine.PushError(string(msg));
   }
 
@@ -249,7 +249,7 @@ namespace sapphire {
     if (is_command) rstk_operated = true;
   }
 
-  void Machine::RecoverLastState(bool call_by_return) {
+  void AASTMachine::RecoverLastState(bool call_by_return) {
     ObjectView view(obj_stack_.GetCurrent().Find(kStrReturnValueConstrantObj));
 
     if (view.IsValid() && !call_by_return) { // no need to check alive state
@@ -267,14 +267,14 @@ namespace sapphire {
     if (!call_by_return) frame_stack_.top().RefreshReturnStack(Object());
   }
 
-  void Machine::FinishInitalizerCalling() {
+  void AASTMachine::FinishInitalizerCalling() {
     auto instance_obj = *obj_stack_.GetCurrent().Find(kStrMe);
     instance_obj.SetDeliveringFlag();
     RecoverLastState(false);
     frame_stack_.top().RefreshReturnStack(instance_obj);
   }
 
-  bool Machine::IsTailRecursion(size_t idx, AnnotatedAST *code) {
+  bool AASTMachine::IsTailRecursion(size_t idx, AnnotatedAST *code) {
     if (code != code_stack_.back()) return false;
 
     auto &vmcode = *code;
@@ -297,7 +297,7 @@ namespace sapphire {
     return result;
   }
 
-  bool Machine::IsTailCall(size_t idx) {
+  bool AASTMachine::IsTailCall(size_t idx) {
     if (frame_stack_.size() <= 1) return false;
     auto &vmcode = *code_stack_.back();
     bool result = false;
@@ -318,7 +318,7 @@ namespace sapphire {
     return result;
   }
 
-  Object *Machine::FetchLiteralObject(Argument &arg) {
+  Object *AASTMachine::FetchLiteralObject(Argument &arg) {
     using namespace constant;
     auto value = arg.GetData();
 
@@ -362,7 +362,7 @@ namespace sapphire {
     return ptr;
   }
 
-  ObjectView Machine::FetchObjectView(Argument &arg) {
+  ObjectView AASTMachine::FetchObjectView(Argument &arg) {
     using namespace constant;
 
 #define OBJECT_DEAD_MSG {                           \
@@ -382,7 +382,7 @@ namespace sapphire {
 
     if (arg.GetType() == ArgumentType::Literal) {
       view = FetchLiteralObject(arg);
-      view.source = ObjectViewSource::ObjectViewSource::Literal;
+      view.source = ObjectViewSource::Literal;
     }
     else if (arg.GetType() == ArgumentType::Pool) {
       if (!arg.properties.domain.id.empty() || arg.properties.member_access.use_last_assert) {
@@ -435,7 +435,7 @@ namespace sapphire {
           frame.MakeError("Object is not found: " + arg.GetData());
         }
       }
-      view.source = ObjectViewSource::ObjectViewSource::Ref;
+      view.source = ObjectViewSource::Ref;
     }
     else if (arg.GetType() == ArgumentType::RetStack) {
       if (!return_stack.empty()) {
@@ -455,7 +455,7 @@ namespace sapphire {
       else {
         frame.MakeError("Can't get object from stack(Internal error)");
       }
-      view.source = ObjectViewSource::ObjectViewSource::Ref;
+      view.source = ObjectViewSource::Ref;
     }
 
 #undef OBJECT_DEAD_MSG
@@ -463,7 +463,7 @@ namespace sapphire {
     return view;
   }
 
-  bool Machine::CheckObjectBehavior(Object &obj, string behaviors) {
+  bool AASTMachine::CheckObjectBehavior(Object &obj, string behaviors) {
     auto sample = BuildStringVector(behaviors);
     bool result = true;
 
@@ -496,7 +496,7 @@ namespace sapphire {
     return result;
   }
 
-  bool Machine::CheckObjectMethod(Object &obj, string id) {
+  bool AASTMachine::CheckObjectMethod(Object &obj, string id) {
     bool result = false;
 
     if (obj.IsSubContainer()) {
@@ -516,7 +516,7 @@ namespace sapphire {
     return result;
   }
 
-  void Machine::GetObjectMethods(Object &obj, vector<string> &dest) {
+  void AASTMachine::GetObjectMethods(Object &obj, vector<string> &dest) {
     if (obj.IsSubContainer()) {
       auto &base = obj.Cast<ObjectStruct>().GetContent();
 
@@ -533,7 +533,7 @@ namespace sapphire {
     }
   }
 
-  bool Machine::FetchFunctionImplEx(FunctionImplPointer &dest, string func_id, string type_id,
+  bool AASTMachine::FetchFunctionImplEx(FunctionImplPointer &dest, string func_id, string type_id,
     Object *obj_ptr) {
     auto &frame = frame_stack_.top();
 
@@ -595,7 +595,7 @@ namespace sapphire {
     return true;
   }
 
-  bool Machine::FetchFunctionImpl(FunctionImplPointer &impl, CommandPointer &command, ObjectMap &obj_map) {
+  bool AASTMachine::FetchFunctionImpl(FunctionImplPointer &impl, CommandPointer &command, ObjectMap &obj_map) {
     auto &frame = frame_stack_.top();
     auto id = command->first.GetFunctionId();
     auto domain = command->first.GetFunctionDomain();
@@ -685,7 +685,7 @@ namespace sapphire {
     return true;
   }
 
-  void Machine::CheckDomainObject(Function &impl, ASTNode &node, bool first_assert) {
+  void AASTMachine::CheckDomainObject(Function &impl, ASTNode &node, bool first_assert) {
     auto &frame = frame_stack_.top();
     auto domain = node.GetFunctionDomain();
     auto operation = node.GetOperation();
@@ -704,7 +704,7 @@ namespace sapphire {
     impl.AppendClosureRecord(domain.GetData(), components::DumpObject(view.Seek()));
   }
 
-  void Machine::CheckArgrumentList(Function &impl, ArgumentList &args) {
+  void AASTMachine::CheckArgrumentList(Function &impl, ArgumentList &args) {
     auto &frame = frame_stack_.top();
     string_view data;
     ArgumentType type;
@@ -739,14 +739,12 @@ namespace sapphire {
     }
   }
 
-  void Machine::ClosureCatching(ArgumentList &args, size_t nest_end, bool closure) {
+  void AASTMachine::ClosureCatching(ArgumentList &args, size_t nest_end, bool closure) {
     auto &frame = frame_stack_.top();
     auto &obj_list = obj_stack_.GetBase();
     auto &origin_code = *code_stack_.back();
-    size_t counter = 0;
     size_t size = args.size();
     size_t nest = frame.idx;
-    bool optional = false;
     bool variable = false;
     bool not_assert_before = false;
     bool first_assert = false;
@@ -769,24 +767,14 @@ namespace sapphire {
         continue;
       }
 
-      if (args[idx].properties.fn.optional_param) {
-        optional = true;
-        counter += 1;
-      }
-
       if (args[idx].properties.fn.variable_param) variable = true;
 
       params.push_back(id);
     }
 
-    if (optional) argument_mode = ParameterPattern::Optional;
     if (variable) argument_mode = ParameterPattern::Variable;
 
     Function impl(nest + 1, code, args[0].GetData(), params, argument_mode);
-
-    if (optional) {
-      impl.SetLimit(params.size() - counter);
-    }
 
     if (closure) {
       for (auto it = code.begin(); it != code.end(); ++it) {
@@ -814,7 +802,7 @@ namespace sapphire {
     frame.Goto(nest_end + 1);
   }
 
-  Message Machine::CallMethod(Object &obj, string id, ObjectMap &args) {
+  Message AASTMachine::CallMethod(Object &obj, string id, ObjectMap &args) {
     FunctionImplPointer impl;
     auto &frame = frame_stack_.top();
     Message result;
@@ -844,12 +832,12 @@ namespace sapphire {
     return result;
   }
 
-  Message Machine::CallMethod(Object &obj, string id, const initializer_list<NamedObject> &&args) {
+  Message AASTMachine::CallMethod(Object &obj, string id, const initializer_list<NamedObject> &&args) {
     ObjectMap obj_map = args;
     return CallMethod(obj, id, obj_map);
   }
 
-  Message Machine::CallVMCFunction(Function &impl, ObjectMap &obj_map) {
+  Message AASTMachine::CallVMCFunction(Function &impl, ObjectMap &obj_map) {
     auto &frame = frame_stack_.top();
     Message result;
 
@@ -886,14 +874,14 @@ namespace sapphire {
     return result;
   }
 
-  void Machine::CommandLoad(ArgumentList &args) {
+  void AASTMachine::CommandLoad(ArgumentList &args) {
     auto &frame = frame_stack_.top();
     auto view = FetchObjectView(args[0]);
     if (frame.error) return;
     frame.RefreshReturnStack(std::move(view));
   }
 
-  void Machine::CommandIfOrWhile(Operation operation, ArgumentList &args, size_t nest_end) {
+  void AASTMachine::CommandIfOrWhile(Operation operation, ArgumentList &args, size_t nest_end) {
     auto &frame = frame_stack_.top();
     auto &code = code_stack_.front();
     bool has_jump_record = false;
@@ -983,7 +971,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::InitForEach(ArgumentList &args, size_t nest_end) {
+  void AASTMachine::InitForEach(ArgumentList &args, size_t nest_end) {
     auto &frame = frame_stack_.top();
 
     auto container_obj = FetchObjectView(args[1]).Seek();
@@ -1072,7 +1060,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CheckForEach(ArgumentList &args, size_t nest_end) {
+  void AASTMachine::CheckForEach(ArgumentList &args, size_t nest_end) {
     auto &frame = frame_stack_.top();
     auto unit_id = FetchObjectView(args[0]).Seek().Cast<string>();
 
@@ -1141,7 +1129,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandCase(ArgumentList &args, size_t nest_end) {
+  void AASTMachine::CommandCase(ArgumentList &args, size_t nest_end) {
     auto &frame = frame_stack_.top();
     auto &code = code_stack_.back();
 
@@ -1180,7 +1168,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandElse() {
+  void AASTMachine::CommandElse() {
     auto &frame = frame_stack_.top();
 
     if (frame.condition_stack.empty()) {
@@ -1196,7 +1184,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandWhen(ArgumentList &args) {
+  void AASTMachine::CommandWhen(ArgumentList &args) {
     auto &frame = frame_stack_.top();
     bool result = false;
 
@@ -1265,7 +1253,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandContinueOrBreak(Operation operation, size_t escape_depth) {
+  void AASTMachine::CommandContinueOrBreak(Operation operation, size_t escape_depth) {
     auto &frame = frame_stack_.top();
     auto &scope_indicator = frame.scope_indicator;
 
@@ -1294,7 +1282,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandStructBegin(ArgumentList &args) {
+  void AASTMachine::CommandStructBegin(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     if (args.size() < 1) {
@@ -1326,7 +1314,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandModuleBegin(ArgumentList &args) {
+  void AASTMachine::CommandModuleBegin(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     if (!EXPECTED_COUNT(1)) {
@@ -1340,7 +1328,7 @@ namespace sapphire {
     frame.struct_id = id_obj.Cast<string>();
   }
 
-  void Machine::CommandConditionEnd() {
+  void AASTMachine::CommandConditionEnd() {
     auto &frame = frame_stack_.top();
     if (!frame.keep_condition) {
       frame.condition_stack.pop();
@@ -1354,7 +1342,7 @@ namespace sapphire {
     frame.jump_stack.pop();
   }
 
-  void Machine::CommandLoopEnd(size_t nest) {
+  void AASTMachine::CommandLoopEnd(size_t nest) {
     auto &frame = frame_stack_.top();
 
     if (frame.final_cycle) {
@@ -1390,7 +1378,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandForEachEnd(size_t nest) {
+  void AASTMachine::CommandForEachEnd(size_t nest) {
     auto &frame = frame_stack_.top();
 
     if (frame.final_cycle) {
@@ -1417,7 +1405,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandStructEnd() {
+  void AASTMachine::CommandStructEnd() {
     auto &frame = frame_stack_.top();
     auto &base = obj_stack_.GetCurrent().GetContent();
     auto managed_struct = make_shared<ObjectStruct>();
@@ -1488,7 +1476,7 @@ namespace sapphire {
     frame.struct_id.shrink_to_fit();
   }
 
-  void Machine::CommandModuleEnd() {
+  void AASTMachine::CommandModuleEnd() {
     auto &frame = frame_stack_.top();
     auto &base = obj_stack_.GetCurrent().GetContent();
     auto managed_module = make_shared<ObjectStruct>();
@@ -1510,7 +1498,7 @@ namespace sapphire {
     frame.struct_id.shrink_to_fit();
   }
 
-  void Machine::CommandInclude(ArgumentList &args) {
+  void AASTMachine::CommandInclude(ArgumentList &args) {
     auto &frame = frame_stack_.top();
     auto &base = obj_stack_.GetCurrent();
     auto module_view = FetchObjectView(args[0]);
@@ -1536,7 +1524,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandSuper(ArgumentList &args) {
+  void AASTMachine::CommandSuper(ArgumentList &args) {
     auto &frame = frame_stack_.top();
     auto &base = obj_stack_.GetCurrent();
 
@@ -1599,7 +1587,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandAttribute(ArgumentList &args) {
+  void AASTMachine::CommandAttribute(ArgumentList &args) {
     auto &frame = frame_stack_.top();
     bool error = false;
 
@@ -1622,7 +1610,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandSwap(ArgumentList &args) {
+  void AASTMachine::CommandSwap(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     if (args.size() == 2) {
@@ -1684,7 +1672,7 @@ namespace sapphire {
 
   }
 
-  void Machine::CommandSwapIf(ArgumentList &args) {
+  void AASTMachine::CommandSwapIf(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     if (!EXPECTED_COUNT(3)) {
@@ -1711,7 +1699,7 @@ namespace sapphire {
     if (cond.Cast<bool>()) left.swap(right);
   }
 
-  void Machine::CommandBind(ArgumentList &args, bool local_value, bool ext_value) {
+  void AASTMachine::CommandBind(ArgumentList &args, bool local_value, bool ext_value) {
     auto &frame = frame_stack_.top();
 
     if (args[0].GetType() == ArgumentType::Literal &&
@@ -1726,7 +1714,7 @@ namespace sapphire {
 
     if (frame.error) return;
 
-    if (lhs.source == ObjectViewSource::ObjectViewSource::Ref) {
+    if (lhs.source == ObjectViewSource::Ref) {
       auto &real_lhs = lhs.Seek().Unpack();
       real_lhs = components::DumpObject(rhs.Seek());
       return;
@@ -1761,7 +1749,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandDelivering(ArgumentList &args, bool local_value, bool ext_value) {
+  void AASTMachine::CommandDelivering(ArgumentList &args, bool local_value, bool ext_value) {
     auto &frame = frame_stack_.top();
 
     if (args[0].GetType() == ArgumentType::Literal &&
@@ -1781,7 +1769,7 @@ namespace sapphire {
 
     if (frame.error) return;
 
-    if (lhs.source == ObjectViewSource::ObjectViewSource::Ref) {
+    if (lhs.source == ObjectViewSource::Ref) {
       auto &real_lhs = lhs.Seek().Unpack();
       real_lhs = rhs.Seek();
       rhs.Seek().Unpack() = Object();
@@ -1818,7 +1806,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandTypeId(ArgumentList &args) {
+  void AASTMachine::CommandTypeId(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     if (args.size() > 1) {
@@ -1840,7 +1828,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandMethods(ArgumentList &args) {
+  void AASTMachine::CommandMethods(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     if (!EXPECTED_COUNT(1)) {
@@ -1873,7 +1861,7 @@ namespace sapphire {
     frame.RefreshReturnStack(ret_obj);
   }
 
-  void Machine::CommandExist(ArgumentList &args) {
+  void AASTMachine::CommandExist(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     if (!EXPECTED_COUNT(2)) {
@@ -1908,7 +1896,7 @@ namespace sapphire {
     frame.RefreshReturnStack(ret_obj);
   }
 
-  void Machine::CommandNullObj(ArgumentList &args) {
+  void AASTMachine::CommandNullObj(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     if (!EXPECTED_COUNT(1)) {
@@ -1922,7 +1910,7 @@ namespace sapphire {
     frame.RefreshReturnStack(Object(obj.GetTypeId() == kTypeIdNull, kTypeIdBool));
   }
 
-  void Machine::CommandToString(ArgumentList &args) {
+  void AASTMachine::CommandToString(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     if (!EXPECTED_COUNT(1)) {
@@ -1974,7 +1962,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandUsing(ArgumentList &args) {
+  void AASTMachine::CommandUsing(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     if (!EXPECTED_COUNT(1)) {
@@ -2015,7 +2003,7 @@ namespace sapphire {
       GrammarAndSemanticAnalysis factory(absolute_path, script_file, logger_);
 
       if (factory.Start()) {
-        Machine sub_machine(script_file, logger_);
+        AASTMachine sub_machine(script_file, logger_);
         auto &obj_base = obj_stack_.GetBase();
         sub_machine.SetDelegatedRoot(obj_base.front());
         sub_machine.Run();
@@ -2033,7 +2021,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandPrint(ArgumentList &args) {
+  void AASTMachine::CommandPrint(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     auto view = FetchObjectView(args[0]);
@@ -2072,7 +2060,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandInput(ArgumentList &args) {
+  void AASTMachine::CommandInput(ArgumentList &args) {
     auto &frame = frame_stack_.top();
     if (!args.empty()) {
       frame.MakeError("Invalid arguments: input()");
@@ -2083,7 +2071,7 @@ namespace sapphire {
     frame.RefreshReturnStack(Object(buf, kTypeIdString));
   }
 
-  void Machine::CommandGetChar(ArgumentList &args) {
+  void AASTMachine::CommandGetChar(ArgumentList &args) {
     auto &frame = frame_stack_.top();
     if (!args.empty()) {
       frame.MakeError("Invalid arguments: getchar()");
@@ -2094,7 +2082,7 @@ namespace sapphire {
     frame.RefreshReturnStack(Object(string().append(1, value), kTypeIdString));
   }
 
-  void Machine::SysCommand(ArgumentList &args) {
+  void AASTMachine::SysCommand(ArgumentList &args) {
     auto &frame = frame_stack_.top();
     if (args.size() != 1) {
       frame.MakeError("Invalid argument: console(command)");
@@ -2113,7 +2101,7 @@ namespace sapphire {
     frame.RefreshReturnStack(Object(result, kTypeIdInt));
   }
 
-  void Machine::CommandSleep(ArgumentList &args) {
+  void AASTMachine::CommandSleep(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     if (args.size() != 1) {
@@ -2149,7 +2137,7 @@ namespace sapphire {
 #endif
   }
 
-  void Machine::CommandTime() {
+  void AASTMachine::CommandTime() {
     auto &frame = frame_stack_.top();
     time_t now = time(nullptr);
     string nowtime(ctime(&now));
@@ -2157,18 +2145,18 @@ namespace sapphire {
     frame.RefreshReturnStack(Object(nowtime));
   }
 
-  void Machine::CommandVersion() {
+  void AASTMachine::CommandVersion() {
     auto &frame = frame_stack_.top();
     frame.RefreshReturnStack(Object(BUILD));
   }
 
-  void Machine::CommandMachineCodeName() {
+  void AASTMachine::CommandMachineCodeName() {
     auto &frame = frame_stack_.top();
     frame.RefreshReturnStack(Object(CODENAME));
   }
 
   template <Operation op_code>
-  void Machine::BinaryMathOperatorImpl(ArgumentList &args) {
+  void AASTMachine::BinaryMathOperatorImpl(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     if (!EXPECTED_COUNT(2)) {
@@ -2217,7 +2205,7 @@ namespace sapphire {
   }
 
   template <Operation op_code>
-  void Machine::BinaryLogicOperatorImpl(ArgumentList &args) {
+  void AASTMachine::BinaryLogicOperatorImpl(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     if (!EXPECTED_COUNT(2)) {
@@ -2290,7 +2278,7 @@ namespace sapphire {
 #undef RESULT_PROCESSING
   }
 
-  void Machine::OperatorLogicNot(ArgumentList &args) {
+  void AASTMachine::OperatorLogicNot(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     if (!EXPECTED_COUNT(1)) {
@@ -2313,7 +2301,7 @@ namespace sapphire {
     frame.RefreshReturnStack(result);
   }
 
-  void Machine::OperatorIncreasing(ArgumentList &args) {
+  void AASTMachine::OperatorIncreasing(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     if (!EXPECTED_COUNT(2)) {
@@ -2335,7 +2323,7 @@ namespace sapphire {
     value += rhs.Seek().Cast<int64_t>();
   }
 
-  void Machine::OperatorDecreasing(ArgumentList &args) {
+  void AASTMachine::OperatorDecreasing(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     if (!EXPECTED_COUNT(2)) {
@@ -2358,7 +2346,7 @@ namespace sapphire {
   }
 
   //TODO: Replace with multiple new commands
-  void Machine::ExpList(ArgumentList &args) {
+  void AASTMachine::ExpList(ArgumentList &args) {
     auto &frame = frame_stack_.top();
     if (!args.empty()) {
       auto result_view = FetchObjectView(args.back());
@@ -2366,7 +2354,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::InitArray(ArgumentList &args) {
+  void AASTMachine::InitArray(ArgumentList &args) {
     auto &frame = frame_stack_.top();
     ManagedArray base = make_shared<ObjectArray>();
 
@@ -2381,7 +2369,7 @@ namespace sapphire {
     frame.RefreshReturnStack(obj);
   }
 
-  void Machine::CommandReturn(ArgumentList &args) {
+  void AASTMachine::CommandReturn(ArgumentList &args) {
     if (frame_stack_.size() == 1) {
       frame_stack_.top().MakeError("Unexpected return");
       return;
@@ -2459,7 +2447,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::CommandAssert(ArgumentList &args) {
+  void AASTMachine::CommandAssert(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     if (!EXPECTED_COUNT(1)) {
@@ -2480,12 +2468,12 @@ namespace sapphire {
     }
   }
 
-  void Machine::DomainAssert(ArgumentList &args) {
+  void AASTMachine::DomainAssert(ArgumentList &args) {
     auto &frame = frame_stack_.top();
     frame.assert_rc_copy = FetchObjectView(args[0]).Seek().Unpack();
   }
 
-  void Machine::CommandIsBaseOf(ArgumentList &args) {
+  void AASTMachine::CommandIsBaseOf(ArgumentList &args) {
     auto &frame = frame_stack_.top(); 
 
     if (!EXPECTED_COUNT(2)) {
@@ -2521,7 +2509,7 @@ namespace sapphire {
     frame.RefreshReturnStack(Object(dest_ptr == base_ptr, kTypeIdBool));
   }
 
-  void Machine::CommandHasBehavior(ArgumentList &args) {
+  void AASTMachine::CommandHasBehavior(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     auto &behavior_obj = FetchObjectView(args[1]).Seek();
@@ -2535,15 +2523,12 @@ namespace sapphire {
   }
 
   template <ParameterPattern pattern>
-  void Machine::CommandCheckParameterPattern(ArgumentList &args) {
+  void AASTMachine::CommandCheckParameterPattern(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     if (!EXPECTED_COUNT(1)) {
       if constexpr (pattern == ParameterPattern::Variable) {
         frame.MakeError("Argument mismatching: is_variable_param(func)");
-      }
-      else if constexpr (pattern == ParameterPattern::Optional) {
-        frame.MakeError("Argument mismatching: is_optional_param(func");
       }
 
       return;
@@ -2563,7 +2548,7 @@ namespace sapphire {
     frame.RefreshReturnStack(result);
   }
 
-  void Machine::CommandOptionalParamRange(ArgumentList &args) {
+  void AASTMachine::CommandOptionalParamRange(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     if (!EXPECTED_COUNT(1)) {
@@ -2585,7 +2570,7 @@ namespace sapphire {
     frame.RefreshReturnStack(result);
   }
 
-  void Machine::MachineCommands(Operation operation, ArgumentList &args, ASTNode &node) {
+  void AASTMachine::MachineCommands(Operation operation, ArgumentList &args, ASTNode &node) {
     auto &frame = frame_stack_.top();
 
     switch (operation) {
@@ -2767,9 +2752,6 @@ namespace sapphire {
     case Operation::IsVariableParam:
       CommandCheckParameterPattern<ParameterPattern::Variable>(args);
       break;
-    case Operation::IsOptionalParam:
-      CommandCheckParameterPattern<ParameterPattern::Optional>(args);
-      break;
     case Operation::OptionalParamRange:
       CommandOptionalParamRange(args);
       break;
@@ -2794,23 +2776,20 @@ namespace sapphire {
     }
   }
 
-  void Machine::GenerateArgs(Function &impl, ArgumentList &args, ObjectMap &obj_map) {
+  void AASTMachine::GenerateArgs(Function &impl, ArgumentList &args, ObjectMap &obj_map) {
     switch (impl.GetPattern()) {
     case ParameterPattern::Fixed:
       Generate_Fixed(impl, args, obj_map);
       break;
     case ParameterPattern::Variable:
-      Generate_AutoSize(impl, args, obj_map);
-      break;
-    case ParameterPattern::Optional:
-      Generate_AutoFill(impl, args, obj_map);
+      Generate_Variable(impl, args, obj_map);
       break;
     default:
       break;
     }
   }
 
-  void Machine::Generate_Fixed(Function &impl, ArgumentList &args, ObjectMap &obj_map) {
+  void AASTMachine::Generate_Fixed(Function &impl, ArgumentList &args, ObjectMap &obj_map) {
     auto &frame = frame_stack_.top();
     auto &params = impl.GetParameters();
     size_t pos = args.size() - 1;
@@ -2835,7 +2814,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::Generate_AutoSize(Function &impl, ArgumentList &args, ObjectMap &obj_map) {
+  void AASTMachine::Generate_Variable(Function &impl, ArgumentList &args, ObjectMap &obj_map) {
     auto &frame = frame_stack_.top();
     vector<string> &params = impl.GetParameters();
     list<Object> temp_list;
@@ -2870,35 +2849,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::Generate_AutoFill(Function &impl, ArgumentList &args, ObjectMap &obj_map) {
-    auto &frame = frame_stack_.top();
-    auto &params = impl.GetParameters();
-    size_t limit = impl.GetLimit();
-    size_t pos = args.size() - 1, param_pos = params.size() - 1;
-
-    if (args.size() > params.size()) {
-      frame.MakeError("Too many arguments");
-      return;
-    }
-
-    if (args.size() < limit) {
-      frame.MakeError("Minimum argument amount is " + to_string(limit));
-      return;
-    }
-
-    for (auto it = params.crbegin(); it != params.crend(); ++it) {
-      if (param_pos != pos) {
-        obj_map.emplace(NamedObject(*it, Object()));
-      }
-      else {
-        obj_map.emplace(NamedObject(*it, FetchObjectView(args[pos]).Dump().RemoveDeliveringFlag()));
-        pos -= 1;
-      }
-      param_pos -= 1;
-    }
-  }
-
-  void Machine::CallExtensionFunction(ObjectMap &p, Function &impl) {
+  void AASTMachine::CallExtensionFunction(ObjectMap &p, Function &impl) {
     auto &frame = frame_stack_.top();
     Object returning_slot;
     auto ext_activity = impl.Get<ExtensionActivity>();
@@ -2911,7 +2862,7 @@ namespace sapphire {
     frame.RefreshReturnStack(returning_slot);
   }
 
-  void Machine::GenerateStructInstance(ObjectMap &p) {
+  void AASTMachine::GenerateStructInstance(ObjectMap &p) {
     auto &frame = frame_stack_.top();
 
     auto &base = frame.struct_base.Cast<ObjectStruct>().GetContent();
@@ -2941,7 +2892,7 @@ namespace sapphire {
     frame.struct_base = Object();
   }
 
-  void Machine::GenerateErrorMessages(size_t stop_index) {
+  void AASTMachine::GenerateErrorMessages(size_t stop_index) {
     //Under consideration
     if (frame_stack_.top().error) {
       //TODO:reporting function calling chain
@@ -2958,7 +2909,7 @@ namespace sapphire {
   }
 
   //for extension callback facilities
-  bool Machine::PushObject(string id, Object object) {
+  bool AASTMachine::PushObject(string id, Object object) {
     auto &frame = frame_stack_.top();
     auto result = obj_stack_.CreateObject(id, object, TryAppendTokenId(id));
     if (!result) {
@@ -2968,12 +2919,12 @@ namespace sapphire {
     return true;
   }
 
-  void Machine::PushError(string msg) {
+  void AASTMachine::PushError(string msg) {
     auto &frame = frame_stack_.top();
     frame.MakeError(msg);
   }
 
-  void Machine::CopyComponents() {
+  void AASTMachine::CopyComponents() {
     auto &base = obj_stack_.GetCurrent();
     auto &comp_base = components::GetBuiltinComponentsObjBase();
     
@@ -2982,7 +2933,7 @@ namespace sapphire {
     }
   }
 
-  void Machine::Run(bool invoke) {
+  void AASTMachine::Run(bool invoke) {
     if (code_stack_.empty()) return;
 
     bool next_tick;
