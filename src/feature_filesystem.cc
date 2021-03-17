@@ -1,95 +1,107 @@
 #include "machine.h"
 
 namespace sapphire {
-  Message ExistFSObject(ObjectMap &p) {
+  //TODO: merge all fucntion into filesystem struct
+  int ExistFSObject(State &state, ObjectMap &p) {
     auto &path = p.Cast<string>("path");
     auto exists = fs::exists(fs::path(path));
-
-    return Message().SetObject(exists);
+    state.PushValue(Object(exists, kTypeIdBool));
+    return 0;
   }
 
-  Message CreateNewDirectory(ObjectMap &p) {
+  int CreateNewDirectory(State &state, ObjectMap &p) {
     auto &path = p.Cast<string>("path");
     auto result = fs::create_directories(path);
-    return Message().SetObject(result);
+    state.PushValue(Object(result, kTypeIdBool));
+    return 0;
   }
 
-  Message RemoveFSObject(ObjectMap &p) {
+  int RemoveFSObject(State &state, ObjectMap &p) {
     auto &path = p.Cast<string>("path");
     auto result = fs::remove(fs::path(path));
-
-    return Message().SetObject(result);
+    state.PushValue(Object(result, kTypeIdBool));
+    return 0;
   }
 
-  Message RemoveFSObject_Recursive(ObjectMap &p) {
+  int RemoveFSObject_Recursive(State &state, ObjectMap &p) {
     auto &path = p.Cast<string>("path");
     auto result = fs::remove_all(fs::path(path));
-    
-    return Message().SetObject(int64_t(result));
+    state.PushValue(Object(result, kTypeIdBool));
+    return 0;
   }
-
-  Message CopyFSObject(ObjectMap &p) {
+  
+  int CopyFSObject(State &state, ObjectMap &p) {
     auto from = p.Cast<string>("from");
     auto to = p.Cast<string>("to");
-    Message result;
+    int result = 0;
 
     try {
       fs::copy(fs::path(from), fs::path(to));
     }
     catch (std::exception & e) {
-      result = Message(e.what(), StateLevel::Error);
+      result = 2;
+      state.SetMsg(e.what());
     }
 
     return result;
   }
 
-  Message CopyFSFile(ObjectMap &p) {
+  int CopyFSFile(State &state, ObjectMap &p) {
     auto from = p.Cast<string>("from");
     auto to = p.Cast<string>("to");
     auto result = fs::copy_file(fs::path(from), fs::path(to));
-    return Message().SetObject(result);
+    state.PushValue(Object(result, kTypeIdBool));
+    return 0;
   }
 
-  Message SetWorkingDir(ObjectMap &p) {
+  int SetWorkingDir(State &state, ObjectMap &p) {
     auto &dir_obj = p["dir"];
     string dest_dir;
 
     dest_dir = dir_obj.Cast<string>();
 
     bool result = runtime::SetWorkingDirectory(dest_dir);
-    return Message().SetObject(result);
+    state.PushValue(Object(result, kTypeIdBool));
+    return 0;
   }
 
-  Message StartHere(ObjectMap &p) {
+  int StartHere(State &state, ObjectMap &p) {
     using namespace runtime;
-    return Message().SetObject(SetWorkingDirectory(GetScriptAbsolutePath()));
+    auto result = SetWorkingDirectory(GetScriptAbsolutePath());
+    state.PushValue(Object(result, kTypeIdBool));
+    return 0;
   }
 
-  Message GetWorkingDir(ObjectMap &p) {
-    return Message().SetObject(runtime::GetWorkingDirectory());
+  int GetWorkingDir(State &state, ObjectMap &p) {
+    state.PushValue(Object(runtime::GetWorkingDirectory(), kTypeIdString));
+    return 0;
   }
 
-  Message GetScriptAbsolutePath(ObjectMap &p) {
-    return Message().SetObject(runtime::GetScriptAbsolutePath());
+  int GetScriptAbsolutePath(State &state, ObjectMap &p) {
+    state.PushValue(Object(runtime::GetScriptAbsolutePath(), kTypeIdString));
+    return 0;
   }
 
-  Message GetCoreAbsolutePath(ObjectMap &p) {
-    return Message().SetObject(runtime::GetBinaryPath());
+  int GetCoreAbsolutePath(State &state, ObjectMap &p) {
+    state.PushValue(Object(runtime::GetBinaryPath(), kTypeIdString));
+    return 0;
   }
 
-  Message GetDirectoryContent(ObjectMap &p) {
+  int GetDirectoryContent(State &state, ObjectMap &p) {
     string path_str = p.Cast<string>("path");
     auto managed_array = make_shared<ObjectArray>();
     for (auto &unit : fs::directory_iterator(path_str)) {
       managed_array->emplace_back(Object(unit.path().string(), kTypeIdString));
     }
 
-    return Message().SetObject(Object(managed_array, kTypeIdArray));
+    state.PushValue(Object(managed_array, kTypeIdArray));
+    return 0;
   }
 
-  Message GetFilenameExtension(ObjectMap &p) {
+  int GetFilenameExtension(State &state, ObjectMap &p) {
     fs::path value(p.Cast<string>("path"));
-    return Message().SetObject(Object(value.extension().string(), kTypeIdString));
+    state.PushValue(Object(value.extension().string(), kTypeIdString));
+    return 0;
   }
 
   void InitConsoleComponents() {
