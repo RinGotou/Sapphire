@@ -318,6 +318,8 @@ namespace sapphire {
         value_returned_ = true;
       }
     }
+
+    string GetMsg() const {}
   };
 
   using FrameStack = stack<RuntimeFrame, deque<RuntimeFrame>>;
@@ -339,10 +341,10 @@ namespace sapphire {
     bool CheckObjectMethod(Object &obj, string id);
     void GetObjectMethods(Object &obj, vector<string> &dest);
 
-    bool FetchFunctionImplEx(FunctionImplPointer &dest, string func_id, string type_id = kTypeIdNull, 
+    bool FetchFunctionImplEx(FunctionPointer &dest, string func_id, string type_id = kTypeIdNull, 
       Object *obj_ptr = nullptr);
 
-    bool FetchFunctionImpl(FunctionImplPointer &impl, CommandPointer &command,
+    bool FetchFunctionImpl(FunctionPointer &impl, CommandPointer &command,
       ObjectMap &obj_map);
 
     void CheckObjectWithDomain(Function &impl, ASTNode &req, bool first_assert);

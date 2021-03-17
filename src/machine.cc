@@ -481,7 +481,7 @@ namespace sapphire {
     }
   }
 
-  bool AASTMachine::FetchFunctionImplEx(FunctionImplPointer &dest, string func_id, string type_id,
+  bool AASTMachine::FetchFunctionImplEx(FunctionPointer &dest, string func_id, string type_id,
     Object *obj_ptr) {
     auto &frame = frame_stack_.top();
 
@@ -543,7 +543,7 @@ namespace sapphire {
     return true;
   }
 
-  bool AASTMachine::FetchFunctionImpl(FunctionImplPointer &impl, CommandPointer &command, ObjectMap &obj_map) {
+  bool AASTMachine::FetchFunctionImpl(FunctionPointer &impl, CommandPointer &command, ObjectMap &obj_map) {
     auto &frame = frame_stack_.top();
     auto id = command->first.GetFunctionId();
     auto domain = command->first.GetFunctionDomain();
@@ -618,7 +618,7 @@ namespace sapphire {
         }
 
         impl = &initializer_obj->Cast<Function>();
-        if (impl->GetType() == FunctionType::Operation) {
+        if (impl->GetType() == FunctionType::UserDef) {
           frame.do_initializer_calling = true;
           frame.struct_base = *ptr;
         }
@@ -649,7 +649,7 @@ namespace sapphire {
 
     if (frame.error) return;
 
-    impl.AppendClosureRecord(domain.GetData(), components::DumpObject(view.Seek()));
+    impl.scope.insert(make_pair(domain.GetData(), components::DumpObject(view.Seek())));
   }
 
   void AASTMachine::CheckArgrumentList(Function &impl, ArgumentList &args) {
@@ -683,7 +683,7 @@ namespace sapphire {
         break;
       }
 
-      impl.AppendClosureRecord(data, components::DumpObject(view.Seek()));
+      impl.scope.insert(make_pair(data, components::DumpObject(view.Seek())));
     }
   }
 
@@ -720,9 +720,8 @@ namespace sapphire {
       params.push_back(id);
     }
 
-    if (variable) argument_mode = ParameterPattern::Variable;
 
-    Function impl(nest + 1, code, args[0].GetData(), params, argument_mode);
+    Function impl(nest + 1, code, args[0].GetData(), params, variable);
 
     if (closure) {
       for (auto it = code.begin(); it != code.end(); ++it) {
@@ -736,7 +735,7 @@ namespace sapphire {
     }
 
     if (!return_value_constraint.empty()) {
-      impl.AppendClosureRecord(kStrReturnValueConstrantObj, Object(return_value_constraint));
+      impl.scope.insert(make_pair(kStrReturnValueConstrantObj, Object(return_value_constraint)));
     }
 
     
@@ -753,7 +752,7 @@ namespace sapphire {
   }
 
   Message AASTMachine::CallMethod(Object &obj, string id, ObjectMap &args) {
-    FunctionImplPointer impl;
+    FunctionPointer impl;
     auto &frame = frame_stack_.top();
     Message result;
 
@@ -762,7 +761,7 @@ namespace sapphire {
     ObjectMap obj_map = args;
     obj_map.emplace(NamedObject(kStrMe, obj));
 
-    if (impl->GetType() == FunctionType::Operation) {
+    if (impl->GetType() == FunctionType::UserDef) {
       result = CallVMCFunction(*impl, obj_map);
     }
     else if (impl->GetType() == FunctionType::External) {
@@ -770,10 +769,13 @@ namespace sapphire {
     }
     else if (impl->GetType() == FunctionType::Component) {
       auto activity = impl->Get<Activity>();
-      result = activity(obj_map);
-      //if (!result.HasObject()) {
-      //  result.SetObject(Object());
-      //}
+      State state(frame);
+      auto run_result = activity(state, args);
+      switch (run_result) {
+      case 1: result = Message(state.GetMsg(), StateLevel::Warning); break;
+      case 2: result = Message(state.GetMsg(), StateLevel::Error); break;
+      default:break;
+      }
     }
     else {
       frame.MakeError("Internal Error(Unknown function type)");
@@ -791,7 +793,7 @@ namespace sapphire {
     auto &frame = frame_stack_.top();
     Message result;
 
-    if (impl.GetType() != FunctionType::Operation) {
+    if (impl.GetType() != FunctionType::UserDef) {
       frame.MakeError("Invalid function variant");
       return result;
     }
@@ -803,7 +805,7 @@ namespace sapphire {
     obj_stack_.Push();
     obj_stack_.CreateObject(kStrUserFunc, Object(impl.GetId()));
     obj_stack_.MergeMap(obj_map);
-    obj_stack_.MergeMap(impl.GetClosureRecord());
+    obj_stack_.MergeMap(impl.scope);
     Run(true);
 
     if (error_) {
@@ -1511,7 +1513,7 @@ namespace sapphire {
       }
 
       auto &initializer_impl = initializer->Cast<Function>();
-      auto &params = initializer_impl.GetParameters();
+      auto &params = initializer_impl.AccessParameters();
       size_t pos = args.size() - 1;
 
       GenerateArgs(initializer_impl, args, obj_map);
@@ -2498,28 +2500,6 @@ namespace sapphire {
     frame.RefreshReturnStack(result);
   }
 
-  void AASTMachine::CommandOptionalParamRange(ArgumentList &args) {
-    auto &frame = frame_stack_.top();
-
-    if (!EXPECTED_COUNT(1)) {
-      frame.MakeError("Argument mismatching: optional_param_range(obj)");
-    }
-
-    auto &func_obj = FetchObjectView(args[0]).Seek();
-    if (frame.error) return;
-
-    if (func_obj.GetTypeId() != kTypeIdFunction) {
-      frame.MakeError("Expected object type is function");
-      return;
-    }
-
-    auto &impl = func_obj.Cast<Function>();
-    auto size = impl.GetParamSize();
-    auto limit = impl.GetLimit();
-    Object result(static_cast<int64_t>(size - limit), kTypeIdInt);
-    frame.RefreshReturnStack(result);
-  }
-
   void AASTMachine::MachineCommands(Operation operation, ArgumentList &args, ASTNode &node) {
     auto &frame = frame_stack_.top();
 
@@ -2702,9 +2682,6 @@ namespace sapphire {
     case Operation::IsVariableParam:
       CommandCheckParameterPattern<ParameterPattern::Variable>(args);
       break;
-    case Operation::OptionalParamRange:
-      CommandOptionalParamRange(args);
-      break;
     case Operation::Print:
       CommandPrint(args);
       break;
@@ -2728,21 +2705,17 @@ namespace sapphire {
 
   //deprecated
   void AASTMachine::GenerateArgs(Function &impl, ArgumentList &args, ObjectMap &obj_map) {
-    switch (impl.GetPattern()) {
-    case ParameterPattern::Fixed:
+    if (impl.IsVariableParam()) {
       Generate_Fixed(impl, args, obj_map);
-      break;
-    case ParameterPattern::Variable:
+    }
+    else {
       Generate_Variable(impl, args, obj_map);
-      break;
-    default:
-      break;
     }
   }
 
   void AASTMachine::Generate_Fixed(Function &impl, ArgumentList &args, ObjectMap &obj_map) {
     auto &frame = frame_stack_.top();
-    auto &params = impl.GetParameters();
+    auto &params = impl.AccessParameters();
     size_t pos = args.size() - 1;
     ObjectView view;
 
@@ -2767,7 +2740,7 @@ namespace sapphire {
 
   void AASTMachine::Generate_Variable(Function &impl, ArgumentList &args, ObjectMap &obj_map) {
     auto &frame = frame_stack_.top();
-    vector<string> &params = impl.GetParameters();
+    vector<string> &params = impl.AccessParameters();
     list<Object> temp_list;
     ManagedArray va_base = make_shared<ObjectArray>();
     size_t pos = args.size(), diff = args.size() - params.size() + 1;
@@ -2880,7 +2853,7 @@ namespace sapphire {
     AnnotatedAST *code = code_stack_.back();
     Sentense *sentense = nullptr;
     ObjectMap obj_map;
-    FunctionImplPointer impl;
+    FunctionPointer impl;
 
     if (!invoke) {
       frame_stack_.push(RuntimeFrame());
@@ -2908,7 +2881,7 @@ namespace sapphire {
       obj_stack_.Push();
       obj_stack_.CreateObject(kStrUserFunc, Object(func.GetId()));
       obj_stack_.MergeMap(obj_map);
-      obj_stack_.MergeMap(impl->GetClosureRecord());
+      obj_stack_.MergeMap(impl->scope);
       refresh_tick();
       frame->jump_offset = func.GetOffset();
       frame->inside_initializer_calling = inside_initializer_calling;
@@ -2922,7 +2895,7 @@ namespace sapphire {
       obj_stack_.ClearCurrent();
       obj_stack_.CreateObject(kStrUserFunc, Object(function_scope));
       obj_stack_.MergeMap(obj_map);
-      obj_stack_.MergeMap(impl->GetClosureRecord());
+      obj_stack_.MergeMap(impl->scope);
       refresh_tick();
       frame->jump_offset = jump_offset;
     };
@@ -2937,15 +2910,18 @@ namespace sapphire {
       obj_stack_.ClearCurrent();
       obj_stack_.CreateObject(kStrUserFunc, Object(func.GetId()));
       obj_stack_.MergeMap(obj_map);
-      obj_stack_.MergeMap(impl->GetClosureRecord());
+      obj_stack_.MergeMap(impl->scope);
       refresh_tick();
       frame->jump_offset = func.GetOffset();
     };
 
     auto load_function_impl = [&](bool invoking_request) -> bool {
       bool switch_to_next_tick = false;
+      State state(frame_stack_.top());
+      int run_result = 0;
+
       switch (impl->GetType()) {
-      case FunctionType::Operation:
+      case FunctionType::UserDef:
         //start new processing in next tick.
         if (invoking_request) goto direct_load_vmcode;
         if (IsTailRecursion(frame->idx, &impl->Get<AnnotatedAST>())) tail_recursion();
@@ -2957,12 +2933,11 @@ namespace sapphire {
         switch_to_next_tick = true;
         break;
       case FunctionType::Component:
-        msg = impl->Get<Activity>()(obj_map);
-        if (msg.GetLevel() == StateLevel::Error) {
-          frame->MakeError(msg.GetDetail());
-        }
-        else if (msg.GetLevel() == StateLevel::Warning) {
-          frame->MakeWarning(msg.GetDetail());
+        run_result = impl->Get<Activity>()(state, obj_map);
+        switch (run_result) {
+        case 1: frame->MakeWarning(state.GetMsg()); break;
+        case 2: frame->MakeError(state.GetMsg()); break;
+        default:break;
         }
         switch_to_next_tick = invoking_request;
         break;

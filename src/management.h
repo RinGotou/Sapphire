@@ -1,5 +1,5 @@
 #pragma once
-#include "function.h"
+#include "function2.h"
 #include "filestream.h"
 
 namespace sapphire::components {

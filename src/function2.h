@@ -6,7 +6,8 @@ namespace sapphire {
   
   class State;
 
-  using Activity = int(*)(State &);
+  using Activity = int(*)(State &, ObjectMap &);
+  //using Activity = int(*)(State &);
 
   enum class ParameterPattern { Variable, Fixed };
 
@@ -50,7 +51,9 @@ namespace sapphire {
   //ineline bool CompareExtensionFunction
 
   enum class FunctionType { Component, UserDef, External, Invalid };
-
+  
+  //First stage, add state class, keep object map parameter
+  //Second stage, remove object map parameter and switch to full-stack-based operations
   class Function {
   protected:
     FunctionSlot slot_;

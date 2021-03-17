@@ -76,8 +76,6 @@ namespace sapphire {
     IsBaseOf,
     HasBehavior,
     IsVariableParam,
-    IsOptionalParam,
-    OptionalParamRange,
     IsSameCopy,
     Attribute,
     Print,
@@ -193,8 +191,6 @@ namespace sapphire {
     kStrIsBaseOf       = "is_base_of",
     kStrHasBehavior    = "has_behavior",
     kStrIsVariableParam = "is_variable_param",
-    kStrIsOptionalParam = "is_optional_param",
-    kStrOptionalParamRange = "optional_param_range",
     kStrAttribute          = "attribute",
     kStrReturnValueConstrantObj = "!rt_constaint",
     kStrMe             = "me";

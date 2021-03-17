@@ -185,8 +185,6 @@ namespace sapphire::lexical {
       T(kStrIsBaseOf       ,Operation::IsBaseOf),
       T(kStrHasBehavior    ,Operation::HasBehavior),
       T(kStrIsVariableParam ,Operation::IsVariableParam),
-      T(kStrIsOptionalParam ,Operation::IsOptionalParam),
-      T(kStrOptionalParamRange ,Operation::OptionalParamRange),
       T(kStrAttribute          ,Operation::Attribute),
       T(kStrConstraintArrow    ,Operation::Constaint),
       T(kStrPrint              ,Operation::Print),
