@@ -345,7 +345,7 @@ namespace sapphire {
     bool FetchFunctionImpl(FunctionImplPointer &impl, CommandPointer &command,
       ObjectMap &obj_map);
 
-    void CheckDomainObject(Function &impl, ASTNode &req, bool first_assert);
+    void CheckObjectWithDomain(Function &impl, ASTNode &req, bool first_assert);
     void CheckArgrumentList(Function &impl, ArgumentList &args);
     void ClosureCatching(ArgumentList &args, size_t nest_end, bool closure);
 

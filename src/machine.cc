@@ -685,7 +685,7 @@ namespace sapphire {
     return true;
   }
 
-  void AASTMachine::CheckDomainObject(Function &impl, ASTNode &node, bool first_assert) {
+  void AASTMachine::CheckObjectWithDomain(Function &impl, ASTNode &node, bool first_assert) {
     auto &frame = frame_stack_.top();
     auto domain = node.GetFunctionDomain();
     auto operation = node.GetOperation();
@@ -746,7 +746,7 @@ namespace sapphire {
     size_t size = args.size();
     size_t nest = frame.idx;
     bool variable = false;
-    bool not_assert_before = false;
+    bool not_assert_lastloop = false;
     bool first_assert = false;
     ParameterPattern argument_mode = ParameterPattern::Fixed;
     vector<string> params;
@@ -778,9 +778,11 @@ namespace sapphire {
 
     if (closure) {
       for (auto it = code.begin(); it != code.end(); ++it) {
-        first_assert = not_assert_before && it->first.GetOperation() == Operation::DomainAssertCommand;
-        not_assert_before = it->first.GetOperation() != Operation::DomainAssertCommand;
-        CheckDomainObject(impl, it->first, first_assert);
+        //needed for CheckObjectWithDomain() for judging catching or not
+        first_assert = not_assert_lastloop && it->first.GetOperation() == Operation::DomainAssertCommand;
+        not_assert_lastloop = it->first.GetOperation() != Operation::DomainAssertCommand;
+        //check and push target object into closure scope
+        CheckObjectWithDomain(impl, it->first, first_assert);
         CheckArgrumentList(impl, it->second);
       }
     }
@@ -2854,7 +2856,7 @@ namespace sapphire {
     auto &frame = frame_stack_.top();
     Object returning_slot;
     auto ext_activity = impl.Get<ExtensionActivity>();
-    VMState vm_state{ &p, &returning_slot, this, ReceiveExtReturningValue };
+    ExternalState vm_state{ &p, &returning_slot, this, ReceiveExtReturningValue };
     auto result_code = ext_activity(vm_state);
     if (result_code < 1) {
       frame.MakeError("Extension reports error while invoking external activity.");

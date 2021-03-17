@@ -5,13 +5,17 @@ namespace sapphire {
   using GenericFunctionPointer = void(*)();
   using ReturningTunnel = void(*)(void *, void *, int);
 
-  extern "C" struct VMState {
+  //deprecated. Using new implementation to replace it.
+  extern "C" struct ExternalState {
     void *obj_map, *ret_slot, *vm;
     ReturningTunnel tunnel;
   };
 
+  class State;
+  using Activity2 = int(*)(State &);
+
   using Activity = Message(*)(ObjectMap &);
-  using ExtensionActivity = int(*)(VMState);
+  using ExtensionActivity = int(*)(ExternalState);
 
   enum class ParameterPattern { Variable, Fixed };
 
