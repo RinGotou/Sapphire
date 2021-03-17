@@ -296,13 +296,15 @@ namespace sapphire {
     vector<ObjectCommonSlot> *return_stack_;
     bool void_return;
     bool value_returned_;
+    string msg_;
 
   public:
     State() = delete;
     State(RuntimeFrame &frame) : 
       return_stack_(&frame.return_stack) ,
       void_return(frame.void_call),
-      value_returned_(false)
+      value_returned_(false),
+      msg_()
     {}
 
     void PushValue(Object &obj) {
@@ -319,7 +321,8 @@ namespace sapphire {
       }
     }
 
-    string GetMsg() const {}
+    string GetMsg() const { return msg_; }
+    string SetMsg(string msg) { msg_ = msg; }
   };
 
   using FrameStack = stack<RuntimeFrame, deque<RuntimeFrame>>;
@@ -417,7 +420,6 @@ namespace sapphire {
     void CommandHasBehavior(ArgumentList &args);
     template <ParameterPattern pattern>
     void CommandCheckParameterPattern(ArgumentList &args);
-    void CommandOptionalParamRange(ArgumentList &args);
 
     void MachineCommands(Operation token, ArgumentList &args, ASTNode &request);
 
