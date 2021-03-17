@@ -1,12 +1,13 @@
 #include "machine.h"
 
 namespace sapphire {
-  Message NewArray(ObjectMap &p) {
+  int NewArray(State &state, ObjectMap &p) {
     ManagedArray base = make_shared<ObjectArray>();
     auto args = p.Cast<ObjectArray>("args");
 
     if (args.size() > 2) {
-      return Message("Too much arguments for constructing array");
+      state.SetMsg("Too much arguments for constructing array");
+      return 2;
     }
 
     auto size = args[0].Cast<int64_t>();
@@ -25,134 +26,155 @@ namespace sapphire {
       }
     }
 
-    return Message().SetObject(Object(base, kTypeIdArray));
+    state.PushValue(Object(base, kTypeIdArray));
+    return 0;
   }
 
-  Message Array_GetElement(ObjectMap &p) {
+  int Array_GetElement(State &state, ObjectMap &p) {
     ObjectArray &base = p.Cast<ObjectArray>(kStrMe);
     auto &idx = p.Cast<int64_t>("index");
     size_t size = base.size();
 
-    if (size_t(idx) >= size) return Message("Index is out of range", StateLevel::Error);
-    if (size_t(idx) < 0) return Message("Index is out of range");
+    if (size_t(idx) >= size || size_t(idx) < 0) {
+      state.SetMsg("Index is out of range");
+      return 2;
+    }
 
-    return Message().SetObjectRef(base[size_t(idx)]);
+    state.PushView(base[size_t(idx)]);
+    return 0;
   }
 
-  Message Array_GetSize(ObjectMap &p) {
+  int Array_GetSize(State &state, ObjectMap &p) {
     auto &obj = p[kStrMe];
     int64_t size = static_cast<int64_t>(obj.Cast<ObjectArray>().size());
-    return Message().SetObject(Object(make_shared<int64_t>(size), kTypeIdInt));
+    state.PushValue(Object(size, kTypeIdInt));
+    return 0;
   }
 
-  Message Array_Empty(ObjectMap &p) {
-    return Message().SetObject(p[kStrMe].Cast<ObjectArray>().empty());
+  int Array_Empty(State &state, ObjectMap &p) {
+    state.PushValue(Object(p[kStrMe].Cast<ObjectArray>().empty(), kTypeIdBool));
+    return 0;
   }
 
-  Message Array_Push(ObjectMap &p) {
+  int Array_Push(State &state, ObjectMap &p) {
     ObjectArray &base = p.Cast<ObjectArray>(kStrMe);
     Object obj = components::DumpObject(p["object"]);
     base.emplace_back(obj);
-
-    return Message();
+    return 0;
   }
 
-  Message Array_Pop(ObjectMap &p) {
+  int Array_Pop(State &state, ObjectMap &p) {
     ObjectArray &base = p.Cast<ObjectArray>(kStrMe);
     if (!base.empty()) base.pop_back();
-
-    return Message().SetObject(base.empty());
+    state.PushValue(Object(base.empty(), kTypeIdBool));
+    return 0;
   }
 
-  Message Array_Clear(ObjectMap &p) {
+  int Array_Clear(State &state, ObjectMap &p) {
     auto &base = p.Cast<ObjectArray>(kStrMe);
     base.clear();
     base.shrink_to_fit();
-    return Message();
+    return 0;
   }
 
-  Message NewPair(ObjectMap &p) {
+  int NewPair(State &state, ObjectMap &p) {
     auto &left = p["left"];
     auto &right = p["right"];
     ManagedPair pair = make_shared<ObjectPair>(
       components::DumpObject(left),
       components::DumpObject(right));
-    return Message().SetObject(Object(pair, kTypeIdPair));
+    state.PushValue(Object(pair, kTypeIdPair));
+    return 0;
   }
 
-  Message Pair_Left(ObjectMap &p) {
+  int Pair_Left(State &state, ObjectMap &p) {
     auto &base = p.Cast<ObjectPair>(kStrMe);
-    return Message().SetObject(Object().PackObject(base.first));
+    state.PushView(base.first);
+    return 0;
   }
 
-  Message Pair_Right(ObjectMap &p) {
+  int Pair_Right(State &state, ObjectMap &p) {
     auto &base = p.Cast<ObjectPair>(kStrMe);
-    return Message().SetObject(Object().PackObject(base.second));
+    state.PushView(base.second);
+    return 0;
   }
 
-  Message NewTable(ObjectMap &p) {
+  int NewTable(State &state, ObjectMap &p) {
     ManagedTable table = make_shared<ObjectTable>();
-    return Message().SetObject(Object(table, kTypeIdTable));
+    state.PushValue(Object(table, kTypeIdTable));
+    return 0;
   }
 
-  Message Table_Insert(ObjectMap &p) {
+  int Table_Insert(State &state, ObjectMap &p) {
     using namespace components;
     auto &table = p.Cast<ObjectTable>(kStrMe);
     auto &key = p["key"];
     auto &value = p["value"];
 
     if (!lexical::IsPlainType(key.GetTypeId())) {
-      return Message("Invalid key type", StateLevel::Error);
+      state.SetMsg("Invalid key type");
+      return 2;
     }
 
     auto result = table.insert(
       make_pair(DumpObject(key), DumpObject(value))
     );
-    return Message();
+
+    state.PushValue(Object(result.second, kTypeIdBool));
+    return 0;
   }
 
-  Message Table_GetElement(ObjectMap &p) {
+  int Table_GetElement(State &state, ObjectMap &p) {
     // Ref: https://stackoverflow.com/questions/53149145/
     // Seems nothing to worry about pointers to element
 
     auto &table = p.Cast<ObjectTable>(kStrMe);
     auto &dest_key = p["key"];
     auto &result = table[dest_key];
-    return Message().SetObjectRef(result);
+    state.PushView(result);
+
+    return 0;
   }
 
-  Message Table_FindElement(ObjectMap &p) {
+  int Table_FindElement(State &state, ObjectMap &p) {
     auto &table = p.Cast<ObjectTable>(kStrMe);
     auto &key = p["key"];
     auto it = table.find(key);
+
     if (it != table.end()) {
-      return Message().SetObjectRef(it->second);
-      //return Message().SetObject(Object().PackObject(it->second));
+      state.PushView(it->second);
     }
-    return Message().SetObject(Object());
+    else {
+      state.PushValue(Object());
+    }
+
+    return 0;
   }
 
-  Message Table_EraseElement(ObjectMap &p) {
+  int Table_EraseElement(State &state, ObjectMap &p) {
     auto &table = p.Cast<ObjectTable>(kStrMe);
     auto &key = p["key"];
     auto count = table.erase(key);
-    return Message().SetObject(static_cast<int64_t>(count));
+    state.PushValue(Object(static_cast<int64_t>(count), kTypeIdInt));
+    return 0;
   }
 
-  Message Table_Empty(ObjectMap &p) {
+  int Table_Empty(State &state, ObjectMap &p) {
     auto &table = p.Cast<ObjectTable>(kStrMe);
-    return Message().SetObject(table.empty());
+    state.PushValue(Object(table.empty(), kTypeIdBool));
+    return 0;
   }
 
-  Message Table_GetSize(ObjectMap &p) {
+  int Table_GetSize(State &state, ObjectMap &p) {
     auto &table = p.Cast<ObjectTable>(kStrMe);
-    return Message().SetObject(static_cast<int64_t>(table.size()));
+    state.PushValue(Object(static_cast<int64_t>(table.size()), kTypeIdInt));
+    return 0;
   }
 
-  Message Table_Clear(ObjectMap &p) {
+  int Table_Clear(State &state, ObjectMap &p) {
     auto &table = p.Cast<ObjectTable>(kStrMe);
     table.clear();
-    return Message();
+    return 0;
   }
 
   void InitContainerComponents() {
@@ -161,7 +183,7 @@ namespace sapphire {
     CreateStruct(kTypeIdArray);
     StructMethodGenerator(kTypeIdArray).Create(
       {
-        Function(NewArray, "args", kStrInitializer, ParameterPattern::Variable),
+        Function(NewArray, "args", kStrInitializer, true),
         Function(Array_GetElement, "index", "at"),
         Function(Array_GetSize, "", "size"),
         Function(Array_Push, "object", "push"),

@@ -198,10 +198,11 @@ namespace sapphire::lexical {
   }
 
   Operation GetKeywordCode(string src) {
+    auto result = Operation::Null;
     auto &base = GetKeywordBase();
     auto it = base.find(src);
-    if (it != base.end()) return it->second;
-    return Operation::Null;
+    if (it != base.end()) result = it->second;
+    return result;
   }
 
   bool IsString(string target) {

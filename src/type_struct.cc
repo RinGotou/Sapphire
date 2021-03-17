@@ -1,7 +1,7 @@
 #include "machine.h"
 
 namespace sapphire {
-  Message Struct_GetMembers(ObjectMap &p) {
+  int Struct_GetMembers(State &state, ObjectMap &p) {
     auto &struct_def = p.Cast<ObjectStruct>(kStrMe);
     auto managed_array = make_shared<ObjectArray>();
 
@@ -9,7 +9,8 @@ namespace sapphire {
       managed_array->push_back(Object(unit.first));
     }
 
-    return Message().SetObject(Object(managed_array, kTypeIdArray));
+    state.PushValue(Object(managed_array, kTypeIdArray));
+    return 0;
   }
 
   void InitStructComponents() {

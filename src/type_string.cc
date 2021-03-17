@@ -3,114 +3,133 @@
 namespace sapphire {
   //We didn't provide regular constructor for string
   //Don't use old type checking function. Write something to replace that
-  Message String_GetElement(ObjectMap &p) {
+  int String_GetElement(State &state, ObjectMap &p) {
     auto index = p.Cast<int64_t>("index");
     auto &me = p.Cast<string>(kStrMe);
 
     if (index < 0 || index >= static_cast<int64_t>(me.size())) {
-      return Message("Invalid index for this string", StateLevel::Error);
+      state.SetMsg("Index is out of range");
+      return 2;
     }
 
     auto elem = make_shared<string>();
     elem->append(1, me[index]);
-    return Message().SetObject(Object(elem, kTypeIdString));
+    state.PushValue(Object(elem, kTypeIdString));
+    return 0;
   }
 
-  Message String_SubStr(ObjectMap &p) {
+  int String_SubStr(State &state, ObjectMap &p) {
     auto begin = p.Cast<int64_t>("begin");
     auto size = p.Cast<int64_t>("size");
     auto &me = p.Cast<string>(kStrMe);
 
     if (begin < 0 || begin >= static_cast<int64_t>(me.size())) {
-      return Message("Invalid begin index for this string", StateLevel::Error);
+      state.SetMsg("Invalid begin index");
+      return 2;
     }
 
     if (size > (static_cast<int64_t>(me.size()) - begin) || size < 0) {
-      return Message("Invalid size for this string", StateLevel::Error);
+      state.SetMsg("Invalid size");
+      return 2;
     }
 
     auto elem = me.substr(begin, size);
-    return Message().SetObject(Object(elem, kTypeIdString));
+    state.PushValue(Object(elem, kTypeIdString));
+    return 0;
   }
 
-  Message String_GetSize(ObjectMap &p) {
+  int String_GetSize(State &state, ObjectMap &p) {
     auto &me = p.Cast<string>(kStrMe);
     auto size = static_cast<int64_t>(me.size());
-    return Message().SetObject(Object(size, kTypeIdInt));
+    state.PushValue(Object(size, kTypeIdInt));
+    return 0;
   }
 
-  Message String_ToWide(ObjectMap &p) {
+  int String_ToWide(State &state, ObjectMap &p) {
     auto wstr = s2ws(p.Cast<string>(kStrMe));
-    return Message().SetObject(Object(wstr, kTypeIdWideString));
+    state.PushValue(Object(wstr, kTypeIdWideString));
+    return 0;
   }
 
-  Message String_Compare(ObjectMap &p) {
+  int String_Compare(State &state, ObjectMap &p) {
     auto &rhs_obj = p[kStrRightHandSide];
     auto &me = p.Cast<string>(kStrMe);
 
     if (rhs_obj.GetTypeId() != kTypeIdString) {
-      return Message().SetObject(false);
+      state.PushValue(Object(false, kTypeIdBool));
+      return 0;
     }
 
-    return Message().SetObject(me == rhs_obj.Cast<string>());
+    state.PushValue(Object(me == rhs_obj.Cast<string>(), kTypeIdBool));
+    return 0;
   }
   
-  Message NewWideString(ObjectMap &p) {
+  int NewWideString(State &state, ObjectMap &p) {
     auto &src = p.Cast<string>("src");
     auto me = make_shared<wstring>(s2ws(src));
-    return Message().SetObject(Object(me, kTypeIdWideString));
+    state.PushValue(Object(me, kTypeIdWideString));
+    return 0;
   }
 
-  Message WString_GetElement(ObjectMap &p) {
+  int WString_GetElement(State &state, ObjectMap &p) {
     auto index = p.Cast<int64_t>("index");
     auto &me = p.Cast<wstring>(kStrMe);
 
     if (index < 0 || index >= static_cast<int64_t>(me.size())) {
-      return Message("Invalid index for this string", StateLevel::Error);
+      state.SetMsg("Invalid syntax");
+      return 2;
     }
 
     auto elem = make_shared<wstring>();
     elem->append(1, me[index]);
-    return Message().SetObject(Object(elem, kTypeIdWideString));
+    state.PushValue(Object(elem, kTypeIdWideString));
+    return 0;
   }
 
-  Message WString_SubStr(ObjectMap &p) {
+  int WString_SubStr(State &state, ObjectMap &p) {
     auto begin = p.Cast<int64_t>("begin");
     auto size = p.Cast<int64_t>("size");
     auto &me = p.Cast<wstring>(kStrMe);
 
     if (begin < 0 || begin >= static_cast<int64_t>(me.size())) {
-      return Message("Invalid begin index for this string", StateLevel::Error);
+      state.SetMsg("Invalid begin index");
+      return 2;
     }
 
     if (size > (static_cast<int64_t>(me.size()) - begin) || size < 0) {
-      return Message("Invalid size for this string", StateLevel::Error);
+      state.SetMsg("Invalid size");
+      return 2;
     }
 
     auto elem = me.substr(begin, size);
-    return Message().SetObject(Object(elem, kTypeIdWideString));
+    state.PushValue(Object(elem, kTypeIdWideString));
+    return 0;
   }
 
-  Message WString_GetSize(ObjectMap &p) {
+  int WString_GetSize(State &state, ObjectMap &p) {
     auto &me = p.Cast<wstring>(kStrMe);
     auto size = static_cast<int64_t>(me.size());
-    return Message().SetObject(Object(size, kTypeIdInt));
+    state.PushValue(Object(size, kTypeIdInt));
+    return 0;
   }
 
-  Message WString_ToBytes(ObjectMap &p) {
+  int WString_ToBytes(State &state, ObjectMap &p) {
     auto str = ws2s(p.Cast<wstring>(kStrMe));
-    return Message().SetObject(Object(str, kTypeIdString));
+    state.PushValue(Object(str, kTypeIdString));
+    return 0;
   }
 
-  Message WString_Compare(ObjectMap &p) {
+  int WString_Compare(State &state, ObjectMap &p) {
     auto &rhs_obj = p[kStrRightHandSide];
     auto &me = p.Cast<wstring>(kStrMe);
 
     if (rhs_obj.GetTypeId() != kTypeIdWideString) {
-      return Message().SetObject(false);
+      state.PushValue(Object(false, kTypeIdBool));
+      return 0;
     }
 
-    return Message().SetObject(me == rhs_obj.Cast<wstring>());
+    state.PushValue(Object(me == rhs_obj.Cast<wstring>(), kTypeIdBool));
+    return 0;
   }
 
   void InitStringTypes() {
@@ -142,28 +161,31 @@ namespace sapphire {
   }
 
   template <int base>
-  Message DecimalConvert(ObjectMap &p) {
+  int DecimalConvert(State &state, ObjectMap &p) {
     string str = ParseRawString(p["str"].Cast<string>());
 
     int64_t dest = stol(str, nullptr, base);
-    return Message().SetObject(Object(
-      make_shared<int64_t>(dest), kTypeIdInt
-    ));
+    state.PushValue(Object(dest, kTypeIdInt));
+    return 0;
   }
 
-  Message ConvertStringToInt(ObjectMap &p) {
-    auto value = static_cast<char>(p.Cast<int64_t>("value"));
-    return Message().SetObject(string().append(1, value));
-  }
-
-  Message ConvertIntToString(ObjectMap &p) {
+  int ConvertCharToInt(State &state, ObjectMap &p) {
     auto &value = p.Cast<string>("value");
 
     if (value.size() != 1) {
-      return Message("Invalid char", StateLevel::Error);
+      state.SetMsg("Function can only convert single-char string");
+      return 2;
     }
 
-    return Message().SetObject(static_cast<int64_t>(value[0]));
+    state.PushValue(Object(static_cast<int64_t>(value[0]), kTypeIdString));
+    return 0;
+  }
+
+  int ConvertIntToChar(State &state, ObjectMap &p) {
+    auto value = static_cast<char>(p.Cast<int64_t>("value"));
+    state.PushValue(Object(string().append(1, value), kTypeIdString));
+    return 0;
+
   }
 
   void InitStringComponents() {
@@ -173,7 +195,7 @@ namespace sapphire {
     CreateFunctionObject(Function(DecimalConvert<2>, "str", "bin"));
     CreateFunctionObject(Function(DecimalConvert<8>, "str", "octa"));
     CreateFunctionObject(Function(DecimalConvert<16>, "str", "hex"));
-    CreateFunctionObject(Function(ConvertStringToInt, "value", "s2int"));
-    CreateFunctionObject(Function(ConvertIntToString, "value", "i2str"));
+    CreateFunctionObject(Function(ConvertCharToInt, "value", "c2int"));
+    CreateFunctionObject(Function(ConvertIntToChar, "value", "i2char"));
   }
 }

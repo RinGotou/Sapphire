@@ -1,38 +1,41 @@
 #include "machine.h"
 
 namespace sapphire {
-  Message Function_GetId(ObjectMap &p) {
+  int Function_GetId(State &state, ObjectMap &p) {
     auto &impl = p.Cast<Function>(kStrMe);
-    return Message(impl.GetId());
+    state.PushValue(Object(impl.GetId(), kTypeIdString));
+    return 0;
   }
 
-  Message Function_GetParameters(ObjectMap &p) {
+  int Function_GetParameters(State &state, ObjectMap &p) {
     auto &impl = p.Cast<Function>(kStrMe);
     shared_ptr<ObjectArray> dest_base = make_shared<ObjectArray>();
-    auto origin_vector = impl.GetParameters();
+    auto origin_vector = impl.AccessParameters();
 
     for (auto it = origin_vector.begin(); it != origin_vector.end(); ++it) {
       dest_base->emplace_back(Object(*it, kTypeIdString));
     }
 
-    return Message().SetObject(Object(dest_base, kTypeIdArray));
+    state.PushValue(Object(dest_base, kTypeIdArray));
+    return 0;
   }
 
-  Message Function_Compare(ObjectMap &p) {
-    auto &rhs = p[kStrRightHandSide];
-    auto &lhs = p[kStrMe].Cast<Function>();
+  //int Function_Compare(State &state, ObjectMap &p) {
+  //  auto &rhs = p[kStrRightHandSide];
+  //  auto &lhs = p[kStrMe].Cast<Function>();
 
-    string type_id = rhs.GetTypeId();
-    bool result = false;
+  //  string type_id = rhs.GetTypeId();
+  //  bool result = false;
 
-    if (type_id == kTypeIdFunction) {
-      auto &rhs_impl = rhs.Cast<Function>();
+  //  if (type_id == kTypeIdFunction) {
+  //    auto &rhs_impl = rhs.Cast<Function>();
 
-      result = lhs.Compare(rhs_impl);
-    }
+  //    result = lhs.Compare(rhs_impl);
+  //  }
 
-    return Message().SetObject(result);
-  }
+  //  state.PushValue(Object(result, kTypeIdBool));
+  //  return 0;
+  //}
 
   void InitFunctionType() {
     using namespace components;
@@ -42,7 +45,7 @@ namespace sapphire {
       {
         Function(Function_GetId, "", "id"),
         Function(Function_GetParameters, "", "params"),
-        Function(Function_Compare, kStrRightHandSide, kStrCompare)
+        //Function(Function_Compare, kStrRightHandSide, kStrCompare)
       }
     );
 

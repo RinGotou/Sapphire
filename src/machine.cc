@@ -2496,7 +2496,7 @@ namespace sapphire {
 
     auto &impl = func_obj.Cast<Function>();
 
-    Object result(impl.GetPattern() == pattern, kTypeIdBool);
+    Object result(impl.IsVariableParam(), kTypeIdBool);
     frame.RefreshReturnStack(result);
   }
 
@@ -2705,7 +2705,7 @@ namespace sapphire {
 
   //deprecated
   void AASTMachine::GenerateArgs(Function &impl, ArgumentList &args, ObjectMap &obj_map) {
-    if (impl.IsVariableParam()) {
+    if (!impl.IsVariableParam()) {
       Generate_Fixed(impl, args, obj_map);
     }
     else {
@@ -2847,7 +2847,6 @@ namespace sapphire {
   void AASTMachine::Run(bool invoke) {
     if (code_stack_.empty()) return;
 
-    bool next_tick;
     size_t script_idx = 0;
     Message msg;
     AnnotatedAST *code = code_stack_.back();
@@ -2915,19 +2914,16 @@ namespace sapphire {
       frame->jump_offset = func.GetOffset();
     };
 
-    auto load_function_impl = [&](bool invoking_request) -> bool {
+    auto load_function_impl = [&]() -> pair<bool, bool> {
       bool switch_to_next_tick = false;
       State state(frame_stack_.top());
       int run_result = 0;
 
       switch (impl->GetType()) {
       case FunctionType::UserDef:
-        //start new processing in next tick.
-        if (invoking_request) goto direct_load_vmcode;
         if (IsTailRecursion(frame->idx, &impl->Get<AnnotatedAST>())) tail_recursion();
         else if (IsTailCall(frame->idx) && !frame->do_initializer_calling) tail_call(*impl);
         else {
-        direct_load_vmcode:
           update_stack_frame(*impl);
         }
         switch_to_next_tick = true;
@@ -2939,13 +2935,13 @@ namespace sapphire {
         case 2: frame->MakeError(state.GetMsg()); break;
         default:break;
         }
-        switch_to_next_tick = invoking_request;
         break;
       default:
         break;
       }
 
-      return switch_to_next_tick;
+
+      return make_pair(switch_to_next_tick, state.HasValueReturned());
     };
 
     auto cleanup_cache = [&]() -> void {
@@ -3015,12 +3011,13 @@ namespace sapphire {
         if (frame->error) break;
 
 
-        next_tick = load_function_impl(false);
+        auto result = load_function_impl();
         if (frame->error) break;
-        if (next_tick) continue;
+        if (result.first) continue;
 
-        if (msg.HasObject()) frame->RefreshReturnStack(msg.GetObjectInfo(), msg.GetPtr());
-        else frame->RefreshReturnStack(Object());
+        if (!frame->error && !result.second && !frame->void_call) {
+          frame->RefreshReturnStack(Object());
+        }
       }
 
       frame->Stepping();

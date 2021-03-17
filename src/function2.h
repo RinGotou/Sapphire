@@ -87,7 +87,7 @@ namespace sapphire {
       params_(params), id_(id) {}
 
     template <typename _T>
-    _T &Get() { return std::get<FunctionBase<_T>>(slot_); }
+    _T &Get() { return std::get<FunctionBase<_T>>(slot_).impl; }
 
     //Remove in the future, deprecated
     auto GetId() const { return id_; }
@@ -100,17 +100,19 @@ namespace sapphire {
     auto GetOffset() const { return std::get<UserDefinedFunction>(slot_).offset; }
     auto Good() const { return (type_ != FunctionType::Invalid); }
 
-    bool Compare(Function &rhs) {
-      if (type_ != rhs.type_) return false;
-      bool result = false;
+    //bool Compare(Function &rhs) {
+    //  if (type_ != rhs.type_) return false;
+    //  bool result = false;
 
-      switch (type_) {
-      case FunctionType::Component: CompareFunctionSlot<Activity>(slot_, rhs.slot_); break;
-      case FunctionType::UserDef: CompareFunctionSlot<AnnotatedAST>(slot_, rhs.slot_); break;
-      case FunctionType::External: /*TODO: Reconstruct external component support */ break;
-      default: break;
-      }
-    }
+    //  switch (type_) {
+    //  case FunctionType::Component: result = CompareFunctionSlot<Activity>(slot_, rhs.slot_); break;
+    //  case FunctionType::UserDef: result = (id_ == rhs.id_); break;
+    //  case FunctionType::External: /*TODO: Reconstruct external component support */ break;
+    //  default: break;
+    //  }
+
+    //  return result;
+    //}
   };
 
   using FunctionPointer = Function *;

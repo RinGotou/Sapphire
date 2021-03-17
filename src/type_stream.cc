@@ -2,63 +2,52 @@
 
 namespace sapphire {
   template <typename StreamType>
-  Message StreamFamilyState(ObjectMap &p) {
+  int StreamFamilyState(State &state, ObjectMap &p) {
     StreamType &stream = p.Cast<StreamType>(kStrMe);
-    return Message().SetObject(stream.Good());
+    state.PushValue(Object(stream.Good(), kTypeIdBool));
+    return 0;
   }
 
-  ///////////////////////////////////////////////////////////////
-  // InStream implementations
-  Message NewInStream(ObjectMap &p) {
-    //auto tc = TypeChecking({ Expect("path", kTypeIdString) }, p);
-    //if (TC_FAIL(tc)) return TC_ERROR(tc);
-
+  int NewInStream(State &state, ObjectMap &p) {
     string path = p.Cast<string>("path");
 
     shared_ptr<InStream> ifs = make_shared<InStream>(path);
-    ifs->eof();
+    state.PushValue(Object(ifs, kTypeIdInStream));
 
-    return Message().SetObject(Object(ifs, kTypeIdInStream));
+    return 0;
   }
 
-  Message InStream_Get(ObjectMap &p) {
+  int InStream_Get(State &state, ObjectMap &p) {
     InStream &ifs = p.Cast<InStream>(kStrMe);
 
     if (!ifs.Good()) {
-      return Message("Invalid instream.", StateLevel::Error);
+      state.SetMsg("Invalid in-stream");
+      return 2;
     }
 
     string result = ifs.GetLine();
 
-    return Message().SetObject(result);
+    state.PushValue(Object(result, kTypeIdString));
+    return 0;
   }
 
-  Message InStream_EOF(ObjectMap &p) {
+  int InStream_EOF(State &state, ObjectMap &p) {
     InStream &ifs = p.Cast<InStream>(kStrMe);
-    return Message().SetObject(ifs.eof());
+    state.PushValue(Object(ifs.eof(), kTypeIdBool));
+    return 0;
   }
-  ///////////////////////////////////////////////////////////////
 
-  ///////////////////////////////////////////////////////////////
-  // OutStream implementations
-  Message NewOutStream(ObjectMap &p) {
-    //auto tc = TypeChecking(
-    //  { 
-    //    Expect("path", kTypeIdString),
-    //    Expect("binary", kTypeIdBool),
-    //    Expect("append", kTypeIdBool)
-    //  }, p);
-    //if (TC_FAIL(tc)) return TC_ERROR(tc);
-
+  int NewOutStream(State &state, ObjectMap &p) {
     string path = p.Cast<string>("path");
     bool binary = p.Cast<bool>("binary");
     bool append = p.Cast<bool>("append");
 
     shared_ptr<OutStream> ofs = make_shared<OutStream>(path, append, binary);
-    return Message().SetObject(Object(ofs, kTypeIdOutStream));
+    state.PushValue(Object(ofs, kTypeIdOutStream));
+    return 0;
   }
 
-  Message OutStream_Write(ObjectMap &p) {
+  int OutStream_Write(State &state, ObjectMap &p) {
     OutStream &ofs = p.Cast<OutStream>(kStrMe);
     auto &obj = p["str"];
     bool result = true;
@@ -71,9 +60,9 @@ namespace sapphire {
       result = false;
     }
 
-    return Message().SetObject(result);
+    state.PushValue(Object(result, kTypeIdBool));
+    return 0;
   }
-  ///////////////////////////////////////////////////////////////
 
   void InitStreamComponents() {
     using namespace components;

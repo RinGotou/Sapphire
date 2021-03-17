@@ -321,8 +321,23 @@ namespace sapphire {
       }
     }
 
+    void PushView(ObjectView view) {
+      if (!void_return) {
+        return_stack_->push_back(new ObjectView(view));
+        value_returned_ = true;
+      }
+    }
+
+    void PushView(Object &obj) {
+      if (!void_return) {
+        return_stack_->push_back(new ObjectView(&obj));
+        value_returned_ = true;
+      }
+    }
+
     string GetMsg() const { return msg_; }
-    string SetMsg(string msg) { msg_ = msg; }
+    void SetMsg(string msg) { msg_ = msg; }
+    bool HasValueReturned() const { return  value_returned_; }
   };
 
   using FrameStack = stack<RuntimeFrame, deque<RuntimeFrame>>;
