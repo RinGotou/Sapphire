@@ -144,7 +144,6 @@ namespace sapphire {
     kStrCase           = "case",
     kStrWhen           = "when",
     kStrReturn         = "return",
-    kStrOptional       = "optional",
     kStrVariable       = "variable",
     kStrHead           = "head",
     kStrTail           = "tail",

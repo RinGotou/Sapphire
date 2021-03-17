@@ -2776,6 +2776,7 @@ namespace sapphire {
     }
   }
 
+  //deprecated
   void AASTMachine::GenerateArgs(Function &impl, ArgumentList &args, ObjectMap &obj_map) {
     switch (impl.GetPattern()) {
     case ParameterPattern::Fixed:

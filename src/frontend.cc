@@ -25,12 +25,6 @@ namespace sapphire {
     return operation == Operation::Return || operation == Operation::Attribute;
   }
 
-  inline bool IsStructExceptions(Operation operation) {
-    return operation == Operation::Bind ||
-      operation == Operation::Attribute ||
-      operation == Operation::Include;
-  }
-
   inline bool IsNestRoot(Operation operation) {
     return operation == Operation::If ||
       operation == Operation::While ||
@@ -460,8 +454,7 @@ namespace sapphire {
 
     bool left_paren = false;
     bool inside_params = false;
-    bool optional = false, optional_declared = false;
-    bool variable = false, variable_declared = false;
+    bool variable = false;
     bool good = true;
 
     frame_->nodes.emplace_back(ASTNode(Operation::Fn));
@@ -470,14 +463,12 @@ namespace sapphire {
 
     auto invalid_param_pattern = [&]()->bool {
       if (!inside_params) return true;
-      return frame_->next.first == "," ||
-        frame_->next.first == kStrOptional ||
-        frame_->next.first == kStrVariable;
+      return frame_->next.first == "," || frame_->next.first == kStrVariable;
     };
 
     //Function identifier
     frame_->Eat();
-    if (auto &str = frame_->current.first; (str == kStrOptional || str == kStrVariable)) {
+    if (auto &str = frame_->current.first; str == kStrVariable) {
       error_string_ = "Invalid function identifier";
       return false;
     }
@@ -527,22 +518,6 @@ namespace sapphire {
         ProduceVMCode();
         break;
       }
-      else if (frame_->current.first == kStrOptional) {
-        if (invalid_param_pattern()) {
-          error_string_ = "Invalid function parameter declaration.";
-          good = false;
-          break;
-        }
-
-        if (variable_declared) {
-          error_string_ = "Cannot declare optional/variable parameters at same time";
-          good = false;
-          break;
-        }
-
-        optional = true;
-        if (!optional_declared) optional_declared = true;
-      }
       else if (frame_->current.first == kStrVariable) {
         if (invalid_param_pattern()) {
           error_string_ = "Invalid function parameter declaration.";
@@ -550,20 +525,7 @@ namespace sapphire {
           break;
         }
 
-        if (variable_declared) {
-          error_string_ = "Cannot declare multiple variable parameters at same time";
-          good = false;
-          break;
-        }
-
-        if (optional_declared) {
-          error_string_ = "Cannot declare optional/variable parameters at same time";
-          good = false;
-          break;
-        }
-
         variable = true;
-        if (!variable_declared) variable_declared = true;
       }
       else if (frame_->current.first == ",") continue;
       else if (frame_->current.second != LiteralType::Identifier) {

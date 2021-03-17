@@ -194,10 +194,6 @@ namespace sapphire {
 
   using CommandPointer = Sentense * ;
 
-  struct RuntimeInfo {
-    //TODO: put some boolean values into heres
-  };
-
   class RuntimeFrame {
   public:
     bool error;
@@ -294,14 +290,44 @@ namespace sapphire {
     }
   };
 
+  //light frame for component function calling
+  class State {
+  protected:
+    vector<ObjectCommonSlot> *return_stack_;
+    bool void_return;
+    bool value_returned_;
+
+  public:
+    State() = delete;
+    State(RuntimeFrame &frame) : 
+      return_stack_(&frame.return_stack) ,
+      void_return(frame.void_call),
+      value_returned_(false)
+    {}
+
+    void PushValue(Object &obj) {
+      if (!void_return) {
+        return_stack_->push_back(new Object(obj));
+        value_returned_ = true;
+      }
+    }
+    
+    void PushValue(Object &&obj) {
+      if (!void_return) {
+        return_stack_->push_back(new Object(std::move(obj)));
+        value_returned_ = true;
+      }
+    }
+  };
+
   using FrameStack = stack<RuntimeFrame, deque<RuntimeFrame>>;
 
   class AASTMachine {
-  private:
+  protected:
     StandardLogger *logger_;
     bool is_logger_host_;
 
-  private:
+  protected:
     void RecoverLastState(bool call_by_return);
     void FinishInitalizerCalling();
     bool IsTailRecursion(size_t idx, AnnotatedAST *code);
@@ -399,7 +425,7 @@ namespace sapphire {
     void CallExtensionFunction(ObjectMap &p, Function &impl);
     void GenerateStructInstance(ObjectMap &p);
     void GenerateErrorMessages(size_t stop_index);
-  private:
+  protected:
     deque<AASTPointer> code_stack_;
     FrameStack frame_stack_;
     ObjectStack obj_stack_;
