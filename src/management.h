@@ -1,6 +1,5 @@
 #pragma once
 #include "function.h"
-#include "extension.h"
 #include "filestream.h"
 
 namespace sapphire::components {
@@ -76,15 +75,6 @@ namespace sapphire::script {
   AnnotatedAST *FindScriptByPath(string path);
   AnnotatedAST &AppendScript(string path, AnnotatedAST &code);
   AnnotatedAST &AppendBlankScript(string path);
-}
-
-namespace sapphire::extension {
-  void DisposeMemoryUnit(void *ptr, int type);
-  int FetchDescriptor(Descriptor *descriptor, void *obj_map, const char *id);
-  int FetchArrayElementDescriptor(Descriptor *arr_desc, Descriptor *dest, size_t index);
-  size_t GetArrayObjectCapacity(Descriptor desc);
-  int DumpObjectFromDescriptor(Descriptor *descriptor, void **dest);
-  int FetchObjectType(void *obj_map, const char *id);
 }
 
 namespace sapphire::runtime {

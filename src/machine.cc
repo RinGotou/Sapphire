@@ -126,58 +126,6 @@ namespace sapphire {
     for (const auto func : kEmbeddedComponents) func();
   }
 
-  void ReceiveExtReturningValue(void *value, void *slot, int type) {
-    auto &slot_obj = *static_cast<Object *>(slot);
-
-    if (type == kExtTypeInt) {
-      auto *ret_value = static_cast<int64_t *>(value);
-      slot_obj.PackContent(make_shared<int64_t>(*ret_value), kTypeIdInt);
-    }
-    else if (type == kExtTypeFloat) {
-      auto *ret_value = static_cast<double *>(value);
-      slot_obj.PackContent(make_shared<double>(*ret_value), kTypeIdFloat);
-    }
-    else if (type == kExtTypeBool) {
-      auto *ret_value = static_cast<int *>(value);
-      bool content = *ret_value == 1 ? true : false;
-      slot_obj.PackContent(make_shared<bool>(content), kTypeIdBool);
-    }
-    else if (type == kExtTypeString) {
-      const auto *ret_value = static_cast<char *>(value);
-      string content(ret_value);
-      slot_obj.PackContent(make_shared<string>(content), kTypeIdString);
-    }
-    else if (type == kExtTypeWideString) {
-      const auto *ret_value = static_cast<wchar_t *>(value);
-      wstring content(ret_value);
-      slot_obj.PackContent(make_shared<wstring>(content), kTypeIdWideString);
-    }
-    else if (type == kExtTypeFunctionPointer) {
-      const auto *ret_value = static_cast<GenericFunctionPointer *>(value);
-      slot_obj.PackContent(make_shared<GenericFunctionPointer>(*ret_value), kTypeIdFunctionPointer);
-    }
-    else if (type == kExtTypeObjectPointer) {
-      const auto *ret_value = static_cast<uintptr_t *>(value);
-      slot_obj.PackContent(make_shared<GenericPointer>(*ret_value), kTypeIdObjectPointer);
-    }
-    else {
-      slot_obj.PackContent(nullptr, kTypeIdNull);
-    }
-  }
-
-  int PushObjectToVM(const char *id, void *ptr, const char *type_id, ExternalMemoryDisposer disposer,
-    void *vm) {
-    auto &machine = *static_cast<AASTMachine *>(vm);
-    Object ext_obj(ptr, disposer, string(type_id));
-    auto result = machine.PushObject(string(id), ext_obj);
-    return result ? 1 : 0;
-  }
-
-  void ReceiveError(void *vm, const char *msg) {
-    auto &machine = *static_cast<AASTMachine *>(vm);
-    machine.PushError(string(msg));
-  }
-
   void RuntimeFrame::Stepping() {
     if (!disable_step) idx += 1;
     disable_step = false;
@@ -2852,19 +2800,6 @@ namespace sapphire {
     }
   }
 
-  void AASTMachine::CallExtensionFunction(ObjectMap &p, Function &impl) {
-    auto &frame = frame_stack_.top();
-    Object returning_slot;
-    auto ext_activity = impl.Get<ExtensionActivity>();
-    ExternalState vm_state{ &p, &returning_slot, this, ReceiveExtReturningValue };
-    auto result_code = ext_activity(vm_state);
-    if (result_code < 1) {
-      frame.MakeError("Extension reports error while invoking external activity.");
-      return;
-    }
-    frame.RefreshReturnStack(returning_slot);
-  }
-
   void AASTMachine::GenerateStructInstance(ObjectMap &p) {
     auto &frame = frame_stack_.top();
 
@@ -3020,17 +2955,6 @@ namespace sapphire {
           update_stack_frame(*impl);
         }
         switch_to_next_tick = true;
-        break;
-      case FunctionType::External:
-        if (invoking_request) {
-          frame->MakeError("Unsupported feature");
-          break;
-        }
-        CallExtensionFunction(obj_map, *impl);
-        if (!frame->error) {
-          frame->Stepping();
-          switch_to_next_tick = true;
-        }
         break;
       case FunctionType::Component:
         msg = impl->Get<Activity>()(obj_map);

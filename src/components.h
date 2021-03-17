@@ -10,7 +10,7 @@ namespace sapphire {
   void InitContainerComponents();
   void InitFunctionType();
   void InitStreamComponents();
-  void InitExtensionComponents();
+  //void InitExtensionComponents();
   void InitStructComponents();
 
   const ComponentLoader kEmbeddedComponents[] = {
@@ -20,7 +20,7 @@ namespace sapphire {
     InitContainerComponents,
     InitFunctionType,
     InitStreamComponents,
-    InitExtensionComponents,
+    //InitExtensionComponents,
     InitStructComponents
   };
 }

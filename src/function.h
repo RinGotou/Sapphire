@@ -55,13 +55,14 @@ namespace sapphire {
     return lhs_obj == rhs_obj;
   }
 
+  //stupid fault!
   inline bool CompareOperationInstance(FunctionBase &lhs, FunctionBase &rhs) {
     auto &lhs_obj = std::get<ExtensionFunction>(lhs).Get();
     auto &rhs_obj = std::get<ExtensionFunction>(rhs).Get();
     return &lhs_obj == &rhs_obj;
   }
 
-  enum class FunctionType { Component, Operation, External, Invalid };
+  enum class FunctionType { Component, UserDef, External, Invalid };
 
   class Function {
   private:
@@ -91,7 +92,7 @@ namespace sapphire {
     Function(size_t offset, AnnotatedAST ir, string id, vector<string> params,
       ParameterPattern argument_mode = ParameterPattern::Fixed) :
       base_(_Function(ir)), record_(),
-      mode_(argument_mode), type_(FunctionType::Operation), limit_(0),
+      mode_(argument_mode), type_(FunctionType::UserDef), limit_(0),
       offset_(offset), id_(id), params_(params) {}
 
     Function(ExtensionActivity activity, string id, string params_pattern,
@@ -135,7 +136,7 @@ namespace sapphire {
       switch (type_) {
       case FunctionType::Component: CompareFunctionBase<Activity>(base_, rhs.base_); break;
       case FunctionType::External:  CompareFunctionBase<ExtensionActivity>(base_, rhs.base_); break;
-      case FunctionType::Operation: CompareOperationInstance(base_, rhs.base_); break;
+      case FunctionType::UserDef: CompareOperationInstance(base_, rhs.base_); break;
       default:break;
       }
 

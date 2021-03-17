@@ -422,7 +422,6 @@ namespace sapphire {
     void GenerateArgs(Function &impl, ArgumentList &args, ObjectMap &obj_map);
     void Generate_Fixed(Function &impl, ArgumentList &args, ObjectMap &obj_map);
     void Generate_Variable(Function &impl, ArgumentList &args, ObjectMap &obj_map);
-    void CallExtensionFunction(ObjectMap &p, Function &impl);
     void GenerateStructInstance(ObjectMap &p);
     void GenerateErrorMessages(size_t stop_index);
   protected:
