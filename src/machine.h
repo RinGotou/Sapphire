@@ -21,17 +21,9 @@ namespace sapphire {
   using ExpectationList = initializer_list<Expect>;
   using NullableList = initializer_list<string>;
 
-//  CommentedResult TypeChecking(ExpectationList &&lst,
-//    ObjectMap &obj_map,
-//    NullableList &&nullable = {});
-//
-//#define TC_ERROR(_Obj) Message(std::get<string>(_Obj), StateLevel::Error)
-//#define TC_FAIL(_Obj) !std::get<bool>(_Obj)
-
   string ParseRawString(const string &src);
   void InitPlainTypesAndConstants();
   void ActivateComponents();
-  void ReceiveError(void* vm, const char* msg);
 
   using ResultTraitKey = pair<PlainType, PlainType>;
   using TraitUnit = pair<ResultTraitKey, PlainType>;
@@ -368,19 +360,16 @@ namespace sapphire {
     void CheckObjectWithDomain(Function &impl, ASTNode &req, bool first_assert);
     void CheckArgrumentList(Function &impl, ArgumentList &args);
     void ClosureCatching(ArgumentList &args, size_t nest_end, bool closure);
-
-    Message CallMethod(Object &obj, string id, ObjectMap &args);
-    Message CallMethod(Object &obj, string id,
-      const initializer_list<NamedObject> &&args = {});
-    Message CallVMCFunction(Function &impl, ObjectMap &obj_map);
+    
+    optional<Object> CallMethod2(Object &obj, string id, ObjectMap &args);
+    optional<Object> CallMethod2(Object &obj, string id, const initializer_list<NamedObject> &&args);
+    optional<Object> CallUserDefinedFunction(Function &impl, ObjectMap &obj_map);
 
     void CommandLoad(ArgumentList &args);
     void CommandIfOrWhile(Operation token, ArgumentList &args, size_t nest_end);
     void InitForEach(ArgumentList &args, size_t nest_end);
     void CheckForEach(ArgumentList &args, size_t nest_end);
     
-    //void CommandForEach(ArgumentList &args, size_t nest_end);
-    //void ForEachChecking(ArgumentList &args, size_t nest_end);
     void CommandCase(ArgumentList &args, size_t nest_end);
     void CommandElse();
     void CommandWhen(ArgumentList &args);

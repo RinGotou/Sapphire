@@ -1,5 +1,5 @@
 #pragma once
-#include "message.h"
+#include "lexical.h"
 #include "object.h"
 
 namespace sapphire {

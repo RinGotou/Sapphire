@@ -751,51 +751,57 @@ namespace sapphire {
     frame.Goto(nest_end + 1);
   }
 
-  Message AASTMachine::CallMethod(Object &obj, string id, ObjectMap &args) {
+  optional<Object> AASTMachine::CallMethod2(Object &obj, string id, ObjectMap &args) {
     FunctionPointer impl;
     auto &frame = frame_stack_.top();
-    Message result;
 
-    if (!FetchFunctionImplEx(impl, id, obj.GetTypeId(), &obj)) return result;
+    if (!FetchFunctionImplEx(impl, id, obj.GetTypeId(), &obj)) {
+      return std::nullopt;
+    }
 
     ObjectMap obj_map = args;
     obj_map.emplace(NamedObject(kStrMe, obj));
+    optional<Object> result;
 
     if (impl->GetType() == FunctionType::UserDef) {
-      result = CallVMCFunction(*impl, obj_map);
+      result = CallUserDefinedFunction(*impl, obj_map);
     }
     else if (impl->GetType() == FunctionType::External) {
-      frame.MakeError("Unsupported feature(Invoke external function)");
+      frame.MakeError("Internal Error(External function as method is not supported)");
     }
     else if (impl->GetType() == FunctionType::Component) {
       auto activity = impl->Get<Activity>();
       State state(frame);
       auto run_result = activity(state, args);
       switch (run_result) {
-      case 1: result = Message(state.GetMsg(), StateLevel::Warning); break;
-      case 2: result = Message(state.GetMsg(), StateLevel::Error); break;
-      default:break;
+      case 1: frame.MakeWarning(state.GetMsg()); break;
+      case 2: frame.MakeError(state.GetMsg()); break;
+      default: 
+        if (state.HasValueReturned()) {
+          result = frame.return_stack.back()->IsObjectView() ?
+            Object().PackObject(dynamic_cast<ObjectView *>(frame.return_stack.back())->Seek()) :
+            *dynamic_cast<ObjectPointer>(frame.return_stack.back());
+          delete frame.return_stack.back();
+          frame.return_stack.pop_back();
+        }
+        break;
       }
-    }
-    else {
-      frame.MakeError("Internal Error(Unknown function type)");
     }
 
     return result;
   }
 
-  Message AASTMachine::CallMethod(Object &obj, string id, const initializer_list<NamedObject> &&args) {
+  optional<Object> AASTMachine::CallMethod2(Object &obj, string id, const initializer_list<NamedObject> &&args) {
     ObjectMap obj_map = args;
-    return CallMethod(obj, id, obj_map);
+    return CallMethod2(obj, id, obj_map);
   }
 
-  Message AASTMachine::CallVMCFunction(Function &impl, ObjectMap &obj_map) {
+  optional<Object> AASTMachine::CallUserDefinedFunction(Function &impl, ObjectMap &obj_map) {
     auto &frame = frame_stack_.top();
-    Message result;
 
     if (impl.GetType() != FunctionType::UserDef) {
-      frame.MakeError("Invalid function variant");
-      return result;
+      frame.MakeError("Internal Error(Wrong implementation for CallUserDefinedFunction())");
+      return std::nullopt;
     }
 
     frame.stop_point = true;
@@ -810,19 +816,19 @@ namespace sapphire {
 
     if (error_) {
       frame.MakeError("Error occurred while calling user-defined function");
-      return result;
+      return std::nullopt;
     }
 
+    optional<Object> result;
     if (frame.has_return_value_from_invoking) {
-      frame.return_stack.back()->IsObjectView() ?
-        result.SetObjectRef(dynamic_cast<ObjectView *>(frame.return_stack.back())->Seek()) :
-        //not checked. SetObjectRef?
-        result.SetObject(*dynamic_cast<ObjectPointer>(frame.return_stack.back()));
+      result = frame.return_stack.back()->IsObjectView() ?
+        Object().PackObject(dynamic_cast<ObjectView *>(frame.return_stack.back())->Seek()) :
+        *dynamic_cast<ObjectPointer>(frame.return_stack.back());
       delete frame.return_stack.back();
       frame.return_stack.pop_back();
     }
-    frame.stop_point = false;
 
+    frame.stop_point = false;
     return result;
   }
 
@@ -979,35 +985,43 @@ namespace sapphire {
         return;
       }
 
-      auto empty_result = CallMethod(container_obj, kStrEmpty).GetObj();
+      auto empty_result = CallMethod2(container_obj, kStrEmpty, {});
       if (frame.error) return;
-      if (empty_result.GetTypeId() != kTypeIdBool) {
+      if (!(empty_result.has_value() && empty_result.value().GetTypeId() != kTypeIdBool)) {
         frame.MakeError("Invalid type of return value from empty()");
         return;
       }
-      if (empty_result.Cast<bool>()) {
+
+      if (empty_result.value().Cast<bool>()) {
         frame.Goto(nest_end);
         frame.final_cycle = true;
         obj_stack_.Push(true); //avoid error
-        frame.scope_indicator.push(false); //????
+        frame.scope_indicator.push(false); //???
+      }
+
+      auto iterator_obj = CallMethod2(container_obj, kStrHead, {});
+      if (frame.error) return;
+      if (!iterator_obj.has_value()) {
+        frame.MakeError("Invalid type of return value from head()");
+        return;
+      }
+      if (!CheckObjectBehavior(iterator_obj.value(), "get|step|compare")) {
+        frame.MakeError("Head iterator doesn't have necessary - get & step &compare");
         return;
       }
 
-      auto iterator_obj = CallMethod(container_obj, kStrHead).GetObj();
+      auto container_unit = CallMethod2(iterator_obj.value(), "get", {});
       if (frame.error) return;
-      if (!CheckObjectBehavior(iterator_obj, "get|step|compare")) {
-        frame.MakeError("Head iterator doesn't have necessary methods");
+      if (!container_unit.has_value()) {
+        frame.MakeError("Invalid type of return value from get()");
         return;
       }
-
-      auto container_unit = CallMethod(iterator_obj, "get").GetObj();
-      if (frame.error) return;
 
       frame.scope_indicator.push(true);
       obj_stack_.Push(true);
-      obj_stack_.CreateObject(kStrIteratorObj, iterator_obj);
+      obj_stack_.CreateObject(kStrIteratorObj, iterator_obj.value());
       obj_stack_.CreateObject(kStrContainerKeepAliveSlot, container_obj);
-      obj_stack_.CreateObject(unit_id, container_unit, TryAppendTokenId(unit_id));
+      obj_stack_.CreateObject(unit_id, container_unit.value(), TryAppendTokenId(unit_id));
 
     }
   }
@@ -1051,32 +1065,40 @@ namespace sapphire {
       }
     }
     else {
-      CallMethod(*iterator_obj, "step");
+      CallMethod2(*iterator_obj, "step", {});
       if (frame.error) return;
 
-      auto tail_iterator = CallMethod(*container_obj, kStrTail).GetObj();
+      auto tail_iterator = CallMethod2(*container_obj, kStrTail, {});
       if (frame.error) return;
-      if (!CheckObjectBehavior(tail_iterator, "get|step|compare")) {
+      if (!tail_iterator.has_value()) {
+        frame.MakeError("Invalid type of return value from tail()");
+        return;
+      }
+      if (!CheckObjectBehavior(tail_iterator.value(), "get|step|compare")) {
         frame.MakeError("Tail iterator doesn't have necessary methods");
         return;
       }
 
-      auto comp_result = CallMethod(*iterator_obj, "compare",
-        { NamedObject(kStrRightHandSide, tail_iterator) }).GetObj();
+      auto comp_result = CallMethod2(*iterator_obj, "compare",
+        { NamedObject(kStrRightHandSide, tail_iterator.value()) });
       if (frame.error) return;
-      if (comp_result.GetTypeId() != kTypeIdBool) {
+      if (!(comp_result.has_value() && comp_result.value().GetTypeId() != kTypeIdBool)) {
         frame.MakeError("Invalid type of return value from compare()");
         return;
       }
 
-      if (comp_result.Cast<bool>()) {
+      if (comp_result.value().Cast<bool>()) {
         frame.Goto(nest_end);
         frame.final_cycle = true;
       }
       else {
-        auto unit = CallMethod(*iterator_obj, "get").GetObj();
+        auto unit = CallMethod2(*iterator_obj, "get", {});
         if (frame.error) return;
-        obj_stack_.GetCurrent().Replace(unit_id, unit, TryAppendTokenId(unit_id));
+        if (!unit.has_value()) {
+          frame.MakeError("Invaild type of return value from get()");
+          return;
+        }
+        obj_stack_.GetCurrent().Replace(unit_id, unit.value(), TryAppendTokenId(unit_id));
       }
     }
   }
@@ -1531,7 +1553,7 @@ namespace sapphire {
       }
 
       obj_map.emplace(NamedObject(kStrMe, *instance));
-      CallVMCFunction(initializer_impl, obj_map);
+      CallUserDefinedFunction(initializer_impl, obj_map);
     }
     else {
       frame.MakeError("This struct doesn't have super struct");
@@ -1906,7 +1928,10 @@ namespace sapphire {
           return;
         }
 
-        ret_obj = CallMethod(obj, kStrToString).GetObj();
+        auto result = CallMethod2(obj, kStrToString, {});
+        if (!result.has_value()) {
+          ret_obj = result.value();
+        }
         if (frame.error) return;
       }
 
@@ -2007,7 +2032,7 @@ namespace sapphire {
         fputs(msg.data(), VM_STDOUT);
       }
       else {
-        CallMethod(obj, kStrPrintDo);
+        CallMethod2(obj, kStrPrintDo, {});
       }
     }
   }
@@ -2185,10 +2210,9 @@ namespace sapphire {
           return;
         }
 
-        //TODO:Test these code(for user-defined function)
-        Object obj = CallMethod(lhs.Seek(), kStrCompare,
-          { NamedObject(kStrRightHandSide, rhs.Dump()) }).GetObj();
+        auto result = CallMethod2(lhs.Seek(), kStrCompare, { NamedObject(kStrRightHandSide, rhs.Dump()) });
         if (frame.error) return;
+        Object obj = result.has_value() ? result.value() : Object();
 
         if (obj.GetTypeId() != kTypeIdBool) {
           frame.MakeError("Invalid behavior of compare()");
@@ -2848,7 +2872,6 @@ namespace sapphire {
     if (code_stack_.empty()) return;
 
     size_t script_idx = 0;
-    Message msg;
     AnnotatedAST *code = code_stack_.back();
     Sentense *sentense = nullptr;
     ObjectMap obj_map;

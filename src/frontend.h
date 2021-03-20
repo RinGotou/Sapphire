@@ -7,6 +7,60 @@
 #define INVALID_TOKEN Token(string(), LiteralType::Invalid)
 
 namespace sapphire {
+  class Message {
+  private:
+    StateLevel level_;
+    string detail_;
+    size_t idx_;
+
+  public:
+    Message() :
+      level_(StateLevel::Normal), detail_(""), idx_(0) {}
+    Message(Message &msg) :
+      level_(msg.level_), detail_(msg.detail_), idx_(msg.idx_) {}
+    Message(Message &&msg) :
+      level_(msg.level_), detail_(std::forward<string>(msg.detail_)), idx_(msg.idx_) {}
+    Message(string detail, StateLevel level = StateLevel::Normal) :
+      level_(level), detail_(detail), idx_(0) {}
+
+    Message &operator=(Message &msg) {
+      level_ = msg.level_;
+      detail_ = msg.detail_;
+      idx_ = msg.idx_;
+      return *this;
+    }
+
+    Message &operator=(Message &&msg) {
+      return this->operator=(msg);
+    }
+
+    StateLevel GetLevel() const { return level_; }
+    string GetDetail() const { return detail_; }
+    size_t GetIndex() const { return idx_; }
+
+    Message &SetLevel(StateLevel level) {
+      level_ = level;
+      return *this;
+    }
+
+    Message &SetDetail(const string &detail) {
+      detail_ = detail;
+      return *this;
+    }
+
+    Message &SetIndex(const size_t index) {
+      idx_ = index;
+      return *this;
+    }
+
+    void Clear() {
+      level_ = StateLevel::Normal;
+      detail_.clear();
+      detail_.shrink_to_fit();
+      idx_ = 0;
+    }
+  };
+
   using CombinedCodeline = pair<size_t, string>;
   using CombinedToken = pair<size_t, deque<Token>>;
 
