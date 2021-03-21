@@ -3,11 +3,6 @@
 #include "management.h"
 #include "components.h"
 
-#define CHECK_PRINT_OPT(_Map)                          \
-  if (_Map.find(kStrSwitchLine) != p.end()) {          \
-    putc('\n', VM_STDOUT);                             \
-  }
-
 namespace sapphire {
   enum class PlainType {
     Int = 1,
@@ -212,10 +207,10 @@ namespace sapphire {
     string function_scope;
     string struct_id;
     string super_struct_id;
-    stack<bool> condition_stack; //preserved
-    stack<bool> scope_indicator;
-    stack<size_t> jump_stack;
-    stack<size_t> branch_jump_stack;
+    stack<bool> condition_stack; //assisted with jump stack
+    stack<bool> scope_indicator; //is this block has scope
+    stack<size_t> jump_stack; //tracing the end of block
+    stack<size_t> branch_jump_stack; //for else/when
     vector<ObjectCommonSlot> return_stack;
 
     RuntimeFrame(string scope = kStrRootScope) :
@@ -392,18 +387,10 @@ namespace sapphire {
     void CommandTypeId(ArgumentList &args);
     void CommandMethods(ArgumentList &args);
     void CommandExist(ArgumentList &args);
-    void CommandNullObj(ArgumentList &args);
     void CommandToString(ArgumentList &args);
     void CommandUsing(ArgumentList &args);
     void CommandPrint(ArgumentList &args);
-    void CommandInput(ArgumentList &args);
-    void CommandGetChar(ArgumentList &args);
-    void SysCommand(ArgumentList &args);
     void CommandSleep(ArgumentList &args);
-
-    void CommandTime();
-    void CommandVersion();
-    void CommandMachineCodeName();
 
     template <Operation op_code>
     void BinaryMathOperatorImpl(ArgumentList &args);
@@ -420,7 +407,6 @@ namespace sapphire {
     void CommandReturn(ArgumentList &args);
     void CommandAssert(ArgumentList &args);
     void DomainAssert(ArgumentList &args);
-    void CommandIsBaseOf(ArgumentList &args);
     void CommandHasBehavior(ArgumentList &args);
     template <ParameterPattern pattern>
     void CommandCheckParameterPattern(ArgumentList &args);

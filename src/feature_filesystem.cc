@@ -107,18 +107,26 @@ namespace sapphire {
   void InitConsoleComponents() {
     using namespace components;
 
+    //TODO:Kill the crap old parser!
+
+    CreateStruct("filesystem");
+    StructMethodGenerator("filesystem").Create(
+      {
+        Function(GetWorkingDir, "", "current"),
+        Function(GetScriptAbsolutePath, "", "boot"),
+        Function(GetCoreAbsolutePath, "", "core"),
+        Function(ExistFSObject, "path", "exists"),
+        Function(CreateNewDirectory, "path", "mkdir"),
+        Function(RemoveFSObject, "path", "remove"),
+        Function(RemoveFSObject_Recursive, "path", "remove_all"),
+        Function(CopyFSObject, "from|to", "copy_obj"),
+        Function(CopyFSFile, "from|to", "copy"),
+        Function(GetDirectoryContent, "path", "list"),
+        Function(GetFilenameExtension, "path", "extension")
+      }
+    );
+
     CreateFunctionObject(Function(StartHere, "", "starthere"));
     CreateFunctionObject(Function(SetWorkingDir, "dir", "chdir"));
-    CreateFunctionObject(Function(GetWorkingDir, "", "current_directory"));
-    CreateFunctionObject(Function(GetScriptAbsolutePath, "", "boot_directory"));
-    CreateFunctionObject(Function(GetCoreAbsolutePath, "", "core_directory"));
-    CreateFunctionObject(Function(ExistFSObject, "path", "exist_fsobj"));
-    CreateFunctionObject(Function(CreateNewDirectory, "path", "create_dir"));
-    CreateFunctionObject(Function(RemoveFSObject, "path", "remove_fsobj"));
-    CreateFunctionObject(Function(RemoveFSObject_Recursive, "path", "remove_all_fsobj"));
-    CreateFunctionObject(Function(CopyFSObject, "from|to", "copy_fsobj"));
-    CreateFunctionObject(Function(CopyFSFile, "from|to", "copy_file"));
-    CreateFunctionObject(Function(GetDirectoryContent, "path", "dir_content"));
-    CreateFunctionObject(Function(GetFilenameExtension, "path", "filename_ext"));
   }
 }

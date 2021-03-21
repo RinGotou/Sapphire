@@ -141,11 +141,7 @@ namespace sapphire::lexical {
       T(kStrHash           ,Operation::Hash),
       T(kStrFor            ,Operation::For),
       T(kStrIn             ,Operation::In),
-      T(kStrNullObj        ,Operation::NullObj),
       T(kStrToString       ,Operation::ToString),
-      T(kStrTime           ,Operation::Time),
-      T(kStrVersion        ,Operation::Version),
-      T(kStrCodeNameCmd    ,Operation::CodeName),
       T(kStrSwap           ,Operation::Swap),
       T(kStrSwapIf         ,Operation::SwapIf),
       T(kStrIf             ,Operation::If),
@@ -182,16 +178,12 @@ namespace sapphire::lexical {
       T(kStrModule         ,Operation::Module),
       T(kStrInclude        ,Operation::Include),
       T(kStrSuper          ,Operation::Super),
-      T(kStrIsBaseOf       ,Operation::IsBaseOf),
       T(kStrHasBehavior    ,Operation::HasBehavior),
       T(kStrIsVariableParam ,Operation::IsVariableParam),
       T(kStrAttribute          ,Operation::Attribute),
       T(kStrConstraintArrow    ,Operation::Constaint),
       T(kStrPrint              ,Operation::Print),
       T(kStrPrintLine          ,Operation::PrintLine),
-      T(kStrInput              ,Operation::Input),
-      T(kStrConsole            ,Operation::Conole),
-      T(kStrGetChar            ,Operation::GetChar),
       T(kStrSleep              ,Operation::Sleep)
     };
     return base;

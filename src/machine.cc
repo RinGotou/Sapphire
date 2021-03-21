@@ -1870,20 +1870,6 @@ namespace sapphire {
     frame.RefreshReturnStack(ret_obj);
   }
 
-  void AASTMachine::CommandNullObj(ArgumentList &args) {
-    auto &frame = frame_stack_.top();
-
-    if (!EXPECTED_COUNT(1)) {
-      frame.MakeError("Argument mismatching: null_obj(obj)");
-      return;
-    }
-
-    Object &obj = FetchObjectView(args[0]).Seek();
-    if (frame.error) return;
-
-    frame.RefreshReturnStack(Object(obj.GetTypeId() == kTypeIdNull, kTypeIdBool));
-  }
-
   void AASTMachine::CommandToString(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
@@ -2001,6 +1987,11 @@ namespace sapphire {
   void AASTMachine::CommandPrint(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
+    if (args.size() != 1) {
+      frame.MakeError("Invaid argument - println(obj)/print(obj)");
+      return;
+    }
+
     auto view = FetchObjectView(args[0]);
     if (frame.error) return;
 
@@ -2037,47 +2028,6 @@ namespace sapphire {
     }
   }
 
-  void AASTMachine::CommandInput(ArgumentList &args) {
-    auto &frame = frame_stack_.top();
-    if (!args.empty()) {
-      frame.MakeError("Invalid arguments: input()");
-      return;
-    }
-
-    string buf = GetLine();
-    frame.RefreshReturnStack(Object(buf, kTypeIdString));
-  }
-
-  void AASTMachine::CommandGetChar(ArgumentList &args) {
-    auto &frame = frame_stack_.top();
-    if (!args.empty()) {
-      frame.MakeError("Invalid arguments: getchar()");
-      return;
-    }
-
-    auto value = static_cast<char>(fgetc(VM_STDIN));
-    frame.RefreshReturnStack(Object(string().append(1, value), kTypeIdString));
-  }
-
-  void AASTMachine::SysCommand(ArgumentList &args) {
-    auto &frame = frame_stack_.top();
-    if (args.size() != 1) {
-      frame.MakeError("Invalid argument: console(command)");
-      return;
-    }
-
-    auto view = FetchObjectView(args[0]);
-    if (frame.error) return;
-
-    if (view.Seek().GetTypeId() != kTypeIdString) {
-      frame.MakeError("Invalid command string");
-      return;
-    }
-
-    int64_t result = system(view.Seek().Cast<string>().data());
-    frame.RefreshReturnStack(Object(result, kTypeIdInt));
-  }
-
   void AASTMachine::CommandSleep(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
@@ -2112,24 +2062,6 @@ namespace sapphire {
 
     nanosleep(&spec, nullptr);
 #endif
-  }
-
-  void AASTMachine::CommandTime() {
-    auto &frame = frame_stack_.top();
-    time_t now = time(nullptr);
-    string nowtime(ctime(&now));
-    nowtime.pop_back();
-    frame.RefreshReturnStack(Object(nowtime));
-  }
-
-  void AASTMachine::CommandVersion() {
-    auto &frame = frame_stack_.top();
-    frame.RefreshReturnStack(Object(BUILD));
-  }
-
-  void AASTMachine::CommandMachineCodeName() {
-    auto &frame = frame_stack_.top();
-    frame.RefreshReturnStack(Object(CODENAME));
   }
 
   template <Operation op_code>
@@ -2449,42 +2381,6 @@ namespace sapphire {
     frame.assert_rc_copy = FetchObjectView(args[0]).Seek().Unpack();
   }
 
-  void AASTMachine::CommandIsBaseOf(ArgumentList &args) {
-    auto &frame = frame_stack_.top(); 
-
-    if (!EXPECTED_COUNT(2)) {
-      frame.MakeError("Argument mismatching: is_base_of(dest_obj, base_obj)");
-      return;
-    }
-
-    auto &base_obj = FetchObjectView(args[1]).Seek();
-    auto &dest_obj = FetchObjectView(args[0]).Seek();
-    if (frame.error) return;
-
-    if (!compare(kTypeIdStruct, dest_obj.GetTypeId(), base_obj.GetTypeId())) {
-      frame.MakeError("Invalid argument type(Required type is struct)");
-      return;
-    }
-
-    auto base_ptr = base_obj.Get();
-    auto &dest_struct = dest_obj.Cast<ObjectStruct>();
-    auto *super_struct_ref = dest_struct.Find(kStrSuperStruct);
-
-    if (super_struct_ref == nullptr) {
-      frame.RefreshReturnStack(Object(false, kTypeIdBool));
-      return;
-    }
-
-    if (!super_struct_ref->IsAlive()) {
-      frame.MakeError("Super struct object is dead");
-      return;
-    }
-
-    auto dest_ptr = super_struct_ref->Get();
-
-    frame.RefreshReturnStack(Object(dest_ptr == base_ptr, kTypeIdBool));
-  }
-
   void AASTMachine::CommandHasBehavior(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
@@ -2589,22 +2485,6 @@ namespace sapphire {
       else {
         InitForEach(args, node.annotation.nest_end);
       }
-      //CommandForEach(args, node.option.nest_end);
-      break;
-    case Operation::NullObj:
-      CommandNullObj(args);
-      break;
-    case Operation::ToString:
-      CommandToString(args);
-      break;
-    case Operation::Time:
-      CommandTime();
-      break;
-    case Operation::Version:
-      CommandVersion();
-      break;
-    case Operation::CodeName:
-      CommandMachineCodeName();
       break;
     case Operation::Swap:
       CommandSwap(args);
@@ -2697,9 +2577,6 @@ namespace sapphire {
     case Operation::Attribute:
       CommandAttribute(args);
       break;
-    case Operation::IsBaseOf:
-      CommandIsBaseOf(args);
-      break;
     case Operation::HasBehavior:
       CommandHasBehavior(args);
       break;
@@ -2712,15 +2589,6 @@ namespace sapphire {
     case Operation::PrintLine:
       CommandPrint(args);
       fputs("\n", VM_STDOUT);
-      break;
-    case Operation::Input:
-      CommandInput(args);
-      break;
-    case Operation::Conole:
-      SysCommand(args);
-      break;
-    case Operation::GetChar:
-      CommandGetChar(args);
       break;
     default:
       break;
