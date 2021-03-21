@@ -115,7 +115,7 @@ namespace sapphire {
         Function(GetWorkingDir, "", "current"),
         Function(GetScriptAbsolutePath, "", "boot"),
         Function(GetCoreAbsolutePath, "", "core"),
-        Function(ExistFSObject, "path", "exists"),
+        Function(ExistFSObject, "path", "exist"),
         Function(CreateNewDirectory, "path", "mkdir"),
         Function(RemoveFSObject, "path", "remove"),
         Function(RemoveFSObject_Recursive, "path", "remove_all"),

@@ -143,7 +143,6 @@ namespace sapphire {
     kStrUsing          = "using",
     kStrPrint          = "print",
     kStrPrintLine      = "println",
-    kStrPrintDo        = "print_do",
     kStrSleep          = "sleep",
     kStrPlus           = "+",
     kStrMinus          = "-",

@@ -158,7 +158,7 @@ namespace sapphire {
       has_return_value_from_invoking = stop_point;
     }
 
-    if (is_command) rstk_operated = true;
+    if (is_command) cmd_value_returned = true;
   }
 
   void RuntimeFrame::RefreshReturnStack(Object &&obj) {
@@ -167,7 +167,7 @@ namespace sapphire {
       has_return_value_from_invoking = stop_point;
     }
 
-    if (is_command) rstk_operated = true;
+    if (is_command) cmd_value_returned = true;
   }
 
   void RuntimeFrame::RefreshReturnStack(const ObjectInfo &info, const shared_ptr<void> &ptr) {
@@ -176,7 +176,7 @@ namespace sapphire {
       has_return_value_from_invoking = stop_point;
     }
 
-    if (is_command) rstk_operated = true;
+    if (is_command) cmd_value_returned = true;
   }
   
   void RuntimeFrame::RefreshReturnStack(bool value) {
@@ -185,7 +185,7 @@ namespace sapphire {
       has_return_value_from_invoking = stop_point;
     }
     
-    if (is_command) rstk_operated = true;
+    if (is_command) cmd_value_returned = true;
   }
 
   void RuntimeFrame::RefreshReturnStack(ObjectView &&view) {
@@ -194,7 +194,7 @@ namespace sapphire {
       has_return_value_from_invoking = stop_point;
     }
 
-    if (is_command) rstk_operated = true;
+    if (is_command) cmd_value_returned = true;
   }
 
   void AASTMachine::RecoverLastState(bool call_by_return) {
@@ -2018,12 +2018,12 @@ namespace sapphire {
     }
     else {
       //Try to invoke 'print' method
-      if (!CheckObjectMethod(obj, kStrPrintDo)) {
+      if (!CheckObjectMethod(obj, kStrPrint)) {
         string msg("<Object Type=" + obj.GetTypeId() + string(">"));
         fputs(msg.data(), VM_STDOUT);
       }
       else {
-        CallMethod2(obj, kStrPrintDo, {});
+        CallMethod2(obj, kStrPrint, {});
       }
     }
   }
@@ -2882,10 +2882,10 @@ namespace sapphire {
         if (is_return) refresh_tick();
         if (frame->error) break;
         if (!frame->stop_point) frame->Stepping();
-        if (!frame->rstk_operated && !is_return) {
+        if (!frame->cmd_value_returned && !is_return) {
           frame->RefreshReturnStack(Object());
         }
-        frame->rstk_operated = false;
+        frame->cmd_value_returned = false;
         continue;
       }
       else {

@@ -197,7 +197,7 @@ namespace sapphire {
     bool has_return_value_from_invoking;
     bool keep_condition;
     bool is_command;
-    bool rstk_operated;
+    bool cmd_value_returned;
     AnnotatedAST *current_code;
     Object struct_base;
     Object assert_rc_copy;
@@ -228,7 +228,7 @@ namespace sapphire {
       has_return_value_from_invoking(false),
       keep_condition(false),
       is_command(false),
-      rstk_operated(false),
+      cmd_value_returned(false),
       current_code(nullptr),
       assert_rc_copy(),
       jump_offset(0),

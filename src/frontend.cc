@@ -633,7 +633,8 @@ namespace sapphire {
   }
 
   bool FirstStageParsing::OtherExpressions() {
-    Operation token = lexical::GetKeywordCode(frame_->current.first);
+    Operation token = frame_->last.first != "." ?
+      lexical::GetKeywordCode(frame_->current.first) : Operation::Null;
 
     if (IsSingleKeyword(token)) {
       if (frame_->next.second != LiteralType::Invalid) {
