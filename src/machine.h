@@ -283,14 +283,16 @@ namespace sapphire {
     vector<ObjectCommonSlot> *return_stack_;
     bool void_return;
     bool value_returned_;
+    ObjectStack *obj_stack_;
     string msg_;
 
   public:
     State() = delete;
-    State(RuntimeFrame &frame) : 
+    State(RuntimeFrame &frame, ObjectStack &obj_stack) : 
       return_stack_(&frame.return_stack) ,
       void_return(frame.void_call),
       value_returned_(false),
+      obj_stack_(&obj_stack),
       msg_()
     {}
 
@@ -322,6 +324,10 @@ namespace sapphire {
       }
     }
 
+    auto &AccessScope() {
+      return *obj_stack_;
+    }
+
     string GetMsg() const { return msg_; }
     void SetMsg(string msg) { msg_ = msg; }
     bool HasValueReturned() const { return  value_returned_; }
@@ -344,7 +350,6 @@ namespace sapphire {
     ObjectView FetchObjectView(Argument &arg);
     bool CheckObjectBehavior(Object &obj, string behaviors);
     bool CheckObjectMethod(Object &obj, string id);
-    void GetObjectMethods(Object &obj, vector<string> &dest);
 
     bool FetchFunctionImplEx(FunctionPointer &dest, string func_id, string type_id = kTypeIdNull, 
       Object *obj_ptr = nullptr);
@@ -385,8 +390,7 @@ namespace sapphire {
     void CommandBind(ArgumentList &args, bool local_value, bool ext_value);
     void CommandDelivering(ArgumentList &args, bool local_value, bool ext_value);
     void CommandTypeId(ArgumentList &args);
-    void CommandMethods(ArgumentList &args);
-    void CommandExist(ArgumentList &args);
+
     void CommandToString(ArgumentList &args);
     void CommandUsing(ArgumentList &args);
     void CommandPrint(ArgumentList &args);
@@ -407,7 +411,6 @@ namespace sapphire {
     void CommandReturn(ArgumentList &args);
     void CommandAssert(ArgumentList &args);
     void DomainAssert(ArgumentList &args);
-    void CommandHasBehavior(ArgumentList &args);
     template <ParameterPattern pattern>
     void CommandCheckParameterPattern(ArgumentList &args);
 

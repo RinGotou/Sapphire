@@ -464,23 +464,6 @@ namespace sapphire {
     return result;
   }
 
-  void AASTMachine::GetObjectMethods(Object &obj, vector<string> &dest) {
-    if (obj.IsSubContainer()) {
-      auto &base = obj.Cast<ObjectStruct>().GetContent();
-
-      for (const auto &unit : base) dest.emplace_back(unit.first);
-      //apppend 'members' method
-      if (obj.GetTypeId() == kTypeIdStruct) dest.emplace_back("members");
-    }
-    else {
-      auto *struct_obj_ptr = obj_stack_.Find(obj.GetTypeId(), TryAppendTokenId(obj.GetTypeId()));
-      if (struct_obj_ptr != nullptr && struct_obj_ptr->IsSubContainer()) {
-        auto &base = struct_obj_ptr->Cast<ObjectStruct>().GetContent();
-        for (const auto &unit : base) dest.emplace_back(unit.first);
-      }
-    }
-  }
-
   bool AASTMachine::FetchFunctionImplEx(FunctionPointer &dest, string func_id, string type_id,
     Object *obj_ptr) {
     auto &frame = frame_stack_.top();
@@ -771,7 +754,7 @@ namespace sapphire {
     }
     else if (impl->GetType() == FunctionType::Component) {
       auto activity = impl->Get<Activity>();
-      State state(frame);
+      State state(frame, obj_stack_);
       auto run_result = activity(state, args);
       switch (run_result) {
       case 1: frame.MakeWarning(state.GetMsg()); break;
@@ -1802,74 +1785,6 @@ namespace sapphire {
     }
   }
 
-  void AASTMachine::CommandMethods(ArgumentList &args) {
-    auto &frame = frame_stack_.top();
-
-    if (!EXPECTED_COUNT(1)) {
-      frame.MakeError("Argument mismatching: methods(obj)");
-      return;
-    }
-
-    
-    Object &obj = FetchObjectView(args[0]).Seek();
-    if (frame.error) return;
-
-    vector<string> methods;
-    GetObjectMethods(obj, methods);
-    ManagedArray base = make_shared<ObjectArray>();
-
-    for (auto &unit : methods) {
-      base->emplace_back(Object(unit, kTypeIdString));
-    }
-
-    if (obj.IsSubContainer()) {
-      auto &container = obj.Cast<ObjectStruct>().GetContent();
-      for (auto &unit : container) {
-        if (unit.second.GetTypeId() == kTypeIdFunction) {
-          base->emplace_back(unit.first);
-        }
-      }
-    }
-
-    Object ret_obj(base, kTypeIdArray);
-    frame.RefreshReturnStack(ret_obj);
-  }
-
-  void AASTMachine::CommandExist(ArgumentList &args) {
-    auto &frame = frame_stack_.top();
-
-    if (!EXPECTED_COUNT(2)) {
-      frame.MakeError("Argument mismatching: exist(obj, id)");
-      return;
-    }
-
-    //Do not change the order
-    auto &str_obj = FetchObjectView(args[1]).Seek();
-    auto &obj = FetchObjectView(args[0]).Seek();
-    if (frame.error) return;
-
-    if (str_obj.GetTypeId() != kTypeIdString) {
-      frame.MakeError("Invalid method id");
-      return;
-    }
-
-    string str = str_obj.Cast<string>();
-    bool first_stage = CheckObjectMethod(obj, str);
-    bool second_stage = obj.IsSubContainer() ?
-      [&]() -> bool {
-      auto &container = obj.Cast<ObjectStruct>().GetContent();
-      for (auto &unit : container) {
-        if (unit.first == str) return true;
-      }
-      return false;
-    }() : false;
-
-
-    Object ret_obj(first_stage || second_stage, kTypeIdBool);
-
-    frame.RefreshReturnStack(ret_obj);
-  }
-
   void AASTMachine::CommandToString(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
@@ -2381,18 +2296,18 @@ namespace sapphire {
     frame.assert_rc_copy = FetchObjectView(args[0]).Seek().Unpack();
   }
 
-  void AASTMachine::CommandHasBehavior(ArgumentList &args) {
-    auto &frame = frame_stack_.top();
+  //void AASTMachine::CommandHasBehavior(ArgumentList &args) {
+  //  auto &frame = frame_stack_.top();
 
-    auto &behavior_obj = FetchObjectView(args[1]).Seek();
-    auto &obj = FetchObjectView(args[0]).Seek();
+  //  auto &behavior_obj = FetchObjectView(args[1]).Seek();
+  //  auto &obj = FetchObjectView(args[0]).Seek();
 
-    if (frame.error) return;
+  //  if (frame.error) return;
 
-    auto result = CheckObjectBehavior(obj, behavior_obj.Cast<string>());
+  //  auto result = CheckObjectBehavior(obj, behavior_obj.Cast<string>());
 
-    frame.RefreshReturnStack(Object(result, kTypeIdBool));
-  }
+  //  frame.RefreshReturnStack(Object(result, kTypeIdBool));
+  //}
 
   template <ParameterPattern pattern>
   void AASTMachine::CommandCheckParameterPattern(ArgumentList &args) {
@@ -2513,12 +2428,6 @@ namespace sapphire {
     case Operation::TypeId:
       CommandTypeId(args);
       break;
-    case Operation::Methods:
-      CommandMethods(args);
-      break;
-    case Operation::Exist:
-      CommandExist(args);
-      break;
     case Operation::Fn:
       ClosureCatching(args, node.annotation.nest_end, frame_stack_.size() > 1);
       break;
@@ -2576,9 +2485,6 @@ namespace sapphire {
       break;
     case Operation::Attribute:
       CommandAttribute(args);
-      break;
-    case Operation::HasBehavior:
-      CommandHasBehavior(args);
       break;
     case Operation::IsVariableParam:
       CommandCheckParameterPattern<ParameterPattern::Variable>(args);
@@ -2807,7 +2713,7 @@ namespace sapphire {
 
     auto load_function_impl = [&]() -> pair<bool, bool> {
       bool switch_to_next_tick = false;
-      State state(frame_stack_.top());
+      State state(frame_stack_.top(), obj_stack_);
       int run_result = 0;
 
       switch (impl->GetType()) {
