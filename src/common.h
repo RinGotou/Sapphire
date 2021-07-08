@@ -57,12 +57,11 @@
 #define CXX20
 #endif
 
-#define PRODUCT     "Sapphire Prototype"
-#define PRODUCT_VER "2.61"
+#define PRODUCT     "Sapphire Prototype Implementation"
 #define BUILD       "2610"
-#define CODENAME    "Lavender"
+#define CODENAME    "Counterattack"
 #define COPYRIGHT   "Licensed under BSD2. Copyright(c) 2020"
-#define AUTHOR      "Rin and Sapphire Language Contributor(s)"
+#define AUTHOR      "Rin and Sapphire Interpreter Contributor(s)"
 
 namespace sapphire {
   using std::string;
@@ -125,7 +124,6 @@ namespace sapphire {
   const string kTypeIdFunction        = "function";
   const string kTypeIdFunctionPointer = "function_pointer";
   const string kTypeIdObjectPointer   = "object_pointer";
-  //const string kTypeIdIterator        = "iterator";
   const string kTypeIdPair            = "pair";
   const string kTypeIdTable           = "table";
   const string kTypeIdStruct          = "struct";

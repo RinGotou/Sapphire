@@ -1521,7 +1521,7 @@ namespace sapphire {
       auto &params = initializer_impl.AccessParameters();
       size_t pos = args.size() - 1;
 
-      GenerateArgs(initializer_impl, args, obj_map);
+      GenerateArgs2(initializer_impl, args, obj_map);
       if (frame.error) return;
 
       if (ss_struct != nullptr) {
@@ -2501,75 +2501,65 @@ namespace sapphire {
     }
   }
 
-  //deprecated
-  void AASTMachine::GenerateArgs(Function &impl, ArgumentList &args, ObjectMap &obj_map) {
-    if (!impl.IsVariableParam()) {
-      Generate_Fixed(impl, args, obj_map);
-    }
-    else {
-      Generate_Variable(impl, args, obj_map);
-    }
-  }
-
-  void AASTMachine::Generate_Fixed(Function &impl, ArgumentList &args, ObjectMap &obj_map) {
+  void AASTMachine::GenerateArgs2(Function &impl, ArgumentList &args, ObjectMap &obj_map) {
     auto &frame = frame_stack_.top();
     auto &params = impl.AccessParameters();
-    size_t pos = args.size() - 1;
-    ObjectView view;
+    
+    if (!impl.IsVariableParam()) {
+      size_t pos = args.size() - 1;
+      ObjectView view; //TODO: move to the upper scope?
 
-    if (args.size() > params.size()) {
-      frame.MakeError("Too many arguments");
-      return;
-    }
-
-    if (args.size() < params.size()) {
-      frame.MakeError("Minimum argument amount is " + to_string(params.size()));
-      return;
-    }
-
-
-    for (auto it = params.rbegin(); it != params.rend(); ++it) {
-      view = FetchObjectView(args[pos]);
-      view.Seek().RemoveDeliveringFlag();
-      obj_map.emplace(NamedObject(*it, view.Seek()));
-      pos -= 1;
-    }
-  }
-
-  void AASTMachine::Generate_Variable(Function &impl, ArgumentList &args, ObjectMap &obj_map) {
-    auto &frame = frame_stack_.top();
-    vector<string> &params = impl.AccessParameters();
-    list<Object> temp_list;
-    ManagedArray va_base = make_shared<ObjectArray>();
-    size_t pos = args.size(), diff = args.size() - params.size() + 1;
-
-    if (args.size() < params.size()) {
-      frame.MakeError("Minimum argument amount is " + to_string(params.size()));
-      return;
-    }
-
-    while (diff != 0) {
-      temp_list.emplace_front(FetchObjectView(args[pos - 1]).Dump().RemoveDeliveringFlag());
-      pos -= 1;
-      diff -= 1;
-    }
-
-    if (!temp_list.empty()) {
-      for (auto it = temp_list.begin(); it != temp_list.end(); ++it) {
-        va_base->emplace_back(*it);
+      if (args.size() > params.size()) {
+        frame.MakeError("Too many arguments");
+        return;
       }
 
-      temp_list.clear();
+      if (args.size() < params.size()) {
+        frame.MakeError("Minimum argument amount is " + to_string(params.size()));
+        return;
+      }
+
+      for (auto it = params.rbegin(); it != params.rend(); ++it) {
+        view = FetchObjectView(args[pos]);
+        view.Seek().RemoveDeliveringFlag();
+        obj_map.emplace(NamedObject(*it, view.Seek()));
+        pos -= 1;
+      }
     }
+    else {
+      list<Object> temp_list;
+      auto va_base = make_shared<ObjectArray>();
+      size_t pos = args.size(), diff = args.size() - params.size() + 1;
+      
+      if (args.size() < params.size()) {
+        frame.MakeError("Minimum argument amount is " + to_string(params.size()));
+        return;
+      }
 
-    obj_map.insert(NamedObject(params.back(), Object(va_base, kTypeIdArray)));
+      while (diff != 0) {
+        temp_list.emplace_front(FetchObjectView(args[pos - 1]).Dump().RemoveDeliveringFlag());
+        pos -= 1;
+        diff -= 1;
+      }
+
+      if (!temp_list.empty()) {
+        for (auto it = temp_list.begin(); it != temp_list.end(); ++it) {
+          va_base->emplace_back(*it);
+        }
+
+        temp_list.clear();
+      }
+
+      obj_map.insert(NamedObject(params.back(), Object(va_base, kTypeIdArray)));
 
 
-    while (pos > 0) {
-      obj_map.emplace(params[pos - 1], FetchObjectView(args[pos - 1]).Dump().RemoveDeliveringFlag());
-      pos -= 1;
+      while (pos > 0) {
+        obj_map.emplace(params[pos - 1], FetchObjectView(args[pos - 1]).Dump().RemoveDeliveringFlag());
+        pos -= 1;
+      }
     }
   }
+
 
   void AASTMachine::GenerateStructInstance(ObjectMap &p) {
     auto &frame = frame_stack_.top();
@@ -2803,7 +2793,7 @@ namespace sapphire {
           }
         }
 
-        GenerateArgs(*impl, sentense->second, obj_map);
+        GenerateArgs2(*impl, sentense->second, obj_map);
         if (frame->do_initializer_calling) GenerateStructInstance(obj_map);
         if (frame->error) break;
 

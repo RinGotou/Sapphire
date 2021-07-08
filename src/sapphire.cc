@@ -21,7 +21,7 @@ void BootMainVMObject(string path, string log_path, bool real_time_log) {
 }
 
 void ApplicationInfo() {
-  printf(PRODUCT " " PRODUCT_VER "(" BUILD ")\n");
+  printf(PRODUCT "(" BUILD ")\n");
   printf("Codename:" CODENAME "\n");
   printf("Build date:" __DATE__ "\n");
   printf(COPYRIGHT ", " AUTHOR "\n");
