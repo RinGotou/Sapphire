@@ -138,12 +138,9 @@ namespace sapphire::lexical {
     static unordered_map<string, Operation> base = {
       T(kStrAssert         ,Operation::Assert),
       T(kStrLocal          ,Operation::Local),
-      T(kStrHash           ,Operation::Hash),
       T(kStrFor            ,Operation::For),
       T(kStrIn             ,Operation::In),
-      T(kStrToString       ,Operation::ToString),
       T(kStrSwap           ,Operation::Swap),
-      T(kStrSwapIf         ,Operation::SwapIf),
       T(kStrIf             ,Operation::If),
       T(kStrFn             ,Operation::Fn),
       T(kStrEnd            ,Operation::End),
@@ -178,7 +175,8 @@ namespace sapphire::lexical {
       T(kStrSuper          ,Operation::Super),
       T(kStrIsVariableParam ,Operation::IsVariableParam),
       T(kStrAttribute          ,Operation::Attribute),
-      T(kStrConstraintArrow    ,Operation::Constaint),
+      T(kStrConstraintArrow    ,Operation::ConstraintArrow),
+      
       T(kStrPrint              ,Operation::Print),
       T(kStrPrintLine          ,Operation::PrintLine),
       T(kStrSleep              ,Operation::Sleep)

@@ -464,19 +464,20 @@ namespace sapphire {
     return result;
   }
 
+  //Used by CallMethod2
   bool AASTMachine::FetchFunctionImplEx(FunctionPointer &dest, string func_id, string type_id,
     Object *obj_ptr) {
     auto &frame = frame_stack_.top();
 
     //TODO:struct support is missing
 
-#define METHOD_NOT_FOUND_MSG {                                           \
+#define METHOD_NOT_FOUND_MSG {                                                \
       frame.MakeError("Method of " + type_id + " is not found: " + func_id);  \
-      return false;                                                      \
+      return false;                                                           \
     }
-#define TYPE_ERROR_MSG {                                                 \
+#define TYPE_ERROR_MSG {                                                      \
       frame.MakeError(func_id + " is not a function object");                 \
-      return false;                                                      \
+      return false;                                                           \
     }
 
     if (type_id != kTypeIdNull) {
@@ -896,6 +897,7 @@ namespace sapphire {
         }
       }
     }
+    
     else if (operation == Operation::While) {
       if (!frame.jump_from_end) {
         frame.scope_indicator.push(true);
@@ -1307,7 +1309,6 @@ namespace sapphire {
         frame.Goto(nest);
         frame.from_continue = false;
         obj_stack_.ClearCurrent();
-        //obj_stack_.GetCurrent().Clear();
         frame.jump_from_end = true;
       }
       else {
@@ -1629,33 +1630,6 @@ namespace sapphire {
 
   }
 
-  void AASTMachine::CommandSwapIf(ArgumentList &args) {
-    auto &frame = frame_stack_.top();
-
-    if (!EXPECTED_COUNT(3)) {
-      frame.MakeError("Argument missing");
-      return;
-    }
-
-    if (args[0].GetType() == ArgumentType::Literal || args[1].GetType() == ArgumentType::Literal) {
-      frame.MakeError("Cannot modify a literal value");
-      return;
-    }
-    
-    auto &right = FetchObjectView(args[1]).Seek();
-    auto &left = FetchObjectView(args[0]).Seek();
-
-    if (frame.error) return;
-
-    auto &cond = FetchObjectView(args[2]).Seek();
-    if (cond.GetTypeId() != kTypeIdBool) {
-      frame.MakeError("Invalid condition value");
-      return;
-    }
-
-    if (cond.Cast<bool>()) left.swap(right);
-  }
-
   void AASTMachine::CommandBind(ArgumentList &args, bool local_value, bool ext_value) {
     auto &frame = frame_stack_.top();
 
@@ -1782,61 +1756,6 @@ namespace sapphire {
     }
     else {
       frame.RefreshReturnStack(Object(kTypeIdNull));
-    }
-  }
-
-  void AASTMachine::CommandToString(ArgumentList &args) {
-    auto &frame = frame_stack_.top();
-
-    if (!EXPECTED_COUNT(1)) {
-      frame.MakeError("Argument mismatching: convert(obj)");
-      return;
-    }
-
-    Argument &arg = args[0];
-    if (arg.GetType() == ArgumentType::Literal) {
-      frame.RefreshReturnStack(*FetchLiteralObject(arg));
-    }
-    else {
-      Object &obj = FetchObjectView(args[0]).Seek();
-      if (frame.error) return;
-
-      string type_id = obj.GetTypeId();
-      Object ret_obj;
-
-      if (type_id == kTypeIdString) {
-        auto str = obj.Cast<string>();
-        auto type = lexical::GetStringType(str, true);
-
-        switch (type) {
-        case LiteralType::Int:
-          ret_obj.PackContent(make_shared<int64_t>(stol(str)), kTypeIdInt);
-          break;
-        case LiteralType::Float:
-          ret_obj.PackContent(make_shared<double>(stod(str)), kTypeIdFloat);
-          break;
-        case LiteralType::Bool:
-          ret_obj.PackContent(make_shared<bool>(str == kStrTrue), kTypeIdBool);
-          break;
-        default:
-          ret_obj = obj;
-          break;
-        }
-      }
-      else {
-        if (!CheckObjectMethod(obj, kStrToString)) {
-          frame.MakeError("Invalid argument for convert()");
-          return;
-        }
-
-        auto result = CallMethod2(obj, kStrToString, {});
-        if (!result.has_value()) {
-          ret_obj = result.value();
-        }
-        if (frame.error) return;
-      }
-
-      frame.RefreshReturnStack(ret_obj);
     }
   }
 
@@ -2404,9 +2323,6 @@ namespace sapphire {
     case Operation::Swap:
       CommandSwap(args);
       break;
-    case Operation::SwapIf:
-      CommandSwapIf(args);
-      break;
     case Operation::Bind:
       CommandBind(args, node.annotation.local_object, node.annotation.ext_object);
       break;
@@ -2716,6 +2632,7 @@ namespace sapphire {
         switch_to_next_tick = true;
         break;
       case FunctionType::Component:
+        // 0 - OK, 1 - Warning, 2 - Error
         run_result = impl->Get<Activity>()(state, obj_map);
         switch (run_result) {
         case 1: frame->MakeWarning(state.GetMsg()); break;

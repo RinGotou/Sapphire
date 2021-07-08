@@ -186,6 +186,27 @@ namespace sapphire {
     return 0;
   }
 
+  int ObjectFromString(State &state, ObjectMap &p) {
+    auto &str = p.Cast<string>("str");
+    auto type = lexical::GetStringType(str, true);
+
+    switch(type) {
+    case LiteralType::Int:
+      state.PushValue(Object(stol(str), kTypeIdInt));
+      break;
+    case LiteralType::Float:
+      state.PushValue(Object(stod(str), kTypeIdFloat));
+      break;
+    case LiteralType::Bool:
+      state.PushValue(Object(str == kStrTrue, kTypeIdBool));
+      break;
+    default:
+      break;
+    }
+
+    return 0;
+  }
+
   int Version(State &state, ObjectMap &p) {
     state.PushValue(Object(string(BUILD), kTypeIdString));
     return 0;
@@ -209,5 +230,6 @@ namespace sapphire {
     CreateFunctionObject(Function(HasBehavior, "obj|behaviors", "has_behavior"));
     CreateFunctionObject(Function(GetMethodList, "obj", "get_methods"));
     CreateFunctionObject(Function(ExistMethod, "obj|str", "exist"));
+    CreateFunctionObject(Function(ObjectFromString, "str", "from_string"));
   }
 }

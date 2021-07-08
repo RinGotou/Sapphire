@@ -391,7 +391,6 @@ namespace sapphire {
     void CommandDelivering(ArgumentList &args, bool local_value, bool ext_value);
     void CommandTypeId(ArgumentList &args);
 
-    void CommandToString(ArgumentList &args);
     void CommandUsing(ArgumentList &args);
     void CommandPrint(ArgumentList &args);
     void CommandSleep(ArgumentList &args);

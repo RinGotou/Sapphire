@@ -19,20 +19,10 @@ namespace sapphire {
     Assert,
     Local,
     Load,
-    Ext,
-    Hash,
     For,
     In,
     NullObj,
-    Destroy,
-    ToString,
-    Time,
-    Version,
-    CodeName,
     Swap,
-    SwapIf,
-    CSwapIf,
-    ObjectAt,
     ExpList,
     Fn,
     If,
@@ -41,7 +31,7 @@ namespace sapphire {
     Else,
     Bind,
     Delivering,
-    Constaint,
+    ConstraintArrow,
     While,
     Plus,
     Minus,
@@ -71,16 +61,10 @@ namespace sapphire {
     DomainAssertCommand,
     Include, 
     Super,
-    IsBaseOf,
-    HasBehavior,
     IsVariableParam,
-    IsSameCopy,
     Attribute,
     Print,
     PrintLine,
-    Input,
-    Conole, 
-    GetChar,
     Sleep,
     Null
   };
@@ -106,24 +90,16 @@ namespace sapphire {
     Null
   };
 
+  // Language Keywords
   const string
     kStrAssert         = "assert",
     kStrStruct         = "struct",
     kStrModule         = "module",
     kStrInclude        = "include",
-    kStrRootScope      = "!root",
     kStrLocal          = "local",
-    kStrExt            = "ext",
-    kStrHash           = "hash",
     kStrIf             = "if",
     kStrFn             = "fn",
-    kStrToString       = "to_string",
     kStrEnd            = "end",
-    kStrCaseObj        = "!case",
-    kStrIteratorObj    = "!iterator",
-    kStrContainerKeepAliveSlot = "!container_keepalive",
-    kStrCommentBegin   = "=begin",
-    kStrCommentEnd     = "=end",
     kStrFor            = "for",
     kStrIn             = "in",
     kStrElse           = "else",
@@ -136,12 +112,13 @@ namespace sapphire {
     kStrWhen           = "when",
     kStrReturn         = "return",
     kStrVariable       = "variable",
-    kStrHead           = "head",
-    kStrTail           = "tail",
+    kStrTrue           = "true",
+    kStrFalse          = "false",
     kStrUsing          = "using",
-    kStrPrint          = "print",
-    kStrPrintLine      = "println",
-    kStrSleep          = "sleep",
+    kStrMe             = "me";
+
+  //Symbols
+  const string 
     kStrPlus           = "+",
     kStrMinus          = "-",
     kStrTimes          = "*",
@@ -157,13 +134,24 @@ namespace sapphire {
     kStrLess           = "<",
     kStrIncrease       = "+=",
     kStrDecrease       = "-=",
-    kStrConstraintArrow = "->",
+    kStrConstraintArrow = "->";
+
+  // Misc
+  const string
+    kStrRootScope      = "!root",
+    kStrCaseObj        = "!case",
+    kStrIteratorObj    = "!iterator",
+    kStrContainerKeepAliveSlot = "!container_keepalive",
+    kStrCommentBegin   = "=begin",
+    kStrCommentEnd     = "=end",
+    kStrHead           = "head",
+    kStrTail           = "tail",
+    kStrPrint          = "print",
+    kStrPrintLine      = "println",
+    kStrSleep          = "sleep",
     kStrUserFunc       = "__func",
     kStrTypeId         = "typeid",
     kStrSwap           = "swap",
-    kStrSwapIf         = "swap_if",
-    kStrTrue           = "true",
-    kStrFalse          = "false",
     kStrSize           = "size",
     kStrEmpty          = "empty",
     kStrCompare        = "compare",
@@ -177,8 +165,8 @@ namespace sapphire {
     kStrSuper          = "super",
     kStrIsVariableParam = "is_variable_param",
     kStrAttribute          = "attribute",
-    kStrReturnValueConstrantObj = "!rt_constaint",
-    kStrMe             = "me";
+    kStrReturnValueConstrantObj = "!rt_constaint";
+
 
   wstring s2ws(const string &s);
   string ws2s(const wstring &s);

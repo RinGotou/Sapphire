@@ -657,15 +657,15 @@ namespace sapphire {
       return true;
     }
 
-    if (token == Operation::Ext) {
-      if (frame_->next_2.first != "=") {
-        error_string_ = "Invalid 'local' token.";
-        return false;
-      }
+    // if (token == Operation::Ext) {
+    //   if (frame_->next_2.first != "=") {
+    //     error_string_ = "Invalid 'local' token.";
+    //     return false;
+    //   }
 
-      frame_->ext_object = true;
-      return true;
-    }
+    //   frame_->ext_object = true;
+    //   return true;
+    // }
 
     if (token != Operation::Null) {
       if (frame_->next.first == "=" || lexical::IsOperator(token)) {
