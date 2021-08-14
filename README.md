@@ -11,21 +11,9 @@ Just add all source files into a new solution. You can also build them with cl.e
 Notice: Mingw/Cygwin is NOT OFFICIAL SUPPORTED for now. You can post issues for these resolutions but I may not fix 
 them until I start working on them.
 
-### Linux/BSD Platform
-gcc 8.0+ or clang 8.0+ are recommended, and you also need cmake/make to finish configurations.
-MacOS is NOT OFFICIAL SUPPORTED for now and I don't have Apple device for testing.
+### Linux/macOS Platform
+Just use the make and cmake to build these codes.
 
-```
-# Archlinux/Manjaro Linux
-sudo pacman -S cmake make gcc
-
-# clone & build
-git clone https://github.com/RinGotou/Sapphire-Adhoc.git sapphire-adhoc
-cd sapphire-adhoc
-git submodule init && git submodule update
-cmake .
-make
-```
 ## Help me?
 You can post issues or create pull request. 
 
