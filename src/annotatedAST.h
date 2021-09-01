@@ -3,18 +3,9 @@
 #include "object.h"
 
 namespace sapphire {
-  enum class ArgumentType {
-    Literal, 
-    Pool, 
-    RetStack, 
-    Invalid
-  };
+  enum class ArgumentType { Literal, Pool, RetStack, Invalid };
 
-  enum class NodeType {
-    Operation, 
-    Function, 
-    Invalid
-  };
+  enum class NodeType { Operation, Function, Invalid };
 
   struct ArgumentProperties {
     struct {

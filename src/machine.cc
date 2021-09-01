@@ -1834,10 +1834,19 @@ namespace sapphire {
 
     if (lexical::IsPlainType(type_id)) {
       if (type_id == kTypeIdInt) {
-#ifndef _MSC_VER
-        fprintf(VM_STDOUT, "%ld", obj.Cast<int64_t>());
-#else
+//#ifndef _MSC_VER
+//        fprintf(VM_STDOUT, "%ld", obj.Cast<int64_t>());
+//#else
+//        fprintf(VM_STDOUT, "%lld", obj.Cast<int64_t>());
+//#endif
+#ifdef _MSC_VER
         fprintf(VM_STDOUT, "%lld", obj.Cast<int64_t>());
+#else
+#ifdef __APPLE__
+        fprintf(VM_STDOUT, "%lld", obj.Cast<int64_t>());    
+#else
+        fprintf(VM_STDOUT, "%ld", obj.Cast<int64_t>());
+#endif
 #endif
       }
       else if (type_id == kTypeIdFloat) {
