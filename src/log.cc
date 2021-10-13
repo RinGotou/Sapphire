@@ -18,10 +18,11 @@ namespace sapphire {
   }
 
   void StandardWriter::operator=(StandardWriter &&rhs) {
-    if (ptr_ != nullptr) {
-      fclose(ptr_);
-    }
-    ptr_ = rhs.ptr_;
+    // if (ptr_ != nullptr && ptr_ != stdout) {
+    //   fclose(ptr_);
+    // }
+    std::swap(ptr_, rhs.ptr_);
+    //ptr_ = rhs.ptr_;
   }
 
   bool StandardWriter::Write(const char *data, size_t size) {
