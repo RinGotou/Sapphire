@@ -4,7 +4,7 @@
 
 // !!! This module is deprecated and will be destroyed in the future.
 
-#define INVALID_TOKEN Token(string(), LiteralType::Invalid)
+#define INVALID_TOKEN Token(string(), TokenType::Invalid)
 
 namespace sapphire {
   class Message {
@@ -193,7 +193,7 @@ namespace sapphire {
       string log, bool rtlog = false) :
       dest_(&dest), path_(path), inside_struct_(false), inside_module_(false),
       struct_member_fn_nest(0),
-      logger_(), is_logger_held_(true) {
+      logger_(nullptr), is_logger_held_(true) {
       logger_ = rtlog ?
         (StandardLogger *)new StandardRTLogger(log.data(), "a") :
         (StandardLogger *)new StandardCachedLogger(log.data(), "a");

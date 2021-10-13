@@ -58,8 +58,8 @@
 #endif
 
 #define PRODUCT     "Sapphire Prototype Implementation"
-#define BUILD       "2610"
-#define CODENAME    "Counterattack"
+#define BUILD       "2611"
+#define CODENAME    "Cappuccino"
 #define COPYRIGHT   "Licensed under BSD2. Copyright(c) 2020"
 #define AUTHOR      "Rin and Sapphire Interpreter Contributor(s)"
 

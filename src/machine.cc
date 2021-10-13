@@ -275,12 +275,12 @@ namespace sapphire {
     if (ptr != nullptr) return ptr;
 
     auto type = arg.GetStringType();
-    if (type == LiteralType::Int) {
+    if (type == TokenType::Int) {
       int64_t int_value;
       from_chars(value.data(), value.data() + value.size(), int_value);
       ptr = CreateConstantObject(value, Object(int_value, kTypeIdInt));
     }
-    else if (type == LiteralType::Float) {
+    else if (type == TokenType::Float) {
       double float_value;
 #ifndef _MSC_VER
       //dealing with issues of charconv implementation in low-version clang
@@ -292,14 +292,14 @@ namespace sapphire {
     }
     else {
       switch (type) {
-      case LiteralType::Bool:
+      case TokenType::Bool:
         ptr = CreateConstantObject(value, Object(value == kStrTrue, kTypeIdBool));
         break;
-      case LiteralType::String:
+      case TokenType::String:
         ptr = CreateConstantObject(value, Object(ParseRawString(value)));
         break;
         //for binding expression
-      case LiteralType::Identifier:
+      case TokenType::Identifier:
         ptr = CreateConstantObject(value, Object(value));
         break;
       default:
@@ -1634,7 +1634,7 @@ namespace sapphire {
     auto &frame = frame_stack_.top();
 
     if (args[0].GetType() == ArgumentType::Literal &&
-      lexical::GetStringType(args[0].GetData(), true) != LiteralType::Identifier) {
+      lexical::GetStringType(args[0].GetData(), true) != TokenType::Identifier) {
       frame.MakeError("Cannot modify a literal value");
       return;
     }
@@ -1653,7 +1653,7 @@ namespace sapphire {
     else {
       string id = lhs.Seek().Cast<string>();
 
-      if (lexical::GetStringType(id) != LiteralType::Identifier) {
+      if (lexical::GetStringType(id) != TokenType::Identifier) {
         frame.MakeError("Invalid object id");
         return;
       }
@@ -1684,7 +1684,7 @@ namespace sapphire {
     auto &frame = frame_stack_.top();
 
     if (args[0].GetType() == ArgumentType::Literal &&
-      lexical::GetStringType(args[0].GetData(), true) != LiteralType::Identifier) {
+      lexical::GetStringType(args[0].GetData(), true) != TokenType::Identifier) {
       frame.MakeError("Cannot modify a literal value");
       return;
     }
@@ -1708,7 +1708,7 @@ namespace sapphire {
     else {
       string id = lhs.Seek().Cast<string>();
 
-      if (lexical::GetStringType(id) != LiteralType::Identifier) {
+      if (lexical::GetStringType(id) != TokenType::Identifier) {
         frame.MakeError("Invalid object id");
         return;
       }

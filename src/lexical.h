@@ -2,7 +2,7 @@
 #include "common.h"
 
 namespace sapphire {
-  enum class LiteralType {
+  enum class TokenType {
     Identifier,
     String,
     Int,
@@ -10,10 +10,11 @@ namespace sapphire {
     Bool,
     Symbol,
     Whitespace,
+    LineBreak,
     Invalid
   };
 
-  using Token = pair<string, LiteralType>;
+  using Token = pair<string, TokenType>;
 
   enum class Operation {
     Assert,
@@ -187,7 +188,7 @@ namespace sapphire::lexical {
   bool IsBlank(string target);
   bool IsSymbol(string target);
   bool IsBoolean(string target);
-  LiteralType GetStringType(string target, bool ignore_symbol_rule = false);
+  TokenType GetStringType(string target, bool ignore_symbol_rule = false);
 
   char GetEscapeChar(char target);
   wchar_t GetEscapeCharW(wchar_t target);

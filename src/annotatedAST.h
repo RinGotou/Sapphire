@@ -53,15 +53,15 @@ namespace sapphire {
   private:
     string data_;
     ArgumentType type_;
-    LiteralType token_type_;
+    TokenType token_type_;
 
   public:
     ArgumentProperties properties;
 
   public:
     Argument() :
-      data_(), type_(ArgumentType::Invalid), token_type_(LiteralType::Invalid), properties() {}
-    Argument(string data, ArgumentType type, LiteralType token_type) :
+      data_(), type_(ArgumentType::Invalid), token_type_(TokenType::Invalid), properties() {}
+    Argument(string data, ArgumentType type, TokenType token_type) :
       data_(data), type_(type), token_type_(token_type), properties() {}
 
     void SetDomain(string id, ArgumentType type) {
@@ -75,7 +75,7 @@ namespace sapphire {
 
     auto &GetData() { return data_; }
     auto &GetType() { return type_; }
-    LiteralType GetStringType() { return token_type_; }
+    TokenType GetStringType() { return token_type_; }
     bool IsPlaceholder() const { return type_ == ArgumentType::Invalid; }
   };
 

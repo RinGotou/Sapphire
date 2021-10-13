@@ -13,6 +13,7 @@ namespace sapphire {
     return 0;
   }
 
+  //https://stackoverflow.com/questions/478898/how-do-i-execute-a-command-and-get-the-output-of-the-command-within-c-using-po
   int SystemConsole(State &state, ObjectMap &p) {
     auto cmd = p.Cast<string>("cmd");
     int64_t result = system(cmd.data());
@@ -191,13 +192,13 @@ namespace sapphire {
     auto type = lexical::GetStringType(str, true);
 
     switch(type) {
-    case LiteralType::Int:
+    case TokenType::Int:
       state.PushValue(Object(stol(str), kTypeIdInt));
       break;
-    case LiteralType::Float:
+    case TokenType::Float:
       state.PushValue(Object(stod(str), kTypeIdFloat));
       break;
-    case LiteralType::Bool:
+    case TokenType::Bool:
       state.PushValue(Object(str == kStrTrue, kTypeIdBool));
       break;
     default:

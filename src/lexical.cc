@@ -303,18 +303,18 @@ namespace sapphire::lexical {
     return compare(target, "true", "false");
   }
 
-  LiteralType GetStringType(string src, bool ignore_symbol_rule) {
-    LiteralType type = LiteralType::Invalid;
-    if (src.empty())              type = LiteralType::Invalid;
-    else if (IsBoolean(src))      type = LiteralType::Bool;
-    else if (IsIdentifier(src))   type = LiteralType::Identifier;
-    else if (IsInteger(src))      type = LiteralType::Int;
-    else if (IsFloat(src))        type = LiteralType::Float;
-    else if (IsBlank(src))        type = LiteralType::Whitespace;
-    else if (IsString(src))       type = LiteralType::String;
+  TokenType GetStringType(string src, bool ignore_symbol_rule) {
+    TokenType type = TokenType::Invalid;
+    if (src.empty())              type = TokenType::Invalid;
+    else if (IsBoolean(src))      type = TokenType::Bool;
+    else if (IsIdentifier(src))   type = TokenType::Identifier;
+    else if (IsInteger(src))      type = TokenType::Int;
+    else if (IsFloat(src))        type = TokenType::Float;
+    else if (IsBlank(src))        type = TokenType::Whitespace;
+    else if (IsString(src))       type = TokenType::String;
 
     if (!ignore_symbol_rule) {
-      if (IsSymbol(src)) type = LiteralType::Symbol;
+      if (IsSymbol(src)) type = TokenType::Symbol;
     }
     return type;
   }

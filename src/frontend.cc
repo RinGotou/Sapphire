@@ -67,7 +67,7 @@ namespace sapphire {
     for (size_t count = 0; count < target.size(); ++count) {
       current = target[count];
       auto type = lexical::GetStringType(toString(current));
-      if (type != LiteralType::Whitespace && exempt_blank_char) {
+      if (type != TokenType::Whitespace && exempt_blank_char) {
         head = count;
         exempt_blank_char = false;
       }
@@ -85,7 +85,7 @@ namespace sapphire {
     if (data.front() == '#') return "";
 
     while (!data.empty() &&
-      lexical::GetStringType(toString(data.back())) == LiteralType::Whitespace) {
+      lexical::GetStringType(toString(data.back())) == TokenType::Whitespace) {
       data.pop_back();
     }
     return data;
@@ -117,7 +117,7 @@ namespace sapphire {
       if (not_escape_char) not_escape_char = false;
 
       if (current == '\'' && !escape_flag) {
-        if (!inside_string && lexical::GetStringType(current_token) == LiteralType::Whitespace) {
+        if (!inside_string && lexical::GetStringType(current_token) == TokenType::Whitespace) {
           current_token.clear();
         }
 
@@ -131,14 +131,14 @@ namespace sapphire {
         temp.append(1, current);
 
         auto type = lexical::GetStringType(temp);
-        if (type == LiteralType::Invalid) {
+        if (type == TokenType::Invalid) {
           auto type = lexical::GetStringType(current_token);
           switch (type) {
-          case LiteralType::Whitespace:
+          case TokenType::Whitespace:
             current_token.clear();
             current_token.append(1, current);
             break;
-          case LiteralType::Int:
+          case TokenType::Int:
             if (current == '.' && lexical::IsDigit(next)) {
               current_token.append(1, current);
             }
@@ -156,7 +156,7 @@ namespace sapphire {
           }
         }
         else {
-          if (type == LiteralType::Int && (temp[0] == '+' || temp[0] == '-')) {
+          if (type == TokenType::Int && (temp[0] == '+' || temp[0] == '-')) {
             output.emplace_back(string().append(1, temp[0]));
             current_token = temp.substr(1, temp.size() - 1);
           }
@@ -177,7 +177,7 @@ namespace sapphire {
       last = target[idx];
     }
 
-    if (lexical::GetStringType(current_token) != LiteralType::Whitespace) {
+    if (lexical::GetStringType(current_token) != TokenType::Whitespace) {
       output.emplace_back(current_token);
     }
 
@@ -224,7 +224,7 @@ namespace sapphire {
         continue;
       }
 
-      if (current.second == LiteralType::Invalid) {
+      if (current.second == TokenType::Invalid) {
         AppendMessage("Unknown token - " + current.first +
           " at line " + to_string(src.first), StateLevel::Error, logger_);
         good = false;
@@ -232,8 +232,8 @@ namespace sapphire {
       }
 
       if (compare(current.first, "+", "-") && !compare(last.first, ")", "]", "}")) {
-        if (compare(last.second, LiteralType::Symbol, LiteralType::Invalid) &&
-          compare(next.second, LiteralType::Int, LiteralType::Float)) {
+        if (compare(last.second, TokenType::Symbol, TokenType::Invalid) &&
+          compare(next.second, TokenType::Int, TokenType::Float)) {
           negative_flag = true;
           tokens->push_back(current);
           last = current;
@@ -264,7 +264,7 @@ namespace sapphire {
       }
 
       if (current.first == ",") {
-        if (last.second == LiteralType::Symbol &&
+        if (last.second == TokenType::Symbol &&
           !compare(last.first, "]", ")", "}", "'")) {
           AppendMessage("Invalid comma at line " + to_string(src.first), StateLevel::Error,
             logger_);
@@ -333,9 +333,9 @@ namespace sapphire {
 
     action_base_.emplace_back(Sentense(frame_->nodes.back(), arguments));
     frame_->nodes.pop_back();
-    frame_->args.emplace_back(Argument("", ArgumentType::RetStack, LiteralType::Invalid));
+    frame_->args.emplace_back(Argument("", ArgumentType::RetStack, TokenType::Invalid));
     if (frame_->nodes.empty() && !IgnoreVoidCall(action_base_.back().first.GetOperation()) &&
-      (frame_->next.first == "," || frame_->next.second == LiteralType::Invalid)) {
+      (frame_->next.first == "," || frame_->next.second == TokenType::Invalid)) {
       action_base_.back().first.annotation.void_call = true;
     }
   }
@@ -381,7 +381,7 @@ namespace sapphire {
   }
 
   void FirstStageParsing::Calling() {
-    if (frame_->last.second != LiteralType::Identifier) {
+    if (frame_->last.second != TokenType::Identifier) {
       frame_->nodes.emplace_back(ASTNode(Operation::ExpList));
     }
 
@@ -407,7 +407,7 @@ namespace sapphire {
 
   bool FirstStageParsing::ArrayGeneratorStmt() {
     bool result = true;
-    if (frame_->last.second == LiteralType::Symbol) {
+    if (frame_->last.second == TokenType::Symbol) {
       frame_->nodes.emplace_back(ASTNode(Operation::InitialArray));
       frame_->nodes.emplace_back(ASTNode());
       frame_->args.emplace_back(Argument());
@@ -447,7 +447,7 @@ namespace sapphire {
     //TODO:Preprecessing-time argument type checking
 
 
-    if (frame_->last.second != LiteralType::Invalid || tokens_.size() < 4 || frame_->next_2.first != "(") {
+    if (frame_->last.second != TokenType::Invalid || tokens_.size() < 4 || frame_->next_2.first != "(") {
       error_string_ = "Invalid function definition";
       return false;
     }
@@ -474,7 +474,7 @@ namespace sapphire {
     }
 
     frame_->args.emplace_back(
-      Argument(frame_->current.first, ArgumentType::Literal, LiteralType::Identifier));
+      Argument(frame_->current.first, ArgumentType::Literal, TokenType::Identifier));
 
     //Parameter segment
     //left parenthesis will be disposed in first loop
@@ -498,19 +498,19 @@ namespace sapphire {
         if (frame_->next.first == kStrConstraintArrow) {
           //dispose right parenthesis
           frame_->Eat();
-          if (frame_->next.second == LiteralType::Invalid) {
+          if (frame_->next.second == TokenType::Invalid) {
             error_string_ = "Invalid return value constraint";
             return false;
           }
 
           //dispose right arrow
           frame_->Eat();
-          if (frame_->current.second != LiteralType::Identifier) {
+          if (frame_->current.second != TokenType::Identifier) {
             error_string_ = "Invalid return value constraint";
             return false;
           }
 
-          Argument constaint_arg(frame_->current.first, ArgumentType::Literal, LiteralType::Identifier);
+          Argument constaint_arg(frame_->current.first, ArgumentType::Literal, TokenType::Identifier);
           constaint_arg.properties.fn.constraint = true;
           frame_->args.emplace_back(constaint_arg);
         }
@@ -528,13 +528,13 @@ namespace sapphire {
         variable = true;
       }
       else if (frame_->current.first == ",") continue;
-      else if (frame_->current.second != LiteralType::Identifier) {
+      else if (frame_->current.second != TokenType::Identifier) {
         error_string_ = "Invalid value in function definition";
         good = false;
         break;
       }
       else {
-        Argument arg(frame_->current.first, ArgumentType::Literal, LiteralType::Identifier);
+        Argument arg(frame_->current.first, ArgumentType::Literal, TokenType::Identifier);
 
         if (variable) {
           arg.properties.fn.variable_param = true;
@@ -550,7 +550,7 @@ namespace sapphire {
 
   bool FirstStageParsing::StructHeaderStmt(Terminator terminator) {
     //TODO: allow access with type identifier(struct/module)
-    if (frame_->last.second != LiteralType::Invalid) {
+    if (frame_->last.second != TokenType::Invalid) {
       error_string_ = "Invalid struct/module definition";
       return false;
     }
@@ -574,7 +574,7 @@ namespace sapphire {
     frame_->nodes.emplace_back(ASTNode());
     frame_->Eat();
 
-    if (frame_->current.second != LiteralType::Identifier) {
+    if (frame_->current.second != TokenType::Identifier) {
       error_string_ = "Invalid struct identifier";
       return false;
     }
@@ -582,9 +582,9 @@ namespace sapphire {
     frame_->args.emplace_back(Argument());
     //struct identifier
     frame_->args.emplace_back(Argument(
-      frame_->current.first, ArgumentType::Literal, LiteralType::Identifier));
+      frame_->current.first, ArgumentType::Literal, TokenType::Identifier));
 
-    if (terminator == Terminator::Module && frame_->next.second != LiteralType::Invalid) {
+    if (terminator == Terminator::Module && frame_->next.second != TokenType::Invalid) {
       error_string_ = "Invalid argument in module definition";
       return false;
     }
@@ -592,14 +592,14 @@ namespace sapphire {
       //inheritance source struct
       frame_->Eat(); frame_->Eat();
       frame_->args.emplace_back(Argument(
-        frame_->current.first, ArgumentType::Literal, LiteralType::Identifier));
+        frame_->current.first, ArgumentType::Literal, TokenType::Identifier));
     }
 
     return true;
   }
 
   bool FirstStageParsing::ForEachStmt() {
-    if (frame_->last.second != LiteralType::Invalid) {
+    if (frame_->last.second != TokenType::Invalid) {
       error_string_ = "Invalid for-each expression";
       return false;
     }
@@ -615,13 +615,13 @@ namespace sapphire {
     frame_->nodes.emplace_back(ASTNode());
     frame_->args.emplace_back(Argument());
 
-    if (frame_->Eat(); lexical::GetStringType(frame_->current.first) != LiteralType::Identifier) {
+    if (frame_->Eat(); lexical::GetStringType(frame_->current.first) != TokenType::Identifier) {
       error_string_ = "Invalid identifier argument in for-each expression";
       return false;
     }
 
     frame_->args.emplace_back(Argument(
-      frame_->current.first, ArgumentType::Literal, LiteralType::Identifier));
+      frame_->current.first, ArgumentType::Literal, TokenType::Identifier));
 
     
     if (frame_->Eat(); lexical::GetTerminatorCode(frame_->current.first) != Terminator::In) {
@@ -637,7 +637,7 @@ namespace sapphire {
       lexical::GetKeywordCode(frame_->current.first) : Operation::Null;
 
     if (IsSingleKeyword(token)) {
-      if (frame_->next.second != LiteralType::Invalid) {
+      if (frame_->next.second != TokenType::Invalid) {
         error_string_ = "Invalid syntax after " + frame_->current.first;
         return false;
       }
@@ -711,12 +711,12 @@ namespace sapphire {
     else if ((frame_->next.first == "=" || frame_->next.first == "<-") &&
       frame_->last.first != ".") {
       frame_->args.emplace_back(Argument(
-        frame_->current.first, ArgumentType::Literal, LiteralType::Identifier));
+        frame_->current.first, ArgumentType::Literal, TokenType::Identifier));
       return true;
     }
     else {
       frame_->args.emplace_back(Argument(
-        frame_->current.first, ArgumentType::Pool, LiteralType::Identifier));
+        frame_->current.first, ArgumentType::Pool, TokenType::Identifier));
 
       if (!frame_->domain.IsPlaceholder() || frame_->seek_last_assert) {
         frame_->args.back().properties.domain.id = frame_->domain.GetData();
@@ -748,7 +748,7 @@ namespace sapphire {
     }
 
     Argument arg(
-      frame_->current.first, ArgumentType::Pool, LiteralType::Identifier);
+      frame_->current.first, ArgumentType::Pool, TokenType::Identifier);
     frame_->args.emplace_back(arg);
 
     return true;
@@ -824,7 +824,7 @@ namespace sapphire {
       else {
         auto token_type = frame_->current.second;
 
-        if (token_type == LiteralType::Identifier) {
+        if (token_type == TokenType::Identifier) {
           state = OtherExpressions();
         }
         else {

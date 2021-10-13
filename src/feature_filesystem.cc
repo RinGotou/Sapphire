@@ -107,8 +107,6 @@ namespace sapphire {
   void InitConsoleComponents() {
     using namespace components;
 
-    //TODO:Kill the crap old parser!
-
     CreateStruct("filesystem");
     StructMethodGenerator("filesystem").Create(
       {

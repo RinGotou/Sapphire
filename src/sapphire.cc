@@ -109,7 +109,7 @@ void InitFromConfigFile() {
     auto log = [&startup]() -> string {
       auto temp = toml::expect<string>(startup, "log");
       if (temp.is_ok()) return temp.unwrap();
-      return "sapphire-project.log";
+      return "project-sapphire.log";
     }();
     auto real_time_log = toml::expect<bool>(startup, "real_time_log");
     auto locale = toml::expect<string>(startup, "locale");
