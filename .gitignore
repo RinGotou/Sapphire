@@ -54,4 +54,11 @@ vsproject
 
 # Jetbrains Misc
 .idea
+Testing
 
+# For test purpose
+main.sp
+test.sp
+
+#macOS craps
+.DS_Store
