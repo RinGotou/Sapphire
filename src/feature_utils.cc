@@ -1,4 +1,5 @@
 #include "machine.h"
+#include <unistd.h>
 
 namespace sapphire {
   int NullObj(State &state, ObjectMap &p) {
@@ -13,11 +14,36 @@ namespace sapphire {
     return 0;
   }
 
-  //https://stackoverflow.com/questions/478898/how-do-i-execute-a-command-and-get-the-output-of-the-command-within-c-using-po
   int SystemConsole(State &state, ObjectMap &p) {
-    auto cmd = p.Cast<string>("cmd");
+    auto &cmd = p.Cast<string>("cmd");
     int64_t result = system(cmd.data());
     state.PushValue(Object(result, kTypeIdInt));
+    return 0;
+  }
+
+  //https://stackoverflow.com/questions/478898/how-do-i-execute-a-command-and-get-the-output-of-the-command-within-c-using-po
+  int InvokeProcess(State &state, ObjectMap &p) {
+    auto &cmd = p.Cast<string>("cmd");
+    array<char, 128> buf;
+    string output;
+
+    auto proc_pipe = popen(cmd.data(), "r");
+
+    if (proc_pipe == nullptr) {
+      state.SetMsg("Bad application to invoke");
+      return 2;
+    }
+
+    char cbuf = 0;
+    while (cbuf != EOF) {
+      cbuf = fgetc(proc_pipe);
+      if (cbuf == EOF) break;
+      output.append(1, cbuf);
+    }
+
+    /* auto code = */ pclose(proc_pipe);
+
+    state.PushValue(Object(output, kTypeIdString));
     return 0;
   }
 
@@ -129,16 +155,15 @@ namespace sapphire {
     auto &str = p.Cast<string>("str");
 
     bool first_stage = CheckObjectMethod(state, obj, str);
-    bool second_stage = obj.IsSubContainer() ?
-      [&]() -> bool {
+    bool second_stage = obj.IsSubContainer() && [&]() -> bool {
       auto &container = obj.Cast<ObjectStruct>().GetContent();
-      for (auto &unit : container) {
+      for (auto &unit: container) {
         if (unit.first == str) {
           return true;
         }
       }
       return false;
-    }() : false;
+    }();
 
     state.PushValue(Object(first_stage || second_stage, kTypeIdBool));
     return 0;
@@ -224,6 +249,7 @@ namespace sapphire {
     CreateFunctionObject(Function(NullObj, "obj", "nullobj"));
     CreateFunctionObject(Function(Input, "", "input"));
     CreateFunctionObject(Function(SystemConsole, "cmd", "console"));
+    CreateFunctionObject(Function(InvokeProcess, "cmd", "invoke_proc"));
     CreateFunctionObject(Function(TimeString, "", "timestring"));
     CreateFunctionObject(Function(IsBaseOf, "base|target", "is_base_of"));
     CreateFunctionObject(Function(Version, "", "core_version"));
