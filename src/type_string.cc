@@ -63,6 +63,71 @@ namespace sapphire {
     state.PushValue(Object(me == rhs_obj.Cast<string>(), kTypeIdBool));
     return 0;
   }
+
+  int String_Trim(State &state, ObjectMap &p) {
+    auto &me = p.Cast<string>(kStrMe);
+    auto size = me.size();
+
+    if (me.empty()) {
+      state.PushValue(Object(string(), kTypeIdString));
+    }
+    else {
+      size_t head = 0, tail = size - 1;
+      while (compare(me[head], ' ', '\r', '\n', '\t') && head < size) head += 1;
+      if (head == size) {
+        state.PushValue(Object(me, kTypeIdString));
+        return 0;
+      }
+      //stop if underflow
+      bool fail = false;
+      while (compare(me[tail], ' ', '\r', '\n', '\t') && tail >= 0) {
+        if (tail == 0) {
+          fail = true;
+          break;
+        }
+        tail -= 1;
+      }
+
+      if (fail) {
+        state.PushValue(Object(me, kTypeIdString));
+      }
+      else {
+        auto result = me.substr(head, tail - head + 1);
+        state.PushValue(Object(result, kTypeIdString));
+      }
+    }
+
+    return 0;
+  }
+
+  int String_Split(State &state, ObjectMap &p) {
+    auto &me = p.Cast<string>(kStrMe);
+    auto &splitter = p.Cast<string>("splitter");
+    auto size = me.size();
+    auto obj_vec = make_shared<ObjectArray>();
+
+    if (!me.empty()) {
+      string buf;
+
+      for (size_t i = 0; i < size; i += 1) {
+        if (me[i] == splitter[0]) {
+          obj_vec->emplace_back(Object(buf, kTypeIdString));
+          buf.clear();
+          continue;
+        }
+
+        buf.append(1, me[i]);
+      }
+
+      if (!buf.empty()) {
+        obj_vec->emplace_back(Object(buf, kTypeIdString));
+      }
+    }
+
+    state.PushValue(Object(obj_vec, kTypeIdArray));
+
+    return 0;
+  }
   
   int NewWideString(State &state, ObjectMap &p) {
     auto &src = p.Cast<string>("src");
@@ -132,6 +197,72 @@ namespace sapphire {
     return 0;
   }
 
+  int WString_Trim(State &state, ObjectMap &p) {
+    auto &me = p.Cast<wstring>(kStrMe);
+    auto size = me.size();
+
+    if (me.empty()) {
+      state.PushValue(Object(wstring(), kTypeIdWideString));
+    }
+    else {
+      size_t head = 0, tail = size - 1;
+      while (compare(me[head], L' ', L'\r', L'\n', L'\t') && head < size) head += 1;
+      if (head == size) {
+        state.PushValue(Object(me, kTypeIdWideString));
+        return 0;
+      }
+
+      //stop if underflow
+      bool fail = false;
+      while (compare(me[tail], L' ', L'\r', L'\n', L'\t') && tail >= 0) {
+        if (tail == 0) {
+          fail = true;
+          break;
+        }
+
+        tail -= 1;
+      }
+
+      if (fail) {
+        state.PushValue(Object(me, kTypeIdWideString));
+      }
+      else {
+        auto result = me.substr(head, tail - head + 1);
+        state.PushValue(Object(result, kTypeIdWideString));
+      }
+    }
+
+    return 0;
+  }
+
+  int WString_Split(State &state, ObjectMap &p) {
+    auto &me = p.Cast<wstring>(kStrMe);
+    auto &splitter = p.Cast<wstring>("splitter");
+    auto size = me.size();
+    auto obj_vec = make_shared<ObjectArray>();
+
+    if (!me.empty()) {
+      wstring buf;
+
+      for (size_t i = 0; i < size; i += 1) {
+        if (me[i] == splitter[0]) {
+          obj_vec->emplace_back(Object(buf, kTypeIdWideString));
+          buf.clear();
+          continue;
+        }
+
+        buf.append(1, me[i]);
+      }
+
+      if (!buf.empty()) {
+        obj_vec->emplace_back(Object(buf, kTypeIdWideString));
+      }
+    }
+
+    state.PushValue(Object(obj_vec, kTypeIdArray));
+    return 0;
+  }
+
   void InitStringTypes() {
     using namespace components;
     using components::CreateFunctionObject;
@@ -143,7 +274,9 @@ namespace sapphire {
         Function(String_SubStr, "begin|size", "substr"),
         Function(String_GetSize, "", "size"),
         Function(String_ToWide, "", "to_wide"),
-        Function(String_Compare, kStrRightHandSide, kStrCompare)
+        Function(String_Compare, kStrRightHandSide, kStrCompare),
+        Function(String_Trim, "", "trim"),
+        Function(String_Split, "splitter", "split_by")
       }
     );
 
@@ -155,10 +288,14 @@ namespace sapphire {
         Function(WString_SubStr, "begin|size", "substr"),
         Function(WString_GetSize, "", "size"),
         Function(WString_ToBytes, "", "to_bytes"),
-        Function(WString_Compare, kStrRightHandSide, kStrCompare)
+        Function(WString_Compare, kStrRightHandSide, kStrCompare),
+        Function(WString_Trim, "", "trim"),
+        Function(WString_Split, "splitter", "split_by")
       }
     );
   }
+
+  //TODO: Add regular expression class support
 
   template <int base>
   int DecimalConvert(State &state, ObjectMap &p) {
@@ -173,7 +310,7 @@ namespace sapphire {
     auto &value = p.Cast<string>("value");
 
     if (value.size() != 1) {
-      state.SetMsg("Function can only convert single-char string");
+      state.SetMsg("Invalid string of representing single char");
       return 2;
     }
 
