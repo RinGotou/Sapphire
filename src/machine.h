@@ -462,7 +462,7 @@ namespace sapphire {
       code_stack_.push_back(&ir);
     }
 
-    bool PushObject(string id, Object object);
+    bool PushObject(const string& id, Object object);
     void PushError(string msg);
     void CopyComponents();
     void Run(bool invoke = false);

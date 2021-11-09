@@ -55,6 +55,7 @@ vsproject
 # Jetbrains Misc
 .idea
 Testing
+*.cbp
 
 # For test purpose
 main.sp

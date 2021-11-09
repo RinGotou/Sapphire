@@ -122,6 +122,7 @@ namespace sapphire {
   const string kTypeIdInStream        = "instream";
   const string kTypeIdOutStream       = "outstream";
   const string kTypeIdFunction        = "function";
+  const string kTypeIdTime            = "time";
   const string kTypeIdFunctionPointer = "function_pointer";
   const string kTypeIdObjectPointer   = "object_pointer";
   const string kTypeIdPair            = "pair";

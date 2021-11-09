@@ -10,6 +10,5 @@ namespace sapphire {
     StandardLogger *logger);
   bool LexicalProcess_2ndStage(deque<IndexedToken> &input, deque<IndexedToken> &output, 
     StandardLogger *logger);
-  bool TryParsing(string_view file, string_view logfile, AnnotatedAST &output);
-
+  bool TryParsing(string_view file, string_view log, AnnotatedAST &output);
 }

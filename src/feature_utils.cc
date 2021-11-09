@@ -35,7 +35,7 @@ namespace sapphire {
     }
 
     char cbuf = 0;
-    while (cbuf != EOF) {
+    while (true) {
       cbuf = fgetc(proc_pipe);
       if (cbuf == EOF) break;
       output.append(1, cbuf);
@@ -47,13 +47,13 @@ namespace sapphire {
     return 0;
   }
 
-  int TimeString(State &state, ObjectMap &p) {
-    time_t now = time(nullptr);
-    string nowtime(ctime(&now));
-    nowtime.pop_back();
-    state.PushValue(Object(nowtime, kTypeIdString));
-    return 0;
-  }
+//  int TimeString(State &state, ObjectMap &p) {
+//    time_t now = time(nullptr);
+//    string nowtime(ctime(&now));
+//    nowtime.pop_back();
+//    state.PushValue(Object(nowtime, kTypeIdString));
+//    return 0;
+//  }
 
   int IsBaseOf(State &state, ObjectMap &p) {
     auto &base = p["base"];
@@ -250,7 +250,7 @@ namespace sapphire {
     CreateFunctionObject(Function(Input, "", "input"));
     CreateFunctionObject(Function(SystemConsole, "cmd", "console"));
     CreateFunctionObject(Function(InvokeProcess, "cmd", "invoke_proc"));
-    CreateFunctionObject(Function(TimeString, "", "timestring"));
+    //CreateFunctionObject(Function(TimeString, "", "timestring"));
     CreateFunctionObject(Function(IsBaseOf, "base|target", "is_base_of"));
     CreateFunctionObject(Function(Version, "", "core_version"));
     CreateFunctionObject(Function(Codename, "", "core_codename"));

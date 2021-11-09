@@ -120,7 +120,7 @@ namespace sapphire {
     }
 
     Object(const Object &&obj) noexcept :
-      info_(std::move(obj.info_)), links_(std::nullopt), shared_ptr<void>(std::move(obj)) {
+      info_(obj.info_), links_(std::nullopt), shared_ptr<void>(obj) {
       EstablishRefLink();
     }
 
@@ -149,8 +149,8 @@ namespace sapphire {
       info_{nullptr, ObjectMode::Normal, false, false, true, kTypeIdString},
       links_(), shared_ptr<void>(make_shared<string>(str)) {}
 
-    Object(const ObjectInfo &info, const shared_ptr<void> &ptr) :
-      info_(info), links_(std::nullopt), shared_ptr<void>(ptr) {
+    Object(ObjectInfo info, const shared_ptr<void> &ptr) :
+      info_(std::move(info)), links_(std::nullopt), shared_ptr<void>(ptr) {
       EstablishRefLink();
     }
 
@@ -263,7 +263,7 @@ namespace sapphire {
     Source source;
 
   public:
-    ObjectView() : value_(nullptr) {}
+    ObjectView() : value_(nullptr), source() {}
     ObjectView(const ObjectView &rhs) = default;
     ObjectView(const ObjectView &&rhs) : ObjectView(rhs) {}
     ObjectView(ObjectPointer ptr) : value_(ptr) {}

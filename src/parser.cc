@@ -118,10 +118,19 @@ namespace sapphire {
     stack<char> bracket_stack;
 #define INVALID_TOKEN Token(string(), TokenType::Invalid)
     Token current = INVALID_TOKEN, next = INVALID_TOKEN, last = INVALID_TOKEN;
-    Token current_valid = INVALID_TOKEN;
+    size_t index = 0;
+    //Token current_valid = INVALID_TOKEN;
+
+    auto get_left_bracket = [](string_view src) -> char {
+      if (src == ")") return '(';
+      if (src == "]") return '[';
+      if (src == "}") return '{';
+      return '\0';
+    };
 
     //TODO: Rewrite this part completely.
     for (size_t i = 0, size = input.size(); i < size; i += 1) {
+      index = input[i].first;
       current = input[i].second;
       next = i < size - 1 ? input[i + 1].second : INVALID_TOKEN;
 
@@ -144,14 +153,62 @@ namespace sapphire {
           //warning:unnecessary semicolon
         }
 
+        last = current;
         continue;
       }
 
+      //invalid token.
+      if (current.second == TokenType::Invalid) {
+        //error: unrecog token
+        state.good = false;
+        break;
+      }
+
+      //positive/negative sign
+      if (compare(current.first, "+", "-") && !compare(last.first, ")", "]", "}")) {
+        if (compare(last.second, TokenType::Symbol, TokenType::Invalid) 
+              && compare(next.second, TokenType::Int, TokenType::Float)) {
+          state.sign_flag = true;
+          //TODO: do not push into output, store it in other location
+          output.push_back(IndexedToken(index, current));
+          last = current;
+          continue;
+        } 
+      }
+
+      //bracket (left)
+      if (compare(current.first, "(", "[", "{")) {
+        bracket_stack.push(current.first[0]);
+      }
+
+      //bracket (right)
+      if (compare(current.first, ")", "]", "}")) {
+        if (bracket_stack.empty()) {
+          //error: No matching left bracket for current token
+          state.good = false;
+          break;
+        }
+
+        if (get_left_bracket(current.first) != bracket_stack.top()) {
+          //error: Mismatched left bracket
+          state.good = false;
+          break;
+        }
+
+        //Matching succeed
+        bracket_stack.pop();
+      }
       
-
-
+      if (state.sign_flag) {
+        auto combined_str = last.first + current.first;
+        
+      }
     }
     //Just a placeholder; delete it later.
     return false;
+  }
+
+  bool TryParsing(string_view file, string_view log, AnnotatedAST &output) {
+
   }
 }

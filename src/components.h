@@ -13,6 +13,7 @@ namespace sapphire {
   void InitStreamComponents();
   //void InitExtensionComponents();
   void InitStructComponents();
+  void InitTimeType();
 
   const ComponentLoader kEmbeddedComponents[] = {
     InitBaseUtils,
@@ -23,6 +24,7 @@ namespace sapphire {
     InitFunctionType,
     InitStreamComponents,
     //InitExtensionComponents,
-    InitStructComponents
+    InitStructComponents,
+    InitTimeType
   };
 }

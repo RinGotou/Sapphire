@@ -1,5 +1,7 @@
 #include "machine.h"
 
+#include <utility>
+
 #define EXPECTED_COUNT(_Count) (args.size() == _Count)
 
 namespace sapphire {
@@ -144,12 +146,12 @@ namespace sapphire {
 
   void RuntimeFrame::MakeError(string str) {
     error = true;
-    msg_string = str;
+    msg_string = std::move(str);
   }
 
   void RuntimeFrame::MakeWarning(string str) {
     warning = true;
-    msg_string = str;
+    msg_string = std::move(str);
   }
 
   void RuntimeFrame::RefreshReturnStack(Object &obj) {
@@ -163,7 +165,7 @@ namespace sapphire {
 
   void RuntimeFrame::RefreshReturnStack(Object &&obj) {
     if (!void_call) {
-      return_stack.push_back(new Object(std::move(obj)));
+      return_stack.push_back(new Object(obj));
       has_return_value_from_invoking = stop_point;
     }
 
@@ -412,7 +414,7 @@ namespace sapphire {
   }
 
   bool AASTMachine::CheckObjectBehavior(Object &obj, string behaviors) {
-    auto sample = BuildStringVector(behaviors);
+    auto sample = BuildStringVector(std::move(behaviors));
     bool result = true;
 
     auto do_checking = [&sample, &result](ObjectStruct &base) -> void {
@@ -739,7 +741,7 @@ namespace sapphire {
     FunctionPointer impl;
     auto &frame = frame_stack_.top();
 
-    if (!FetchFunctionImplEx(impl, id, obj.GetTypeId(), &obj)) {
+    if (!FetchFunctionImplEx(impl, std::move(id), obj.GetTypeId(), &obj)) {
       return std::nullopt;
     }
 
@@ -777,7 +779,7 @@ namespace sapphire {
 
   optional<Object> AASTMachine::CallMethod2(Object &obj, string id, const initializer_list<NamedObject> &&args) {
     ObjectMap obj_map = args;
-    return CallMethod2(obj, id, obj_map);
+    return CallMethod2(obj, std::move(id), obj_map);
   }
 
   optional<Object> AASTMachine::CallUserDefinedFunction(Function &impl, ObjectMap &obj_map) {
@@ -1135,7 +1137,7 @@ namespace sapphire {
       return;
     }
 
-    if (frame.condition_stack.top() == true) {
+    if (frame.condition_stack.top()) {
       frame.Goto(frame.jump_stack.top());
     }
     else {
@@ -1244,7 +1246,7 @@ namespace sapphire {
   void AASTMachine::CommandStructBegin(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
-    if (args.size() < 1) {
+    if (args.empty()) {
       frame.MakeError("struct identifier is missing");
       return;
     }
@@ -1549,7 +1551,7 @@ namespace sapphire {
     auto &frame = frame_stack_.top();
     bool error = false;
 
-    if (args.size() == 0) {
+    if (args.empty()) {
       frame.MakeError("Expect one argrument at least");
       return;
     }
@@ -1871,6 +1873,7 @@ namespace sapphire {
     }
   }
 
+  //TODO: This bulit-in function is broken on macOS
   void AASTMachine::CommandSleep(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
@@ -1891,7 +1894,7 @@ namespace sapphire {
 #ifdef _MSC_VER
     Sleep(static_cast<DWORD>(value));
 #else
-    timespec spec;
+    timespec spec{};
 
     if (value >= 1000) {
       spec.tv_sec = value / 1000;
@@ -1985,6 +1988,7 @@ namespace sapphire {
           return;
         }
 
+        //this shallows the outside 'bool result' variable!
         auto result = CallMethod2(lhs.Seek(), kStrCompare, { NamedObject(kStrRightHandSide, rhs.Dump()) });
         if (frame.error) return;
         Object obj = result.has_value() ? result.value() : Object();
@@ -1996,7 +2000,7 @@ namespace sapphire {
 
         bool value = obj.Cast<bool>();
 
-        frame.RefreshReturnStack(op_code == Operation::NotEqual ? !value : value);
+        frame.RefreshReturnStack(op_code == Operation::NotEqual == !value);
       }
 
       return;
@@ -2154,7 +2158,7 @@ namespace sapphire {
       frame_stack_.top().RefreshReturnStack(ret_keepalive);
      
     }
-    else if (args.size() == 0) {
+    else if (args.empty()) {
       if (!constraint_type.empty() && constraint_type != kTypeIdNull) {
         frame_stack_.top().MakeError("Mismatched return value type: null");
         return;
@@ -2331,6 +2335,9 @@ namespace sapphire {
       break;
     case Operation::Swap:
       CommandSwap(args);
+      break;
+    case Operation::Sleep:
+      CommandSleep(args);
       break;
     case Operation::Bind:
       CommandBind(args, node.annotation.local_object, node.annotation.ext_object);
@@ -2533,7 +2540,7 @@ namespace sapphire {
   }
 
   //for extension callback facilities
-  bool AASTMachine::PushObject(string id, Object object) {
+  bool AASTMachine::PushObject(const string& id, Object object) {
     auto &frame = frame_stack_.top();
     auto result = obj_stack_.CreateObject(id, object, TryAppendTokenId(id));
     if (!result) {
@@ -2545,7 +2552,7 @@ namespace sapphire {
 
   void AASTMachine::PushError(string msg) {
     auto &frame = frame_stack_.top();
-    frame.MakeError(msg);
+    frame.MakeError(std::move(msg));
   }
 
   void AASTMachine::CopyComponents() {
@@ -2615,7 +2622,7 @@ namespace sapphire {
       code_stack_.pop_back();
       code_stack_.push_back(&func.Get<AnnotatedAST>());
       obj_map.Naturalize(obj_stack_.GetCurrent());
-      //auto inside_initiailizer_calling = frame_stack_.top().do_initializer_calling;
+      //auto inside_initializer_calling = frame_stack_.top().do_initializer_calling;
       frame_stack_.top() = RuntimeFrame(func.GetId());
       //frame_stack_.top().inside_initializer_calling = inside_initiailizer_calling;
       obj_stack_.ClearCurrent();

@@ -1,0 +1,5 @@
+begin_time = time()
+sleep(2000)
+end_time = time()
+duration = begin_time.diff_as_begin(end_time)
+println(duration)
