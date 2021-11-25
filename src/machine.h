@@ -179,7 +179,7 @@ namespace sapphire {
   const string kContainerBehavior = "head|tail|empty";
   const string kForEachExceptions = "!iterator|!container_keepalive";
 
-  using CommandPointer = Sentense * ;
+  using CommandPointer = Sentence * ;
 
   class RuntimeFrame {
   public:
@@ -386,7 +386,6 @@ namespace sapphire {
     void CommandAttribute(ArgumentList &args);
 
     void CommandSwap(ArgumentList &args);
-    void CommandSwapIf(ArgumentList &args);
     void CommandBind(ArgumentList &args, bool local_value, bool ext_value);
     void CommandDelivering(ArgumentList &args, bool local_value, bool ext_value);
     void CommandTypeId(ArgumentList &args);
@@ -410,7 +409,6 @@ namespace sapphire {
     void CommandReturn(ArgumentList &args);
     void CommandAssert(ArgumentList &args);
     void DomainAssert(ArgumentList &args);
-    template <ParameterPattern pattern>
     void CommandCheckParameterPattern(ArgumentList &args);
 
     void MachineCommands(Operation token, ArgumentList &args, ASTNode &request);

@@ -9,7 +9,7 @@ namespace sapphire {
     bool exempt_esc_flag: 1;
   };
 
-  bool LexicalProcess_1stStage(IndexedString str, deque<IndexedToken> &output, 
+  void LexicalProcess_1stStage(IndexedString str, deque<IndexedToken> &output, 
     StandardLogger *logger) {
       LexicalFirstStepState state{false, false, false, false, false};
       char current = 0, next = 0, last = 0;
@@ -102,9 +102,7 @@ namespace sapphire {
       output.emplace_back(IndexedToken(str.first, Token(current_valid, lexical::GetStringType(current_valid))));
     }
 
-    //TODO: Insert linebreak after every processing
-    //TODO: missing return!
-    return false; //placeholder
+    //TODO: Insert linebreak placeholder after every processing  
   }
 
   struct LexicalSecondStageState {
@@ -113,13 +111,12 @@ namespace sapphire {
   };
 
   bool LexicalProcess_2ndStage(deque<IndexedToken> &input, deque<IndexedToken> &output, 
-    StandardLogger *logger) {
+    string &msg) {
     LexicalSecondStageState state{true, false};
     stack<char> bracket_stack;
 #define INVALID_TOKEN Token(string(), TokenType::Invalid)
     Token current = INVALID_TOKEN, next = INVALID_TOKEN, last = INVALID_TOKEN;
     size_t index = 0;
-    //Token current_valid = INVALID_TOKEN;
 
     auto get_left_bracket = [](string_view src) -> char {
       if (src == ")") return '(';
@@ -128,7 +125,6 @@ namespace sapphire {
       return '\0';
     };
 
-    //TODO: Rewrite this part completely.
     for (size_t i = 0, size = input.size(); i < size; i += 1) {
       index = input[i].first;
       current = input[i].second;
@@ -170,7 +166,7 @@ namespace sapphire {
               && compare(next.second, TokenType::Int, TokenType::Float)) {
           state.sign_flag = true;
           //TODO: do not push into output, store it in other location
-          output.push_back(IndexedToken(index, current));
+          //output.push_back(IndexedToken(index, current));
           last = current;
           continue;
         } 
@@ -198,17 +194,47 @@ namespace sapphire {
         //Matching succeed
         bracket_stack.pop();
       }
+
+      if (current.first == ",") {
+        if (last.second == TokenType::Symbol
+          && !compare(last.first, "]", ")", "}", "'")) {
+          //error: invalid comma
+          state.good = false;
+          break;
+        }
+      }
       
       if (state.sign_flag) {
         auto combined_str = last.first + current.first;
-        
+        output.emplace_back(IndexedToken(index, Token(combined_str, current.second)));
+        state.sign_flag = false;
+        last = Token(combined_str, current.second);
+        continue;
+      }
+
+      //append directly into output
+      {
+        output.emplace_back(IndexedToken(index, current));
+        last = current;
       }
     }
-    //Just a placeholder; delete it later.
-    return false;
+    
+    return state.good;
   }
 
   bool TryParsing(string_view file, string_view log, AnnotatedAST &output) {
+    // TODO: how to feed original script to two functions?
+    // Reading script file
+    // TODO: Add string_view type initializer into InStream and OutStream class
+    InStream in_stream(file.data());
+    string buf;
 
+    if (!in_stream.Good()) return false;
+
+    while (!in_stream.eof()) {
+      buf = in_stream.GetLine();
+
+
+    }
   }
 }

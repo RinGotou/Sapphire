@@ -331,7 +331,7 @@ namespace sapphire {
       frame_->args.pop_back();
     }
 
-    action_base_.emplace_back(Sentense(frame_->nodes.back(), arguments));
+    action_base_.emplace_back(Sentence(frame_->nodes.back(), arguments));
     frame_->nodes.pop_back();
     frame_->args.emplace_back(Argument("", ArgumentType::RetStack, TokenType::Invalid));
     if (frame_->nodes.empty() && !IgnoreVoidCall(action_base_.back().first.GetOperation()) &&
@@ -729,7 +729,7 @@ namespace sapphire {
 
         if (frame_->next.first == ".") {
           ASTNode node(Operation::DomainAssertCommand);
-          Sentense command;
+          Sentence command;
 
           command.first = node;
           command.second.push_back(frame_->args.back());

@@ -128,17 +128,17 @@ namespace sapphire {
    };
 
   using ArgumentList = deque<Argument>;
-  using Sentense = pair<ASTNode, ArgumentList>;
+  using Sentence = pair<ASTNode, ArgumentList>;
 
-  class AnnotatedAST : public deque<Sentense> {
+  class AnnotatedAST : public deque<Sentence> {
   protected:
     AnnotatedAST *source_;
     unordered_map<size_t, list<size_t>> jump_record_;
 
   public:
-    AnnotatedAST() : deque<Sentense>(), source_(nullptr) {}
-    AnnotatedAST(AnnotatedAST *source) : deque<Sentense>(), source_(source) {}
-    AnnotatedAST(const AnnotatedAST &rhs) : deque<Sentense>(rhs), source_(rhs.source_),
+    AnnotatedAST() : deque<Sentence>(), source_(nullptr) {}
+    AnnotatedAST(AnnotatedAST *source) : deque<Sentence>(), source_(source) {}
+    AnnotatedAST(const AnnotatedAST &rhs) : deque<Sentence>(rhs), source_(rhs.source_),
       jump_record_(rhs.jump_record_) {}
     AnnotatedAST(const AnnotatedAST &&rhs) : AnnotatedAST(rhs) {}
 

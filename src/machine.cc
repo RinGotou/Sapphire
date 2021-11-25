@@ -1027,8 +1027,9 @@ namespace sapphire {
     
     if (container_type == kTypeIdArray) {
       auto &index = iterator_obj->Cast<int64_t>() ;
+      auto size = container_obj->Cast<ObjectArray>().size();
       index += 1;
-      if (index == container_obj->Cast<ObjectArray>().size()) {
+      if (index == size) {
         frame.Goto(nest_end);
         frame.final_cycle = true;
       }
@@ -1335,6 +1336,7 @@ namespace sapphire {
       obj_stack_.ClearCurrent();
       //obj_stack_.GetCurrent().Clear();
       frame.jump_from_end = true;
+      frame.from_continue = false;
     }
   }
 
@@ -1362,6 +1364,7 @@ namespace sapphire {
       // container unit will be disposed here, you need to regenerate a new one in header
       obj_stack_.GetCurrent().ClearExcept(kForEachExceptions);
       frame.jump_from_end = true;
+      frame.from_continue = false;
     }
   }
 
@@ -2028,7 +2031,6 @@ namespace sapphire {
       RESULT_PROCESSING(bool, BoolProducer);
     }
 
-
     frame.RefreshReturnStack(result);
 #undef RESULT_PROCESSING
   }
@@ -2041,7 +2043,6 @@ namespace sapphire {
       return;
     }
 
-    //TODO:ObjectView
     auto &rhs = FetchObjectView(args[0]).Seek();
     if (frame.error) return;
 
@@ -2228,28 +2229,11 @@ namespace sapphire {
     frame.assert_rc_copy = FetchObjectView(args[0]).Seek().Unpack();
   }
 
-  //void AASTMachine::CommandHasBehavior(ArgumentList &args) {
-  //  auto &frame = frame_stack_.top();
-
-  //  auto &behavior_obj = FetchObjectView(args[1]).Seek();
-  //  auto &obj = FetchObjectView(args[0]).Seek();
-
-  //  if (frame.error) return;
-
-  //  auto result = CheckObjectBehavior(obj, behavior_obj.Cast<string>());
-
-  //  frame.RefreshReturnStack(Object(result, kTypeIdBool));
-  //}
-
-  template <ParameterPattern pattern>
   void AASTMachine::CommandCheckParameterPattern(ArgumentList &args) {
     auto &frame = frame_stack_.top();
 
     if (!EXPECTED_COUNT(1)) {
-      if constexpr (pattern == ParameterPattern::Variable) {
-        frame.MakeError("Argument mismatching: is_variable_param(func)");
-      }
-
+      frame.MakeError("Argument mismatching: is_variable_param(func)");
       return;
     }
 
@@ -2419,7 +2403,7 @@ namespace sapphire {
       CommandAttribute(args);
       break;
     case Operation::IsVariableParam:
-      CommandCheckParameterPattern<ParameterPattern::Variable>(args);
+      CommandCheckParameterPattern(args);
       break;
     case Operation::Print:
       CommandPrint(args);
@@ -2569,7 +2553,7 @@ namespace sapphire {
 
     size_t script_idx = 0;
     AnnotatedAST *code = code_stack_.back();
-    Sentense *sentense = nullptr;
+    Sentence *sentence = nullptr;
     ObjectMap obj_map;
     FunctionPointer impl;
 
@@ -2674,7 +2658,9 @@ namespace sapphire {
       cleanup_cache();
 
       //break at stop point.
-      if (frame->stop_point) break;
+      if (frame->stop_point) {
+        break;
+      }
 
       if (frame->warning) {
         AppendMessage(frame->msg_string, StateLevel::Warning, logger_);
@@ -2687,7 +2673,10 @@ namespace sapphire {
         if (frame->inside_initializer_calling) FinishInitalizerCalling();
         else RecoverLastState(false);
 
-        if (frame->error) break;
+        if (frame->error) {
+          break;
+        }
+
         //Update register data
         refresh_tick();
         if (!frame->stop_point) {
@@ -2696,17 +2685,17 @@ namespace sapphire {
         continue;
       }
 
-      sentense = &(*code)[frame->idx];
-      script_idx = sentense->first.idx;
+      sentence = &(*code)[frame->idx];
+      script_idx = sentence->first.idx;
       // indicator for disposing returning value or not
-      frame->void_call = sentense->first.annotation.void_call; 
+      frame->void_call = sentence->first.annotation.void_call; 
       frame->current_code = code;
-      frame->is_command = sentense->first.type == NodeType::Operation;
+      frame->is_command = sentence->first.type == NodeType::Operation;
 
-      if (sentense->first.type == NodeType::Operation) {
-        MachineCommands(sentense->first.GetOperation(), sentense->second, sentense->first);
+      if (sentence->first.type == NodeType::Operation) {
+        MachineCommands(sentence->first.GetOperation(), sentence->second, sentence->first);
         
-        auto is_return = sentense->first.GetOperation() == Operation::Return;
+        auto is_return = sentence->first.GetOperation() == Operation::Return;
 
         if (is_return) refresh_tick();
         if (frame->error) break;
@@ -2720,13 +2709,13 @@ namespace sapphire {
       else {
         obj_map.clear();
 
-        if (sentense->first.type == NodeType::Function) {
-          if (!FetchFunctionImpl(impl, sentense, obj_map)) {
+        if (sentence->first.type == NodeType::Function) {
+          if (!FetchFunctionImpl(impl, sentence, obj_map)) {
             break;
           }
         }
 
-        GenerateArgs2(*impl, sentense->second, obj_map);
+        GenerateArgs2(*impl, sentence->second, obj_map);
         if (frame->do_initializer_calling) GenerateStructInstance(obj_map);
         if (frame->error) break;
 
