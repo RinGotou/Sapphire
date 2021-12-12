@@ -1,4 +1,6 @@
 #include "parser.h"
+#include "lexical.h"
+#include "log.h"
 
 namespace sapphire {
   struct LexicalFirstStepState {
@@ -11,7 +13,7 @@ namespace sapphire {
 
   void LexicalProcess_1stStage(IndexedString str, deque<IndexedToken> &output, 
     StandardLogger *logger) {
-      LexicalFirstStepState state{false, false, false, false, false};
+      LexicalFirstStepState state{ false, false, false, false, false };
       char current = 0, next = 0, last = 0;
       string current_valid, buf;
 
@@ -222,19 +224,87 @@ namespace sapphire {
     return state.good;
   }
 
+  void StringTrimming(string &target) {
+    if (target.empty()) return;
+
+    char current = 0;
+    size_t head = 0, tail = target.size() - 1;
+    bool inside_string = false;
+
+    auto is_whitespace = [](char src) -> bool {
+      return src == ' ' || src == '\t' || src == '\r';
+    };
+    
+    for (size_t i = 0, size = target.size(); i < size; i += 1) {
+      current = target[i];
+
+      if (!is_whitespace(current)) {
+        head = i;
+        break;
+      }
+    }
+
+    if (target.at(head) == '#' || head == target.size() - 1) {
+      target.clear();
+      return;
+    }
+
+    for (size_t i = target.size() - 1; i <= 0 && i < target.size(); i -= 1) {
+      current = target[i];
+      
+      if (!is_whitespace(current)) {
+        tail = i;
+        break;
+      }
+    }
+
+    if (tail == 0) {
+      return;
+    }
+
+    target = target.substr(head, tail - head);
+
+    for (size_t i = 0, size = target.size(); i < size; i += 1) {
+      current = target[i];
+      if (current == '\'') {
+        inside_string = !inside_string;
+      }
+
+      if (!inside_string && current == '#') {
+        tail = i;
+        break;
+      }
+    }
+
+    target = target.substr(0, tail - 1);
+  }
+
   bool TryParsing(string_view file, string_view log, AnnotatedAST &output) {
     // TODO: how to feed original script to two functions?
-    // Reading script file
     // TODO: Add string_view type initializer into InStream and OutStream class
-    InStream in_stream(file.data());
+    size_t idx = 1; //tracking the indices of script lines. 
     string buf;
+    bool inside_comment_block = false;
+    InStream in_stream(file.data());
+
 
     if (!in_stream.Good()) return false;
 
+    //read script file
     while (!in_stream.eof()) {
       buf = in_stream.GetLine();
 
+      if (buf == kStrCommentBlock) {
+        inside_comment_block  = !inside_comment_block;
+        idx += 1;
+        continue;
+      }
 
+      if (inside_comment_block) {
+        //skip it.
+        idx += 1;
+        continue;
+      }
     }
   }
 }
