@@ -104,17 +104,13 @@ namespace sapphire {
       output.emplace_back(IndexedToken(str.first, Token(current_valid, lexical::GetStringType(current_valid))));
     }
 
-    //TODO: Insert linebreak placeholder after every processing  
+    // TODO: Insert linebreak placeholder after every processing  
   }
 
-  struct LexicalSecondStageState {
-    bool good: 1;
-    bool sign_flag: 1;
-  };
-
-  bool LexicalProcess_2ndStage(deque<IndexedToken> &input, deque<IndexedToken> &output, 
+  ParsingState LexicalProcess_2ndStage(deque<IndexedToken> &input, deque<IndexedToken> &output, 
     string &msg) {
-    LexicalSecondStageState state{true, false};
+    ParsingState state = ParsingState::Fine;
+    bool sign_flag = false;
     stack<char> bracket_stack;
 #define INVALID_TOKEN Token(string(), TokenType::Invalid)
     Token current = INVALID_TOKEN, next = INVALID_TOKEN, last = INVALID_TOKEN;
@@ -134,21 +130,22 @@ namespace sapphire {
 
       //invalid token.
       if (current.second == TokenType::Invalid) {
-        //error: (report unknown tokens)
-        state.good = false;
+        msg = "Invalid token '" + current.first + "'";
+        state = ParsingState::Error;
         break;
       }
 
       //semicolon.
       if (current.first == ";") {
         if (!bracket_stack.empty()) {
-          //error:mismatched brackets
-          state.good = false;
+          msg = "Mismatched bracket";
+          state = ParsingState::Error;
           break;
         }
 
         if (compare(next.second, TokenType::LineBreak, TokenType::Invalid)) {
-          //warning:unnecessary semicolon
+          msg = "Unnecessary semicolon inside codeline";
+          state = ParsingState::Warning;
         }
 
         last = current;
@@ -157,8 +154,8 @@ namespace sapphire {
 
       //invalid token.
       if (current.second == TokenType::Invalid) {
-        //error: unrecog token
-        state.good = false;
+        msg = "unrecognized token '" + current.first + "'";
+        state = ParsingState::Error;
         break;
       }
 
@@ -166,7 +163,7 @@ namespace sapphire {
       if (compare(current.first, "+", "-") && !compare(last.first, ")", "]", "}")) {
         if (compare(last.second, TokenType::Symbol, TokenType::Invalid) 
               && compare(next.second, TokenType::Int, TokenType::Float)) {
-          state.sign_flag = true;
+          sign_flag = true;
           //TODO: do not push into output, store it in other location
           //output.push_back(IndexedToken(index, current));
           last = current;
@@ -183,13 +180,13 @@ namespace sapphire {
       if (compare(current.first, ")", "]", "}")) {
         if (bracket_stack.empty()) {
           //error: No matching left bracket for current token
-          state.good = false;
+          state = ParsingState::Error;
           break;
         }
 
         if (get_left_bracket(current.first) != bracket_stack.top()) {
           //error: Mismatched left bracket
-          state.good = false;
+          state = ParsingState::Error;
           break;
         }
 
@@ -201,15 +198,15 @@ namespace sapphire {
         if (last.second == TokenType::Symbol
           && !compare(last.first, "]", ")", "}", "'")) {
           //error: invalid comma
-          state.good = false;
+          state = ParsingState::Error;
           break;
         }
       }
       
-      if (state.sign_flag) {
+      if (sign_flag) {
         auto combined_str = last.first + current.first;
         output.emplace_back(IndexedToken(index, Token(combined_str, current.second)));
-        state.sign_flag = false;
+        sign_flag = false;
         last = Token(combined_str, current.second);
         continue;
       }
@@ -221,7 +218,7 @@ namespace sapphire {
       }
     }
     
-    return state.good;
+    return state;
   }
 
   void StringTrimming(string &target) {

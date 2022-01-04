@@ -62,7 +62,7 @@ namespace sapphire {
     size_t head = 0, tail = 0;
     bool exempt_blank_char = true;
     bool string_processing = false;
-    auto toString = [](char t) ->string {return string().append(1, t); };
+    auto toString = [](char t) ->string { return string().append(1, t); };
 
     for (size_t count = 0; count < target.size(); ++count) {
       current = target[count];

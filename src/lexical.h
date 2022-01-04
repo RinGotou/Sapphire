@@ -143,8 +143,9 @@ namespace sapphire {
     kStrCaseObj        = "!case",
     kStrIteratorObj    = "!iterator",
     kStrContainerKeepAliveSlot = "!container_keepalive",
-    kStrCommentBegin   = "=begin",
-    kStrCommentEnd     = "=end",
+    kStrCommentBegin   = "=begin", //deprecated
+    kStrCommentEnd     = "=end", //deprecated
+    kStrCommentBlock   = "=====",
     kStrHead           = "head",
     kStrTail           = "tail",
     kStrPrint          = "print",

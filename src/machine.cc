@@ -466,7 +466,8 @@ namespace sapphire {
     return result;
   }
 
-  //Used by CallMethod2
+  // Used by CallMethod2
+  // TODO: write main behavior in comment msg
   bool AASTMachine::FetchFunctionImplEx(FunctionPointer &dest, string func_id, string type_id,
     Object *obj_ptr) {
     auto &frame = frame_stack_.top();
